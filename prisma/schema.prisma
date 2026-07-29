@@ -224,3 +224,19 @@ model LaunchTokenRedemption {
   @@index([workspaceUserId])
   @@index([expiresAt])
 }
+
+model ProvisioningRun {
+  id            String   @id @default(cuid())
+  source        String
+  status        String
+  receivedCount Int
+  createdCount  Int      @default(0)
+  updatedCount  Int      @default(0)
+  inactiveCount Int      @default(0)
+  error         String?
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  @@index([createdAt])
+  @@index([status])
+}

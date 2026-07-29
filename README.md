@@ -36,6 +36,9 @@ http://localhost:3001/workspace/launch
 Use the slug `itf-flow`, assign an app role matching one of the Prisma `UserRole` values, and set
 the same `WORKSPACE_LAUNCH_TOKEN_SECRET` in both applications.
 
+Staff master-list provisioning and secure directory synchronization are documented in
+[`docs/provisioning.md`](docs/provisioning.md).
+
 ## Current demo boundaries
 
 - Local disk attachment storage is suitable only for the local demo. Configure private S3 or
