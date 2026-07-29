@@ -2,7 +2,7 @@ const originatorSteps = [
   ["Open Raise correspondence", "Choose the option from the left navigation or dashboard."],
   ["Choose the document type", "Select an internal memo, outgoing letter, or—where authorized—an incoming letter."],
   ["Describe the correspondence", "Enter the subject, summary, full text, classification, priority, reference, and due date."],
-  ["Select To recipients", "Search by name, staff number, department, division, position, email, or role. These recipients must take action and must be at an adjacent hierarchy level."],
+  ["Select To recipients", "Search by name, staff number, department, division, unit, position, email, or role. Action choices are limited to your assigned supervisor and direct reports."],
   ["Select Copy recipients", "Search the wider staff directory for anyone who should be informed but is not accountable for action."],
   ["Add the routing minute", "State clearly what should be done, the expected result, and any deadline."],
   ["Attach supporting material", "Add a PDF, JPEG, or PNG scan when the source document or evidence is required."],
@@ -39,8 +39,8 @@ export default function GuidePage() {
       <h1>How correspondence moves in ITF Flow</h1>
       <p className="muted" style={{ maxWidth: 820, lineHeight: 1.7 }}>
         Action recipients are responsible for treatment. CC recipients receive visibility
-        without becoming accountable owners. Formal action routing remains between adjacent
-        hierarchy levels.
+        without becoming accountable owners. Formal action routing follows explicit supervisor
+        and direct-report assignments.
       </p>
       <div className="grid guide-grid">
         <section className="card"><h2>Raising correspondence</h2><StepList steps={originatorSteps} /></section>

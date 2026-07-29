@@ -2,11 +2,15 @@
 
 Slices are ordered so each one produces a demonstrable, testable increment.
 
-## Slice 2 — Organization-aware directory and reporting lines
+## Slice 2 — Organization-aware directory and reporting lines — Implemented
 
-- Replace role-only adjacency with explicit supervisor, position, unit, division, department, office, and acting-appointment relationships.
-- Prevent cross-department routing unless a controlled cross-functional route is selected.
-- Synchronize staff identity and organization placement from ITF Workspace.
+- Replaced role-only adjacency with explicit supervisor/direct-report relationships.
+- Added unit and stable Workspace office, department, division, unit, and position identifiers.
+- Action-recipient search and server-side mutations now enforce the assigned reporting line.
+- Cross-department action routing is blocked unless represented by an explicit reporting assignment.
+- Workspace launch exchange now synchronizes the available staff identity and organization IDs.
+
+Acting appointments and time-bound delegation remain scheduled for Slice 7.
 
 ## Slice 3 — Drafts, review and dispatch
 

@@ -14,20 +14,47 @@ const demoUsers = [
   { staffNumber: "ITF/ICT/010", email: "head.pass@itf.gov.ng", name: "Head PASS Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "PASS", position: "Division Head", hierarchyLevel: 3 },
   { staffNumber: "ITF/ICT/011", email: "head.ncs@itf.gov.ng", name: "Head NCS Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "NCS", position: "Division Head", hierarchyLevel: 3 },
   { staffNumber: "ITF/ICT/012", email: "head.hardware@itf.gov.ng", name: "Head Hardware Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "Hardware", position: "Division Head", hierarchyLevel: 3 },
-  { staffNumber: "ITF/ICT/020", email: "unit.apps@itf.gov.ng", name: "Head Applications Unit", role: UserRole.UNIT_HEAD, office: "Headquarters", department: "ICT", division: "PASS", position: "Unit Head", hierarchyLevel: 2 },
-  { staffNumber: "ITF/ICT/030", email: "officer.apps@itf.gov.ng", name: "Applications Officer", role: UserRole.OFFICER, office: "Headquarters", department: "ICT", division: "PASS", position: "ICT Officer", hierarchyLevel: 1 },
+  { staffNumber: "ITF/ICT/020", email: "unit.apps@itf.gov.ng", name: "Head Applications Unit", role: UserRole.UNIT_HEAD, office: "Headquarters", department: "ICT", division: "PASS", unit: "Applications", position: "Unit Head", hierarchyLevel: 2 },
+  { staffNumber: "ITF/ICT/030", email: "officer.apps@itf.gov.ng", name: "Applications Officer", role: UserRole.OFFICER, office: "Headquarters", department: "ICT", division: "PASS", unit: "Applications", position: "ICT Officer", hierarchyLevel: 1 },
 ];
+
+const reportingLines: Record<string, string> = {
+  "secretary.abuja@itf.gov.ng": "dg@itf.gov.ng",
+  "secretary.jos@itf.gov.ng": "dg@itf.gov.ng",
+  "secretary.lagos@itf.gov.ng": "dg@itf.gov.ng",
+  "director.ict@itf.gov.ng": "dg@itf.gov.ng",
+  "director.ric@itf.gov.ng": "dg@itf.gov.ng",
+  "director.sdo@itf.gov.ng": "dg@itf.gov.ng",
+  "head.pass@itf.gov.ng": "director.ict@itf.gov.ng",
+  "head.ncs@itf.gov.ng": "director.ict@itf.gov.ng",
+  "head.hardware@itf.gov.ng": "director.ict@itf.gov.ng",
+  "unit.apps@itf.gov.ng": "head.pass@itf.gov.ng",
+  "officer.apps@itf.gov.ng": "unit.apps@itf.gov.ng",
+};
 
 async function main() {
   const passwordHash = await bcrypt.hash(process.env.SEED_PASSWORD ?? "Demo123!", 12);
+  const userIds = new Map<string, string>();
+
   for (const user of demoUsers) {
-    await db.user.upsert({
+    const saved = await db.user.upsert({
       where: { email: user.email },
       update: { ...user, passwordHash, isActive: true },
       create: { ...user, passwordHash },
     });
+    userIds.set(saved.email, saved.id);
   }
-  console.log(`Seeded ${demoUsers.length} ITF Flow demo users.`);
+
+  for (const [email, supervisorEmail] of Object.entries(reportingLines)) {
+    const supervisorId = userIds.get(supervisorEmail);
+    if (!supervisorId) throw new Error(`Missing seeded supervisor: ${supervisorEmail}`);
+    await db.user.update({
+      where: { email },
+      data: { supervisorId },
+    });
+  }
+
+  console.log(`Seeded ${demoUsers.length} ITF Flow demo users and reporting lines.`);
 }
 
 main().finally(() => db.$disconnect());

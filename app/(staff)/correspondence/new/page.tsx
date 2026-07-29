@@ -1,7 +1,6 @@
 import { registerCorrespondenceAction } from "@/app/actions";
 import { RecipientSelector } from "@/components/recipient-selector";
-import { canOriginate, canRegister, getAdjacentRoles } from "@/lib/permissions";
-import { label } from "@/lib/reference";
+import { canOriginate, canRegister } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 
 export default async function NewCorrespondencePage() {
@@ -12,7 +11,6 @@ export default async function NewCorrespondencePage() {
   }
 
   const isRegistrar = canRegister(user.role);
-  const adjacentRoles = getAdjacentRoles(user.role);
 
   return (
     <>
@@ -23,7 +21,7 @@ export default async function NewCorrespondencePage() {
       <p className="muted">
         {isRegistrar
           ? "Incoming letters go directly to the DG. Internal correspondence follows the formal hierarchy."
-          : `Route to the adjacent ${adjacentRoles.map(label).join(" or ")} level without skipping the hierarchy.`}
+          : "Route to your assigned supervisor or direct reports without skipping the formal reporting line."}
       </p>
 
       <form action={registerCorrespondenceAction} className="card form-grid">
@@ -111,8 +109,8 @@ export default async function NewCorrespondencePage() {
           <RecipientSelector
             actionHint={
               isRegistrar
-                ? "Incoming letters go to the DG automatically. For internal correspondence, choose a formal adjacent-level recipient."
-                : "Select one or more adjacent-level staff responsible for taking action."
+                ? "Incoming letters go to the DG automatically. For internal correspondence, choose an assigned reporting-line recipient."
+                : "Select your assigned supervisor or one or more direct reports responsible for taking action."
             }
           />
         </div>

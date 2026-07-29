@@ -21,7 +21,8 @@ import {
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { createReferenceNumber } from "@/lib/reference";
-import { canMinute, canOriginate, canRegister, getAdjacentRoles } from "@/lib/permissions";
+import { canMinute, canOriginate, canRegister } from "@/lib/permissions";
+import { actionRecipientsFollowReportingLine } from "@/lib/reporting-lines";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 
 const correspondenceSchema = z.object({
@@ -192,11 +193,13 @@ export async function registerCorrespondenceAction(formData: FormData) {
     throw new Error("Select at least one valid recipient.");
   }
 
-  const allowedRoles = getAdjacentRoles(user.role);
   if (
     !isSecretariatIntake &&
-    user.role !== UserRole.SYSTEM_ADMIN &&
-    actionRecipients.some((recipient) => !allowedRoles.includes(recipient.role))
+    !(await actionRecipientsFollowReportingLine({
+      actorId: user.id,
+      actorRole: user.role,
+      recipientIds: actionRecipients.map((recipient) => recipient.id),
+    }))
   ) {
     throw new Error("New correspondence must follow the formal communication hierarchy.");
   }
@@ -334,10 +337,12 @@ export async function routeCorrespondenceAction(formData: FormData) {
   ) {
     throw new Error("Invalid routing request.");
   }
-  const permittedRoles = getAdjacentRoles(user.role);
   if (
-    user.role !== UserRole.SYSTEM_ADMIN &&
-    actionRecipients.some((recipient) => !permittedRoles.includes(recipient.role))
+    !(await actionRecipientsFollowReportingLine({
+      actorId: user.id,
+      actorRole: user.role,
+      recipientIds: actionRecipients.map((recipient) => recipient.id),
+    }))
   ) {
     throw new Error("Routing must follow the formal communication hierarchy.");
   }

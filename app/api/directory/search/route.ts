@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
-import { getAdjacentRoles } from "@/lib/permissions";
+import { getPermittedActionRecipientIds } from "@/lib/reporting-lines";
 import { getCurrentUser } from "@/lib/session";
 
 export async function GET(request: Request) {
@@ -13,13 +12,16 @@ export async function GET(request: Request) {
   const mode = url.searchParams.get("mode") === "copy" ? "copy" : "action";
   if (query.length < 2) return NextResponse.json({ people: [] });
 
-  const actionRoles = getAdjacentRoles(user.role);
+  const permittedActionIds =
+    mode === "action"
+      ? await getPermittedActionRecipientIds(user.id, user.role)
+      : null;
   const people = await db.user.findMany({
     where: {
       isActive: true,
       id: { not: user.id },
-      ...(mode === "action" && user.role !== UserRole.SYSTEM_ADMIN
-        ? { role: { in: actionRoles } }
+      ...(mode === "action" && permittedActionIds !== null
+        ? { id: { in: permittedActionIds, not: user.id } }
         : {}),
       OR: [
         { name: { contains: query, mode: "insensitive" } },
@@ -27,6 +29,7 @@ export async function GET(request: Request) {
         { email: { contains: query, mode: "insensitive" } },
         { department: { contains: query, mode: "insensitive" } },
         { division: { contains: query, mode: "insensitive" } },
+        { unit: { contains: query, mode: "insensitive" } },
         { office: { contains: query, mode: "insensitive" } },
         { position: { contains: query, mode: "insensitive" } },
       ],
@@ -40,6 +43,7 @@ export async function GET(request: Request) {
       staffNumber: true,
       department: true,
       division: true,
+      unit: true,
       office: true,
       position: true,
       role: true,

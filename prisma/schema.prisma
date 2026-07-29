@@ -89,7 +89,16 @@ model User {
   office              String
   department          String?
   division            String?
+  unit                String?
   position            String?
+  workspaceOfficeId   String?
+  workspaceDepartmentId String?
+  workspaceDivisionId String?
+  workspaceUnitId     String?
+  workspacePositionId String?
+  supervisorId        String?
+  supervisor          User?    @relation("ReportingLine", fields: [supervisorId], references: [id], onDelete: SetNull)
+  directReports       User[]   @relation("ReportingLine")
   hierarchyLevel      Int
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
@@ -100,6 +109,10 @@ model User {
   launchRedemptions   LaunchTokenRedemption[]
 
   @@index([role, isActive])
+  @@index([supervisorId, isActive])
+  @@index([workspaceDepartmentId])
+  @@index([workspaceDivisionId])
+  @@index([workspaceUnitId])
 }
 
 model ExternalOrganization {

@@ -12,14 +12,6 @@ import { canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
 
-const adjacentRoles: Partial<Record<UserRole, UserRole[]>> = {
-  OFFICER: [UserRole.UNIT_HEAD],
-  UNIT_HEAD: [UserRole.OFFICER, UserRole.DIVISION_HEAD],
-  DIVISION_HEAD: [UserRole.UNIT_HEAD, UserRole.DIRECTOR],
-  DIRECTOR: [UserRole.DIVISION_HEAD, UserRole.DG],
-  DG: [UserRole.DIRECTOR],
-};
-
 export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
@@ -45,8 +37,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       item.kind === "ACTION" &&
       activeStatuses.includes(item.status),
   );
-  const targetRoles = adjacentRoles[user.role] ?? [];
-  const canRoute = Boolean(activeActionItem && canMinute(user.role) && targetRoles.length);
+  const canRoute = Boolean(activeActionItem && canMinute(user.role));
   return (
     <>
       <span className="eyebrow">{record.referenceNumber}</span>
@@ -69,13 +60,13 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           {canRoute ? (
             <section className="card">
               <h2>Minute and route</h2>
-              <p className="muted">Formal adjacent level: {targetRoles.map(label).join(" or ")}</p>
+              <p className="muted">Formal reporting line: your assigned supervisor or direct reports.</p>
               <form action={routeCorrespondenceAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
                 <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
                 <div className="field">
                   <RecipientSelector
-                    actionHint={`Select staff at the formal adjacent ${targetRoles.map(label).join(" or ")} level.`}
+                    actionHint="Select your assigned supervisor or one or more direct reports."
                   />
                 </div>
                 <button className="btn" type="submit">Record minute and route</button>

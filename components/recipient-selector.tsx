@@ -9,6 +9,7 @@ export type DirectoryPerson = {
   staffNumber: string | null;
   department: string | null;
   division: string | null;
+  unit: string | null;
   office: string;
   position: string | null;
   role: string;
@@ -143,7 +144,7 @@ function PersonPicker({
                 <span className="recipient-identity">
                   <strong>{person.name}</strong>
                   <small>
-                    {[person.staffNumber, person.position, person.department]
+                    {[person.staffNumber, person.position, person.department, person.division, person.unit]
                       .filter(Boolean)
                       .join(" · ")}
                   </small>

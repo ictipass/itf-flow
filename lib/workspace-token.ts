@@ -12,6 +12,11 @@ export type WorkspacePayload = {
     name?: string | null;
     email?: string | null;
     staffNumber?: string | null;
+    officeId?: string | null;
+    departmentId?: string | null;
+    divisionId?: string | null;
+    unitId?: string | null;
+    positionId?: string | null;
   };
   app: {
     slug: string;
