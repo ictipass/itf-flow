@@ -23,7 +23,7 @@ export default async function DashboardPage() {
     <>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: 20, marginBottom: 24 }}>
         <div><span className="eyebrow">Command centre</span><h1 style={{ marginBottom: 5 }}>Good day, {user.name.split(" ")[0]}</h1><p className="muted">Correspondence requiring your attention.</p></div>
-        <Link className="btn" href="/correspondence/new">Register correspondence</Link>
+        <Link className="btn" href="/correspondence/new">Raise correspondence</Link>
       </div>
       <section className="grid stats">
         <div className="card stat"><span className="muted">New inbox</span><strong>{open}</strong></div>

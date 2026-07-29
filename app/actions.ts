@@ -21,7 +21,7 @@ import {
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { createReferenceNumber } from "@/lib/reference";
-import { canMinute, canRegister } from "@/lib/permissions";
+import { canMinute, canOriginate, canRegister, getAdjacentRoles } from "@/lib/permissions";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 
 const correspondenceSchema = z.object({
@@ -149,7 +149,7 @@ export async function externalSubmitAction(formData: FormData) {
 
 export async function registerCorrespondenceAction(formData: FormData) {
   const user = await requireUser();
-  if (!canRegister(user.role)) throw new Error("You cannot register correspondence.");
+  if (!canOriginate(user.role)) throw new Error("You cannot raise correspondence.");
   const parsed = correspondenceSchema.parse({
     type: formData.get("type"),
     classification: formData.get("classification"),
@@ -161,8 +161,33 @@ export async function registerCorrespondenceAction(formData: FormData) {
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,
   });
-  const dg = await db.user.findFirst({ where: { role: UserRole.DG, isActive: true } });
-  if (!dg) throw new Error("The DG demo account has not been configured.");
+  const isSecretariatIntake =
+    canRegister(user.role) && parsed.type === CorrespondenceType.INCOMING_LETTER;
+  const requestedRecipientIds = formData.getAll("recipientIds").map(String).filter(Boolean);
+  const recipients = isSecretariatIntake
+    ? await db.user.findMany({ where: { role: UserRole.DG, isActive: true }, take: 1 })
+    : await db.user.findMany({
+        where: { id: { in: requestedRecipientIds }, isActive: true },
+        orderBy: { hierarchyLevel: "desc" },
+      });
+
+  if (
+    !recipients.length ||
+    (!isSecretariatIntake && recipients.length !== new Set(requestedRecipientIds).size)
+  ) {
+    throw new Error("Select at least one valid recipient.");
+  }
+
+  const allowedRoles = getAdjacentRoles(user.role);
+  if (
+    !isSecretariatIntake &&
+    user.role !== UserRole.SYSTEM_ADMIN &&
+    recipients.some((recipient) => !allowedRoles.includes(recipient.role))
+  ) {
+    throw new Error("New correspondence must follow the formal communication hierarchy.");
+  }
+
+  const instruction = String(formData.get("instruction") ?? "").trim();
   const context = await requestContext();
   const record = await db.$transaction(async (tx) => {
     const created = await tx.correspondence.create({
@@ -171,12 +196,21 @@ export async function registerCorrespondenceAction(formData: FormData) {
         dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
         referenceNumber: await nextReference(tx),
         createdById: user.id,
-        status: CorrespondenceStatus.WITH_DG,
-        currentOwnerId: dg.id,
+        status:
+          recipients[0].role === UserRole.DG
+            ? CorrespondenceStatus.WITH_DG
+            : CorrespondenceStatus.ASSIGNED,
+        currentOwnerId: recipients[0].id,
       },
     });
-    await tx.workItem.create({
-      data: { correspondenceId: created.id, assigneeId: dg.id, kind: RecipientKind.ACTION },
+    await tx.workItem.createMany({
+      data: recipients.map((recipient, index) => ({
+        correspondenceId: created.id,
+        assigneeId: recipient.id,
+        kind: index === 0 ? RecipientKind.ACTION : RecipientKind.COPY,
+        instruction: instruction || "For attention and necessary action.",
+        dueAt: created.dueAt,
+      })),
     });
     await tx.correspondenceEvent.create({
       data: {
@@ -184,10 +218,11 @@ export async function registerCorrespondenceAction(formData: FormData) {
         actorId: user.id,
         actorType: ActorType.STAFF,
         type: EventType.REGISTERED,
-        fromStatus: CorrespondenceStatus.SUBMITTED,
-        toStatus: CorrespondenceStatus.WITH_DG,
-        minute: "Registered by the DG Secretariat and submitted to the DG.",
-        metadata: { recipients: [dg.id] },
+        toStatus: created.status,
+        minute: isSecretariatIntake
+          ? "Registered by the DG Secretariat and submitted to the DG."
+          : instruction || "Raised internally and routed through the formal hierarchy.",
+        metadata: { recipientIds: recipients.map((recipient) => recipient.id) },
         ...context,
       },
     });
@@ -235,14 +270,6 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
   revalidatePath(`/correspondence/${correspondenceId}`);
 }
 
-const adjacentRoles: Partial<Record<UserRole, UserRole[]>> = {
-  [UserRole.OFFICER]: [UserRole.UNIT_HEAD],
-  [UserRole.UNIT_HEAD]: [UserRole.OFFICER, UserRole.DIVISION_HEAD],
-  [UserRole.DIVISION_HEAD]: [UserRole.UNIT_HEAD, UserRole.DIRECTOR],
-  [UserRole.DIRECTOR]: [UserRole.DIVISION_HEAD, UserRole.DG],
-  [UserRole.DG]: [UserRole.DIRECTOR],
-};
-
 export async function routeCorrespondenceAction(formData: FormData) {
   const user = await requireUser();
   if (!canMinute(user.role)) throw new Error("You cannot minute or route correspondence.");
@@ -257,7 +284,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
     db.user.findMany({ where: { id: { in: recipientIds }, isActive: true } }),
   ]);
   if (!record || recipients.length !== new Set(recipientIds).size) throw new Error("Invalid routing request.");
-  const permittedRoles = adjacentRoles[user.role] ?? [];
+  const permittedRoles = getAdjacentRoles(user.role);
   if (user.role !== UserRole.SYSTEM_ADMIN && recipients.some((recipient) => !permittedRoles.includes(recipient.role))) {
     throw new Error("Routing must follow the formal communication hierarchy.");
   }
