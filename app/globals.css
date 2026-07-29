@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #14251d;
+  --green: #006b3c;
+  --green-dark: #004a2a;
+  --gold: #d4a017;
+  --paper: #f7f5ef;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; }
+.shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
+.sidebar { background: var(--green-dark); color: white; padding: 28px 20px; display: flex; flex-direction: column; }
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
+.brand-mark { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; background: var(--gold); color: var(--green-dark); font-weight: 900; }
+.nav { display: grid; gap: 7px; }
+.nav a { padding: 11px 12px; border-radius: 10px; color: #e8f1ec; }
+.nav a:hover { background: rgba(255,255,255,.1); }
+.main { min-width: 0; }
+.topbar { height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; background: white; border-bottom: 1px solid #e4e1d8; }
+.content { padding: 30px 32px 56px; max-width: 1400px; margin: auto; }
+.grid { display: grid; gap: 18px; }
+.stats { grid-template-columns: repeat(4, 1fr); }
+.card { background: white; border: 1px solid #e2ded2; border-radius: 16px; padding: 22px; box-shadow: 0 8px 24px rgba(20,37,29,.04); }
+.stat strong { font-size: 2rem; display: block; margin-top: 8px; }
+.muted { color: #66736c; }
+.eyebrow { color: var(--green); text-transform: uppercase; letter-spacing: .12em; font-weight: 700; font-size: .73rem; }
+.btn { appearance: none; border: 0; border-radius: 10px; padding: 11px 16px; background: var(--green); color: white; cursor: pointer; font-weight: 700; display: inline-flex; justify-content: center; align-items: center; }
+.btn:hover { background: var(--green-dark); }
+.btn.secondary { background: #eef3ef; color: var(--green-dark); }
+.field { display: grid; gap: 7px; }
+.field label { font-size: .83rem; font-weight: 700; }
+.field input, .field select, .field textarea { width: 100%; border: 1px solid #cfcbbf; border-radius: 9px; padding: 11px 12px; background: white; }
+.field textarea { min-height: 110px; resize: vertical; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.span-2 { grid-column: span 2; }
+.table { width: 100%; border-collapse: collapse; }
+.table th, .table td { padding: 13px 10px; text-align: left; border-bottom: 1px solid #ece9e0; font-size: .9rem; }
+.table th { color: #65716b; font-size: .75rem; text-transform: uppercase; letter-spacing: .05em; }
+.badge { display: inline-flex; padding: 4px 8px; background: #eaf3ed; color: #075d38; border-radius: 999px; font-size: .72rem; font-weight: 800; }
+.badge.urgent { background: #fff0dd; color: #9b4e00; }
+.badge.secret { background: #fce8e8; color: #9b1c1c; }
+.hero { min-height: 100vh; display: grid; grid-template-columns: 1.15fr .85fr; }
+.hero-copy { padding: 8vw; display: flex; flex-direction: column; justify-content: center; background: var(--green-dark); color: white; }
+.hero-copy h1 { font-size: clamp(3rem, 6vw, 6.5rem); line-height: .9; margin: 18px 0; letter-spacing: -.06em; }
+.hero-copy p { max-width: 620px; color: #d8e7de; font-size: 1.1rem; line-height: 1.7; }
+.hero-panel { padding: 7vw; display: flex; flex-direction: column; justify-content: center; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+.timeline { display: grid; gap: 0; }
+.event { border-left: 2px solid #c8d8ce; padding: 0 0 24px 22px; position: relative; }
+.event::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--green); position: absolute; left: -6px; top: 5px; }
+.notice { padding: 13px 15px; border-radius: 10px; background: #fff7db; border: 1px solid #ead692; }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .stats, .form-grid, .hero { grid-template-columns: 1fr; }
+  .span-2 { grid-column: auto; }
+  .content { padding: 22px 16px; }
+  .hero-copy, .hero-panel { padding: 48px 24px; }
+}

@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  DG_SECRETARY
+  DG
+  DIRECTOR
+  DIVISION_HEAD
+  UNIT_HEAD
+  OFFICER
+  RECORDS_ADMIN
+  SYSTEM_ADMIN
+}
+
+enum CorrespondenceType {
+  INCOMING_LETTER
+  OUTGOING_LETTER
+  INTERNAL_MEMO
+}
+
+enum Classification {
+  PUBLIC
+  INTERNAL
+  CONFIDENTIAL
+  SECRET
+}
+
+enum Priority {
+  ROUTINE
+  URGENT
+  IMMEDIATE
+}
+
+enum CorrespondenceStatus {
+  SUBMITTED
+  REGISTERED
+  WITH_DG
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+  RETURNED
+}
+
+enum RecipientKind {
+  ACTION
+  COPY
+}
+
+enum WorkItemStatus {
+  OPEN
+  ACKNOWLEDGED
+  COMPLETED
+  CANCELLED
+}
+
+enum EventType {
+  SUBMITTED
+  REGISTERED
+  ACKNOWLEDGED
+  MINUTED
+  FORWARDED
+  RETURNED
+  RESOLVED
+  CLOSED
+  COMMENTED
+}
+
+enum ActorType {
+  STAFF
+  EXTERNAL
+  SYSTEM
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  workspaceUserId     String?  @unique
+  email               String   @unique
+  name                String
+  passwordHash        String?
+  role                UserRole
+  office              String
+  department          String?
+  division            String?
+  position            String?
+  hierarchyLevel      Int
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  createdCorrespondence Correspondence[] @relation("CorrespondenceCreator")
+  workItems           WorkItem[]
+  events              CorrespondenceEvent[]
+  launchRedemptions   LaunchTokenRedemption[]
+
+  @@index([role, isActive])
+}
+
+model ExternalOrganization {
+  id           String   @id @default(cuid())
+  name         String
+  contactName  String
+  email        String
+  phone        String?
+  address      String?
+  createdAt    DateTime @default(now())
+  submissions  Correspondence[]
+
+  @@index([email])
+}
+
+model Correspondence {
+  id                     String               @id @default(cuid())
+  referenceNumber        String               @unique
+  type                   CorrespondenceType
+  classification         Classification
+  priority               Priority             @default(ROUTINE)
+  status                 CorrespondenceStatus @default(SUBMITTED)
+  subject                String
+  summary                String
+  body                   String?
+  senderName             String
+  senderReference        String?
+  dateOnDocument         DateTime?
+  receivedAt             DateTime             @default(now())
+  dueAt                  DateTime?
+  currentOwnerId         String?
+  createdById            String?
+  externalOrganizationId String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  createdBy            User?                 @relation("CorrespondenceCreator", fields: [createdById], references: [id])
+  externalOrganization ExternalOrganization? @relation(fields: [externalOrganizationId], references: [id])
+  attachments          Attachment[]
+  workItems            WorkItem[]
+  events               CorrespondenceEvent[]
+
+  @@index([status, updatedAt])
+  @@index([currentOwnerId, status])
+  @@index([classification])
+}
+
+model Attachment {
+  id               String         @id @default(cuid())
+  correspondenceId String
+  originalName     String
+  mimeType         String
+  sizeBytes        Int
+  storageKey       String
+  sha256           String
+  createdAt        DateTime       @default(now())
+  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+
+  @@index([correspondenceId])
+}
+
+model WorkItem {
+  id               String         @id @default(cuid())
+  correspondenceId String
+  assigneeId       String
+  kind             RecipientKind
+  status           WorkItemStatus @default(OPEN)
+  instruction      String?
+  dueAt            DateTime?
+  assignedAt       DateTime       @default(now())
+  acknowledgedAt   DateTime?
+  completedAt      DateTime?
+  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  assignee         User           @relation(fields: [assigneeId], references: [id])
+
+  @@index([assigneeId, status])
+  @@index([correspondenceId, status])
+}
+
+model CorrespondenceEvent {
+  id               String         @id @default(cuid())
+  correspondenceId String
+  actorId          String?
+  actorType        ActorType
+  type             EventType
+  fromStatus       CorrespondenceStatus?
+  toStatus         CorrespondenceStatus?
+  minute           String?
+  metadata         Json?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime       @default(now())
+  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  actor            User?          @relation(fields: [actorId], references: [id])
+
+  @@index([correspondenceId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model LaunchTokenRedemption {
+  id              String   @id @default(cuid())
+  tokenId         String   @unique
+  workspaceUserId String
+  userId          String
+  expiresAt       DateTime
+  redeemedAt      DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@index([workspaceUserId])
+  @@index([expiresAt])
+}
