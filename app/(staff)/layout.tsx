@@ -17,6 +17,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
           <Link href="/inbox">My inbox</Link>
           <Link href="/correspondence">All correspondence</Link>
           <Link href="/correspondence/new">Raise correspondence</Link>
+          <Link href="/guide">How it works</Link>
         </nav>
         <div style={{ marginTop: "auto" }}>
           <small style={{ opacity: .7 }}>Signed in as</small>

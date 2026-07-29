@@ -27,11 +27,13 @@ export async function GET(request: Request) {
         where: { email: payload.user.email!.toLowerCase() },
         update: {
           workspaceUserId: payload.user.id,
+          staffNumber: payload.user.staffNumber ?? undefined,
           name: payload.user.name ?? payload.user.email!,
           isActive: true,
         },
         create: {
           workspaceUserId: payload.user.id,
+          staffNumber: payload.user.staffNumber ?? null,
           email: payload.user.email!.toLowerCase(),
           name: payload.user.name ?? payload.user.email!,
           role: roleFromWorkspace(payload.app.role),

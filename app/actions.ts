@@ -163,17 +163,31 @@ export async function registerCorrespondenceAction(formData: FormData) {
   });
   const isSecretariatIntake =
     canRegister(user.role) && parsed.type === CorrespondenceType.INCOMING_LETTER;
-  const requestedRecipientIds = formData.getAll("recipientIds").map(String).filter(Boolean);
-  const recipients = isSecretariatIntake
+  const actionRecipientIds = formData
+    .getAll("actionRecipientIds")
+    .map(String)
+    .filter(Boolean);
+  const copyRecipientIds = formData
+    .getAll("copyRecipientIds")
+    .map(String)
+    .filter(Boolean)
+    .filter((id) => !actionRecipientIds.includes(id));
+  const actionRecipients = isSecretariatIntake
     ? await db.user.findMany({ where: { role: UserRole.DG, isActive: true }, take: 1 })
     : await db.user.findMany({
-        where: { id: { in: requestedRecipientIds }, isActive: true },
+        where: { id: { in: actionRecipientIds }, isActive: true },
         orderBy: { hierarchyLevel: "desc" },
       });
+  const copyRecipients = await db.user.findMany({
+    where: { id: { in: copyRecipientIds }, isActive: true },
+    orderBy: { name: "asc" },
+  });
 
   if (
-    !recipients.length ||
-    (!isSecretariatIntake && recipients.length !== new Set(requestedRecipientIds).size)
+    !actionRecipients.length ||
+    (!isSecretariatIntake &&
+      actionRecipients.length !== new Set(actionRecipientIds).size) ||
+    copyRecipients.length !== new Set(copyRecipientIds).size
   ) {
     throw new Error("Select at least one valid recipient.");
   }
@@ -182,7 +196,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
   if (
     !isSecretariatIntake &&
     user.role !== UserRole.SYSTEM_ADMIN &&
-    recipients.some((recipient) => !allowedRoles.includes(recipient.role))
+    actionRecipients.some((recipient) => !allowedRoles.includes(recipient.role))
   ) {
     throw new Error("New correspondence must follow the formal communication hierarchy.");
   }
@@ -197,20 +211,29 @@ export async function registerCorrespondenceAction(formData: FormData) {
         referenceNumber: await nextReference(tx),
         createdById: user.id,
         status:
-          recipients[0].role === UserRole.DG
+          actionRecipients[0].role === UserRole.DG
             ? CorrespondenceStatus.WITH_DG
             : CorrespondenceStatus.ASSIGNED,
-        currentOwnerId: recipients[0].id,
+        currentOwnerId: actionRecipients[0].id,
       },
     });
     await tx.workItem.createMany({
-      data: recipients.map((recipient, index) => ({
-        correspondenceId: created.id,
-        assigneeId: recipient.id,
-        kind: index === 0 ? RecipientKind.ACTION : RecipientKind.COPY,
-        instruction: instruction || "For attention and necessary action.",
-        dueAt: created.dueAt,
-      })),
+      data: [
+        ...actionRecipients.map((recipient) => ({
+          correspondenceId: created.id,
+          assigneeId: recipient.id,
+          kind: RecipientKind.ACTION,
+          instruction: instruction || "For attention and necessary action.",
+          dueAt: created.dueAt,
+        })),
+        ...copyRecipients.map((recipient) => ({
+          correspondenceId: created.id,
+          assigneeId: recipient.id,
+          kind: RecipientKind.COPY,
+          instruction: "For your information.",
+          dueAt: created.dueAt,
+        })),
+      ],
     });
     await tx.correspondenceEvent.create({
       data: {
@@ -222,7 +245,10 @@ export async function registerCorrespondenceAction(formData: FormData) {
         minute: isSecretariatIntake
           ? "Registered by the DG Secretariat and submitted to the DG."
           : instruction || "Raised internally and routed through the formal hierarchy.",
-        metadata: { recipientIds: recipients.map((recipient) => recipient.id) },
+        metadata: {
+          actionRecipientIds: actionRecipients.map((recipient) => recipient.id),
+          copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
+        },
         ...context,
       },
     });
@@ -275,17 +301,44 @@ export async function routeCorrespondenceAction(formData: FormData) {
   if (!canMinute(user.role)) throw new Error("You cannot minute or route correspondence.");
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
-  const recipientIds = formData.getAll("recipientIds").map(String).filter(Boolean);
-  if (!correspondenceId || minute.length < 3 || recipientIds.length === 0) {
-    throw new Error("A minute and at least one recipient are required.");
+  const actionRecipientIds = formData
+    .getAll("actionRecipientIds")
+    .map(String)
+    .filter(Boolean);
+  const copyRecipientIds = formData
+    .getAll("copyRecipientIds")
+    .map(String)
+    .filter(Boolean)
+    .filter((id) => !actionRecipientIds.includes(id));
+  if (!correspondenceId || minute.length < 3 || actionRecipientIds.length === 0) {
+    throw new Error("A minute and at least one action recipient are required.");
   }
-  const [record, recipients] = await Promise.all([
+  const [record, currentActionItem, actionRecipients, copyRecipients] = await Promise.all([
     db.correspondence.findUnique({ where: { id: correspondenceId } }),
-    db.user.findMany({ where: { id: { in: recipientIds }, isActive: true } }),
+    db.workItem.findFirst({
+      where: {
+        correspondenceId,
+        assigneeId: user.id,
+        kind: RecipientKind.ACTION,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+    }),
+    db.user.findMany({ where: { id: { in: actionRecipientIds }, isActive: true } }),
+    db.user.findMany({ where: { id: { in: copyRecipientIds }, isActive: true } }),
   ]);
-  if (!record || recipients.length !== new Set(recipientIds).size) throw new Error("Invalid routing request.");
+  if (
+    !record ||
+    !currentActionItem ||
+    actionRecipients.length !== new Set(actionRecipientIds).size ||
+    copyRecipients.length !== new Set(copyRecipientIds).size
+  ) {
+    throw new Error("Invalid routing request.");
+  }
   const permittedRoles = getAdjacentRoles(user.role);
-  if (user.role !== UserRole.SYSTEM_ADMIN && recipients.some((recipient) => !permittedRoles.includes(recipient.role))) {
+  if (
+    user.role !== UserRole.SYSTEM_ADMIN &&
+    actionRecipients.some((recipient) => !permittedRoles.includes(recipient.role))
+  ) {
     throw new Error("Routing must follow the formal communication hierarchy.");
   }
   const context = await requestContext();
@@ -295,17 +348,29 @@ export async function routeCorrespondenceAction(formData: FormData) {
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
     });
     await tx.workItem.createMany({
-      data: recipients.map((recipient, index) => ({
-        correspondenceId,
-        assigneeId: recipient.id,
-        kind: index === 0 ? RecipientKind.ACTION : RecipientKind.COPY,
-        instruction: minute,
-        dueAt: record.dueAt,
-      })),
+      data: [
+        ...actionRecipients.map((recipient) => ({
+          correspondenceId,
+          assigneeId: recipient.id,
+          kind: RecipientKind.ACTION,
+          instruction: minute,
+          dueAt: record.dueAt,
+        })),
+        ...copyRecipients.map((recipient) => ({
+          correspondenceId,
+          assigneeId: recipient.id,
+          kind: RecipientKind.COPY,
+          instruction: "For your information.",
+          dueAt: record.dueAt,
+        })),
+      ],
     });
     await tx.correspondence.update({
       where: { id: correspondenceId },
-      data: { status: CorrespondenceStatus.ASSIGNED, currentOwnerId: recipients[0].id },
+      data: {
+        status: CorrespondenceStatus.ASSIGNED,
+        currentOwnerId: actionRecipients[0].id,
+      },
     });
     await tx.correspondenceEvent.create({
       data: {
@@ -316,7 +381,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
         fromStatus: record.status,
         toStatus: CorrespondenceStatus.ASSIGNED,
         minute,
-        metadata: { recipientIds },
+        metadata: { actionRecipientIds, copyRecipientIds },
         ...context,
       },
     });
@@ -350,8 +415,20 @@ export async function resolveAction(formData: FormData) {
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
   if (minute.length < 3) throw new Error("A resolution note is required.");
-  const record = await db.correspondence.findUnique({ where: { id: correspondenceId } });
-  if (!record) throw new Error("Correspondence not found.");
+  const [record, currentActionItem] = await Promise.all([
+    db.correspondence.findUnique({ where: { id: correspondenceId } }),
+    db.workItem.findFirst({
+      where: {
+        correspondenceId,
+        assigneeId: user.id,
+        kind: RecipientKind.ACTION,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+    }),
+  ]);
+  if (!record || !currentActionItem) {
+    throw new Error("Only a current action recipient can resolve correspondence.");
+  }
   await db.$transaction([
     db.workItem.updateMany({
       where: { correspondenceId, assigneeId: user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },

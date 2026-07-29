@@ -81,6 +81,7 @@ enum ActorType {
 model User {
   id                  String   @id @default(cuid())
   workspaceUserId     String?  @unique
+  staffNumber         String?  @unique
   email               String   @unique
   name                String
   passwordHash        String?

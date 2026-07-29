@@ -20,11 +20,11 @@ export default async function LoginPage({
         <form action={loginAction} className="grid" style={{ marginTop: 20 }}>
           <div className="field">
             <label htmlFor="email">ITF email</label>
-            <input id="email" name="email" type="email" required />
+            <input id="email" name="email" type="email" placeholder="name@itf.gov.ng" required />
           </div>
           <div className="field">
             <label htmlFor="password">Password</label>
-            <input id="password" name="password" type="password" required />
+            <input id="password" name="password" type="password" placeholder="Enter your password" required />
           </div>
           <button className="btn" type="submit">Sign in</button>
         </form>

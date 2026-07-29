@@ -5,6 +5,7 @@ import {
   resolveAction,
   routeCorrespondenceAction,
 } from "@/app/actions";
+import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondenceStatus, UserRole, WorkItemStatus } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { canMinute, canRegister } from "@/lib/permissions";
@@ -38,11 +39,14 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   if (!broadAccess && !participant) notFound();
   const activeStatuses: WorkItemStatus[] = [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED];
   const activeItem = record.workItems.find((item) => item.assigneeId === user.id && activeStatuses.includes(item.status));
+  const activeActionItem = record.workItems.find(
+    (item) =>
+      item.assigneeId === user.id &&
+      item.kind === "ACTION" &&
+      activeStatuses.includes(item.status),
+  );
   const targetRoles = adjacentRoles[user.role] ?? [];
-  const recipients = targetRoles.length
-    ? await db.user.findMany({ where: { role: { in: targetRoles }, isActive: true }, orderBy: [{ hierarchyLevel: "desc" }, { name: "asc" }] })
-    : [];
-  const canRoute = Boolean(activeItem && canMinute(user.role) && recipients.length);
+  const canRoute = Boolean(activeActionItem && canMinute(user.role) && targetRoles.length);
   return (
     <>
       <span className="eyebrow">{record.referenceNumber}</span>
@@ -68,15 +72,17 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <p className="muted">Formal adjacent level: {targetRoles.map(label).join(" or ")}</p>
               <form action={routeCorrespondenceAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
-                <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="Please review and take the necessary action…" /></div>
-                <div className="field"><label>Recipients (first selected is accountable owner)</label>
-                  <div className="grid" style={{ gap: 8 }}>{recipients.map((recipient) => <label key={recipient.id} style={{ display: "flex", alignItems: "center", gap: 9 }}><input type="checkbox" name="recipientIds" value={recipient.id} /> <span>{recipient.name} <small className="muted">— {recipient.position ?? label(recipient.role)}</small></span></label>)}</div>
+                <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
+                <div className="field">
+                  <RecipientSelector
+                    actionHint={`Select staff at the formal adjacent ${targetRoles.map(label).join(" or ")} level.`}
+                  />
                 </div>
                 <button className="btn" type="submit">Record minute and route</button>
               </form>
             </section>
           ) : null}
-          {activeItem ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
+          {activeActionItem ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
         </div>
         <aside className="card">
           <h2>Movement & minutes</h2>

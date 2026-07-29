@@ -1,5 +1,5 @@
 import { registerCorrespondenceAction } from "@/app/actions";
-import { db } from "@/lib/db";
+import { RecipientSelector } from "@/components/recipient-selector";
 import { canOriginate, canRegister, getAdjacentRoles } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
@@ -13,16 +13,6 @@ export default async function NewCorrespondencePage() {
 
   const isRegistrar = canRegister(user.role);
   const adjacentRoles = getAdjacentRoles(user.role);
-  const recipients = adjacentRoles.length
-    ? await db.user.findMany({
-        where: {
-          role: { in: adjacentRoles },
-          isActive: true,
-          id: { not: user.id },
-        },
-        orderBy: [{ hierarchyLevel: "desc" }, { name: "asc" }],
-      })
-    : [];
 
   return (
     <>
@@ -51,22 +41,32 @@ export default async function NewCorrespondencePage() {
 
         <div className="field">
           <label>Sender *</label>
-          <input name="senderName" defaultValue={user.name} required />
+          <input
+            name="senderName"
+            defaultValue={user.name}
+            placeholder="Name of the originating officer or external sender"
+            required
+          />
         </div>
 
         <div className="field span-2">
           <label>Subject *</label>
-          <input name="subject" required minLength={5} />
+          <input
+            name="subject"
+            placeholder="Briefly state what the correspondence is about"
+            required
+            minLength={5}
+          />
         </div>
 
         <div className="field">
           <label>Sender reference</label>
-          <input name="senderReference" />
+          <input name="senderReference" placeholder="e.g. ITF/ICT/PASS/2026/014" />
         </div>
 
         <div className="field">
           <label>Due date</label>
-          <input name="dueAt" type="date" />
+          <input name="dueAt" type="date" aria-label="Required response or action date" />
         </div>
 
         <div className="field">
@@ -90,35 +90,32 @@ export default async function NewCorrespondencePage() {
 
         <div className="field span-2">
           <label>Summary *</label>
-          <textarea name="summary" required minLength={10} />
+          <textarea
+            name="summary"
+            placeholder="Summarize the request, decision required, and important context"
+            required
+            minLength={10}
+          />
         </div>
 
         <div className="field span-2">
           <label>Compose memo / transcribe letter</label>
-          <textarea name="body" style={{ minHeight: 180 }} />
+          <textarea
+            name="body"
+            placeholder="Compose the full memo or transcribe the main content of the letter"
+            style={{ minHeight: 180 }}
+          />
         </div>
 
-        {recipients.length ? (
-          <div className="field span-2">
-            <label>Recipients (first selected becomes the accountable owner)</label>
-            <div className="grid" style={{ gap: 8 }}>
-              {recipients.map((recipient) => (
-                <label
-                  key={recipient.id}
-                  style={{ display: "flex", alignItems: "center", gap: 9 }}
-                >
-                  <input type="checkbox" name="recipientIds" value={recipient.id} />
-                  <span>
-                    {recipient.name}{" "}
-                    <small className="muted">
-                      — {recipient.position ?? label(recipient.role)}
-                    </small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <div className="field span-2">
+          <RecipientSelector
+            actionHint={
+              isRegistrar
+                ? "Incoming letters go to the DG automatically. For internal correspondence, choose a formal adjacent-level recipient."
+                : "Select one or more adjacent-level staff responsible for taking action."
+            }
+          />
+        </div>
 
         <div className="field span-2">
           <label>Routing minute / instruction</label>
