@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { loginAction } from "@/app/actions";
 
 export default async function LoginPage({
@@ -10,7 +11,8 @@ export default async function LoginPage({
   return (
     <main className="hero">
       <section className="hero-copy">
-        <span className="eyebrow" style={{ color: "#e1bd55" }}>ITF Workspace child application</span>
+        <Image className="hero-logo" src="/itf-logo.png" alt="Industrial Training Fund logo" width={112} height={112} priority />
+        <span className="eyebrow" style={{ color: "white" }}>ITF Workspace child application</span>
         <h1 style={{ fontSize: "4.5rem" }}>Staff<br />access</h1>
         <p>Use the local demo accounts below or launch ITF Flow from the Workspace.</p>
       </section>

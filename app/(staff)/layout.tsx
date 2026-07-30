@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { logoutAction } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
@@ -10,7 +11,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">IF</div>
+          <Image className="brand-mark" src="/itf-logo.png" alt="Industrial Training Fund logo" width={48} height={48} priority />
           <div><strong>ITF Flow</strong><br /><small style={{ opacity: .7 }}>Correspondence</small></div>
         </div>
         <nav className="nav">

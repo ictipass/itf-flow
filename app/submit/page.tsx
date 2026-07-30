@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { externalSubmitAction } from "@/app/actions";
 
 export default async function SubmitPage({
@@ -9,7 +10,10 @@ export default async function SubmitPage({
   const { error } = await searchParams;
   return (
     <main className="content" style={{ maxWidth: 900 }}>
-      <Link href="/" className="eyebrow">← ITF Flow</Link>
+      <Link href="/" className="public-brand">
+        <Image src="/itf-logo.png" alt="Industrial Training Fund logo" width={40} height={40} priority />
+        <span>ITF Flow</span>
+      </Link>
       <div style={{ margin: "28px 0" }}>
         <h1 style={{ fontSize: "2.5rem", marginBottom: 8 }}>Submit correspondence to ITF</h1>
         <p className="muted">For organizations and external stakeholders. Required fields are marked.</p>

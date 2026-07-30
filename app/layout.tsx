@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ITF Flow",
   description: "ITF Correspondence and Workflow Management System",
+  icons: {
+    icon: "/itf-logo.ico",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
