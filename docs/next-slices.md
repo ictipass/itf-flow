@@ -19,9 +19,11 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Add outgoing dispatch records, delivery channels and acknowledgement of delivery.
 - Add document version history and compare revisions.
 
-## Slice 4 — Secretariat operations
+## Slice 4 — Secretariat operations — In progress
 
-- Shared intake queue for the three DG Secretaries with claim/assign controls.
+- Shared intake queue for the three DG Secretaries with atomic claim/release controls. Implemented.
+- Return-for-correction and auditable resubmission for staff-originated correspondence. Implemented.
+- Manual IMAP mailbox synchronization into the shared intake queue. Implemented.
 - Duplicate detection, scanning desk metadata, physical-file location and barcode/QR labels.
 - Reassignment between secretariat locations with reason and audit trail.
 - Service-level timers for unregistered and unacknowledged items.

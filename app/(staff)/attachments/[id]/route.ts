@@ -1,8 +1,7 @@
-import { readFile } from "fs/promises";
-import path from "path";
 import { NextResponse } from "next/server";
-import { UserRole } from "@/lib/generated/prisma/client";
+import { MalwareScanStatus, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
+import { readStoredDocument } from "@/lib/document-storage";
 import { getCurrentUser } from "@/lib/session";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,10 +18,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!broadAccess && attachment.correspondence.createdById !== user.id && !attachment.correspondence.workItems.length) {
     return new NextResponse("Forbidden", { status: 403 });
   }
-  const absolutePath = path.resolve(process.cwd(), "storage", "uploads", attachment.storageKey);
-  const storageRoot = path.resolve(process.cwd(), "storage", "uploads");
-  if (!absolutePath.startsWith(`${storageRoot}${path.sep}`)) return new NextResponse("Invalid file", { status: 400 });
-  const bytes = await readFile(absolutePath);
+  if (
+    attachment.malwareScanStatus === MalwareScanStatus.INFECTED ||
+    attachment.malwareScanStatus === MalwareScanStatus.QUARANTINED
+  ) {
+    return new NextResponse("Attachment is quarantined", { status: 423 });
+  }
+  if (attachment.storageProvider !== "LOCAL") {
+    return new NextResponse("Document provider is not available", { status: 503 });
+  }
+  const bytes = await readStoredDocument(attachment.storageKey);
   return new NextResponse(bytes, {
     headers: {
       "Content-Type": attachment.mimeType,

@@ -1,8 +1,5 @@
 "use server";
 
-import { createHash } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -14,16 +11,19 @@ import {
   CorrespondenceStatus,
   CorrespondenceType,
   EventType,
+  IntakeSource,
   Priority,
   RecipientKind,
   UserRole,
   WorkItemStatus,
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
+import { storeDocument } from "@/lib/document-storage";
 import { createReferenceNumber } from "@/lib/reference";
 import { canMinute, canOriginate, canRegister } from "@/lib/permissions";
 import { actionRecipientsFollowReportingLine } from "@/lib/reporting-lines";
 import { createSession, destroySession, requireUser } from "@/lib/session";
+import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -47,24 +47,15 @@ async function requestContext() {
 
 async function persistAttachment(file: File, correspondenceId: string) {
   if (!file.size) return null;
-  const allowed = new Set(["application/pdf", "image/jpeg", "image/png"]);
-  if (!allowed.has(file.type) || file.size > 10 * 1024 * 1024) {
-    throw new Error("Attachments must be PDF, JPEG, or PNG files no larger than 10 MB.");
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("Portal attachments cannot exceed 10 MB.");
   }
-  const bytes = Buffer.from(await file.arrayBuffer());
-  const sha256 = createHash("sha256").update(bytes).digest("hex");
-  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-  const key = `${correspondenceId}/${crypto.randomUUID()}-${safeName}`;
-  const base = path.join(process.cwd(), "storage", "uploads", correspondenceId);
-  await mkdir(base, { recursive: true });
-  await writeFile(path.join(process.cwd(), "storage", "uploads", key), bytes, { flag: "wx" });
-  return {
+  return storeDocument({
+    correspondenceId,
     originalName: file.name,
     mimeType: file.type,
-    sizeBytes: file.size,
-    storageKey: key,
-    sha256,
-  };
+    bytes: Buffer.from(await file.arrayBuffer()),
+  });
 }
 
 async function nextReference(tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) {
@@ -89,6 +80,22 @@ export async function loginAction(formData: FormData) {
 export async function logoutAction() {
   await destroySession();
   redirect("/");
+}
+
+export async function syncMailboxAction() {
+  const user = await requireUser();
+  if (!canRegister(user.role)) throw new Error("You cannot synchronize the Secretariat mailbox.");
+  const result = await syncMailbox();
+  redirect(`/intake?mail=success&imported=${result.importedCount}&skipped=${result.skippedCount}`);
+}
+
+export async function testMailConnectionAction() {
+  const user = await requireUser();
+  if (user.role !== UserRole.SYSTEM_ADMIN) {
+    throw new Error("Only a system administrator can test mail-server credentials.");
+  }
+  await verifyMailConnections();
+  redirect("/intake?mail=connected");
 }
 
 export async function externalSubmitAction(formData: FormData) {
@@ -125,6 +132,7 @@ export async function externalSubmitAction(formData: FormData) {
         dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
         referenceNumber: await nextReference(tx),
         externalOrganizationId: organization.id,
+        intakeSource: IntakeSource.PORTAL,
       },
     });
     await tx.correspondenceEvent.create({
@@ -271,7 +279,12 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const dg = await db.user.findFirst({ where: { role: UserRole.DG, isActive: true } });
   const record = await db.correspondence.findUnique({ where: { id: correspondenceId } });
-  if (!record || record.status !== CorrespondenceStatus.SUBMITTED || !dg) {
+  if (
+    !record ||
+    record.status !== CorrespondenceStatus.SUBMITTED ||
+    record.claimedById !== user.id ||
+    !dg
+  ) {
     throw new Error("This submission cannot be registered.");
   }
   await db.$transaction([
@@ -296,6 +309,186 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
       },
     }),
   ]);
+  revalidatePath(`/correspondence/${correspondenceId}`);
+}
+
+export async function claimIntakeAction(formData: FormData) {
+  const user = await requireUser();
+  if (!canRegister(user.role)) throw new Error("You cannot claim Secretariat intake.");
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const claimedAt = new Date();
+  const result = await db.correspondence.updateMany({
+    where: {
+      id: correspondenceId,
+      status: CorrespondenceStatus.SUBMITTED,
+      claimedById: null,
+    },
+    data: { claimedById: user.id, claimedAt },
+  });
+  if (result.count !== 1) {
+    throw new Error("This correspondence has already been claimed by another secretary.");
+  }
+  await db.correspondenceEvent.create({
+    data: {
+      correspondenceId,
+      actorId: user.id,
+      actorType: ActorType.STAFF,
+      type: EventType.CLAIMED,
+      minute: `Claimed for Secretariat review by ${user.name}.`,
+      metadata: { claimedById: user.id, office: user.office },
+      ...(await requestContext()),
+    },
+  });
+  revalidatePath("/intake");
+  revalidatePath(`/correspondence/${correspondenceId}`);
+}
+
+export async function releaseIntakeAction(formData: FormData) {
+  const user = await requireUser();
+  if (!canRegister(user.role)) throw new Error("You cannot release Secretariat intake.");
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const result = await db.correspondence.updateMany({
+    where: {
+      id: correspondenceId,
+      status: CorrespondenceStatus.SUBMITTED,
+      claimedById: user.id,
+    },
+    data: { claimedById: null, claimedAt: null },
+  });
+  if (result.count !== 1) throw new Error("Only the secretary handling this item can release it.");
+  await db.correspondenceEvent.create({
+    data: {
+      correspondenceId,
+      actorId: user.id,
+      actorType: ActorType.STAFF,
+      type: EventType.RELEASED,
+      minute: `Released back to the shared Secretariat queue by ${user.name}.`,
+      ...(await requestContext()),
+    },
+  });
+  revalidatePath("/intake");
+  revalidatePath(`/correspondence/${correspondenceId}`);
+}
+
+export async function returnToInitiatorAction(formData: FormData) {
+  const user = await requireUser();
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (reason.length < 5) throw new Error("Give a clear reason for returning the correspondence.");
+  const [record, activeActionItem] = await Promise.all([
+    db.correspondence.findUnique({ where: { id: correspondenceId } }),
+    db.workItem.findFirst({
+      where: {
+        correspondenceId,
+        assigneeId: user.id,
+        kind: RecipientKind.ACTION,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+    }),
+  ]);
+  if (!record?.createdById || !activeActionItem) {
+    throw new Error("Only the current action recipient can return staff-originated correspondence.");
+  }
+  const context = await requestContext();
+  await db.$transaction(async (tx) => {
+    await tx.workItem.updateMany({
+      where: {
+        correspondenceId,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+      data: { status: WorkItemStatus.CANCELLED, completedAt: new Date() },
+    });
+    await tx.workItem.create({
+      data: {
+        correspondenceId,
+        assigneeId: record.createdById!,
+        kind: RecipientKind.ACTION,
+        instruction: reason,
+      },
+    });
+    await tx.correspondence.update({
+      where: { id: correspondenceId },
+      data: { status: CorrespondenceStatus.RETURNED, currentOwnerId: record.createdById },
+    });
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.RETURNED,
+        fromStatus: record.status,
+        toStatus: CorrespondenceStatus.RETURNED,
+        minute: reason,
+        metadata: { returnedToId: record.createdById, returnedById: user.id },
+        ...context,
+      },
+    });
+  });
+  revalidatePath("/inbox");
+  revalidatePath(`/correspondence/${correspondenceId}`);
+}
+
+export async function resubmitReturnedAction(formData: FormData) {
+  const user = await requireUser();
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const note = String(formData.get("note") ?? "").trim();
+  if (note.length < 5) throw new Error("Describe the correction made.");
+  const record = await db.correspondence.findUnique({
+    where: { id: correspondenceId },
+    include: {
+      events: {
+        where: { type: EventType.RETURNED },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+  const returnedById = record?.events[0]?.actorId;
+  if (
+    !record ||
+    record.createdById !== user.id ||
+    record.status !== CorrespondenceStatus.RETURNED ||
+    !returnedById
+  ) {
+    throw new Error("This correspondence cannot be resubmitted.");
+  }
+  const context = await requestContext();
+  await db.$transaction(async (tx) => {
+    await tx.workItem.updateMany({
+      where: {
+        correspondenceId,
+        assigneeId: user.id,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+      data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
+    });
+    await tx.workItem.create({
+      data: {
+        correspondenceId,
+        assigneeId: returnedById,
+        kind: RecipientKind.ACTION,
+        instruction: note,
+      },
+    });
+    await tx.correspondence.update({
+      where: { id: correspondenceId },
+      data: { status: CorrespondenceStatus.ASSIGNED, currentOwnerId: returnedById },
+    });
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.RESUBMITTED,
+        fromStatus: CorrespondenceStatus.RETURNED,
+        toStatus: CorrespondenceStatus.ASSIGNED,
+        minute: note,
+        metadata: { resubmittedToId: returnedById },
+        ...context,
+      },
+    });
+  });
+  revalidatePath("/inbox");
   revalidatePath(`/correspondence/${correspondenceId}`);
 }
 

@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import {
   acceptExternalSubmissionAction,
   acknowledgeAction,
+  claimIntakeAction,
+  releaseIntakeAction,
+  resubmitReturnedAction,
   resolveAction,
+  returnToInitiatorAction,
   routeCorrespondenceAction,
 } from "@/app/actions";
 import { RecipientSelector } from "@/components/recipient-selector";
@@ -19,6 +23,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     where: { id },
     include: {
       externalOrganization: true,
+      claimedBy: true,
+      emailMessage: true,
       attachments: true,
       workItems: { include: { assignee: true }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
@@ -38,6 +44,12 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       activeStatuses.includes(item.status),
   );
   const canRoute = Boolean(activeActionItem && canMinute(user.role));
+  const canHandleIntake =
+    record.status === CorrespondenceStatus.SUBMITTED &&
+    canRegister(user.role) &&
+    record.claimedById === user.id;
+  const canReturnToInitiator = Boolean(activeActionItem && record.createdById && record.createdById !== user.id);
+  const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id;
   return (
     <>
       <span className="eyebrow">{record.referenceNumber}</span>
@@ -45,15 +57,29 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
         <div><h1 style={{ maxWidth: 800 }}>{record.subject}</h1><p className="muted">From {record.senderName} · received {record.receivedAt.toLocaleString("en-NG")}</p></div>
         <div className="actions" style={{ marginTop: 0 }}><span className={`badge ${record.classification === "SECRET" ? "secret" : ""}`}>{label(record.classification)}</span><span className="badge">{label(record.status)}</span></div>
       </div>
+      {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
+      {record.status === CorrespondenceStatus.SUBMITTED ? (
+        <section className="handler-strip">
+          <div>
+            <strong>{record.claimedBy ? `Being handled by ${record.claimedBy.name}` : "Unassigned Secretariat intake"}</strong>
+            <small>{record.claimedBy ? `${record.claimedBy.office} · claimed ${record.claimedAt?.toLocaleString("en-NG")}` : "A secretary must claim this correspondence before registering it."}</small>
+          </div>
+          {!record.claimedById && canRegister(user.role) ? (
+            <form action={claimIntakeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn compact" type="submit">Claim</button></form>
+          ) : record.claimedById === user.id ? (
+            <form action={releaseIntakeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary compact" type="submit">Release</button></form>
+          ) : null}
+        </section>
+      ) : null}
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1.3fr) minmax(320px, .7fr)", marginTop: 22 }}>
         <div className="grid">
           <section className="card">
             <h2>Correspondence</h2>
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div style={{ marginTop: 20 }}><strong>Attachments</strong>{record.attachments.map((file) => <p key={file.id}><a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName}</a> <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB)</small></p>)}</div> : null}
+            {record.attachments.length ? <div style={{ marginTop: 20 }}><strong>Attachments</strong>{record.attachments.map((file) => <p key={file.id}><a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName}</a> <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {label(file.malwareScanStatus)})</small></p>)}</div> : null}
           </section>
-          {record.status === CorrespondenceStatus.SUBMITTED && canRegister(user.role) ? (
+          {canHandleIntake ? (
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}
           {activeItem?.status === WorkItemStatus.OPEN ? <section className="card"><form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary" type="submit">Acknowledge receipt</button></form></section> : null}
@@ -74,6 +100,27 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             </section>
           ) : null}
           {activeActionItem ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
+          {canReturnToInitiator ? (
+            <section className="card">
+              <h2>Return for correction</h2>
+              <p className="muted">The initiator will receive this in their inbox. The return and resubmission remain in the audit trail.</p>
+              <form action={returnToInitiatorAction} className="grid">
+                <input type="hidden" name="correspondenceId" value={record.id} />
+                <div className="field"><label>Reason and correction required</label><textarea name="reason" minLength={5} required placeholder="Explain what must be corrected before this correspondence can proceed…" /></div>
+                <button className="btn secondary" type="submit">Return to initiator</button>
+              </form>
+            </section>
+          ) : null}
+          {canResubmit ? (
+            <section className="card">
+              <h2>Resubmit corrected correspondence</h2>
+              <form action={resubmitReturnedAction} className="grid">
+                <input type="hidden" name="correspondenceId" value={record.id} />
+                <div className="field"><label>Correction note</label><textarea name="note" minLength={5} required placeholder="Describe the correction made and any supporting update…" /></div>
+                <button className="btn" type="submit">Resubmit to reviewing officer</button>
+              </form>
+            </section>
+          ) : null}
         </div>
         <aside className="card">
           <h2>Movement & minutes</h2>

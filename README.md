@@ -41,12 +41,25 @@ Staff master-list provisioning and secure directory synchronization are document
 
 ## Current demo boundaries
 
-- Local disk attachment storage is suitable only for the local demo. Configure private S3 or
-  Vercel Blob storage before Vercel deployment.
-- File validation currently checks declared MIME type, size and SHA-256 digest. Production needs
-  magic-byte inspection, malware scanning and quarantine.
+- Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`
+  is the provider boundary for the future ITF electronic document management server.
+- File validation currently checks declared MIME type, size and SHA-256 digest. Attachments are
+  explicitly marked `NOT_SCANNED`. Production rollout is blocked until magic-byte inspection,
+  malware scanning (for example ClamAV or a managed scanner), and quarantine are operational.
 - External submission issues a reference but does not yet authenticate the sender or send email.
 - Workflow definitions are code-controlled for the demo. A later phase should version configurable
   workflow templates while keeping server-side transition policies.
 - The Workspace handoff is one-time and audited locally, but enterprise OIDC, MFA and central logout
   remain the production target.
+
+## Secretariat mailbox
+
+The shared intake page can manually synchronize unread messages over IMAP/TLS and verify both IMAP
+and SMTP connectivity. Copy the `MAIL_*` placeholders from `.env.example`; keep the real password
+only in the runtime secret store. Imported email HTML is not rendered, remote images are not loaded,
+and unsupported attachments are rejected.
+
+For local development, `odukaye.abiodun@itf.gov.ng` may be used. Production switches to the DG
+mailbox by changing environment configuration, without changing source code. A persistent IMAP
+connection must not run inside Vercel request handlers; production should invoke synchronization
+from an authenticated scheduled job or a dedicated worker.

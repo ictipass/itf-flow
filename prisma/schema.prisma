@@ -48,6 +48,12 @@ enum CorrespondenceStatus {
   RETURNED
 }
 
+enum IntakeSource {
+  MANUAL
+  PORTAL
+  EMAIL
+}
+
 enum RecipientKind {
   ACTION
   COPY
@@ -62,14 +68,26 @@ enum WorkItemStatus {
 
 enum EventType {
   SUBMITTED
+  EMAIL_IMPORTED
+  CLAIMED
+  RELEASED
   REGISTERED
   ACKNOWLEDGED
   MINUTED
   FORWARDED
   RETURNED
+  RESUBMITTED
   RESOLVED
   CLOSED
   COMMENTED
+}
+
+enum MalwareScanStatus {
+  NOT_SCANNED
+  PENDING
+  CLEAN
+  QUARANTINED
+  INFECTED
 }
 
 enum ActorType {
@@ -106,6 +124,7 @@ model User {
   createdCorrespondence Correspondence[] @relation("CorrespondenceCreator")
   workItems           WorkItem[]
   events              CorrespondenceEvent[]
+  claimedCorrespondence Correspondence[] @relation("CorrespondenceClaim")
   launchRedemptions   LaunchTokenRedemption[]
 
   @@index([role, isActive])
@@ -135,6 +154,7 @@ model Correspondence {
   classification         Classification
   priority               Priority             @default(ROUTINE)
   status                 CorrespondenceStatus @default(SUBMITTED)
+  intakeSource           IntakeSource         @default(MANUAL)
   subject                String
   summary                String
   body                   String?
@@ -144,18 +164,24 @@ model Correspondence {
   receivedAt             DateTime             @default(now())
   dueAt                  DateTime?
   currentOwnerId         String?
+  claimedById            String?
+  claimedAt              DateTime?
   createdById            String?
   externalOrganizationId String?
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
   createdBy            User?                 @relation("CorrespondenceCreator", fields: [createdById], references: [id])
+  claimedBy            User?                 @relation("CorrespondenceClaim", fields: [claimedById], references: [id], onDelete: SetNull)
   externalOrganization ExternalOrganization? @relation(fields: [externalOrganizationId], references: [id])
   attachments          Attachment[]
   workItems            WorkItem[]
   events               CorrespondenceEvent[]
+  emailMessage         EmailMessage?
 
   @@index([status, updatedAt])
+  @@index([intakeSource, status, receivedAt])
+  @@index([claimedById, status])
   @@index([currentOwnerId, status])
   @@index([classification])
 }
@@ -168,10 +194,46 @@ model Attachment {
   sizeBytes        Int
   storageKey       String
   sha256           String
+  storageProvider  String         @default("LOCAL")
+  externalDocumentId String?
+  malwareScanStatus MalwareScanStatus @default(NOT_SCANNED)
   createdAt        DateTime       @default(now())
   correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
 
   @@index([correspondenceId])
+}
+
+model EmailMessage {
+  id               String         @id @default(cuid())
+  correspondenceId String         @unique
+  mailbox          String
+  folder           String         @default("INBOX")
+  uidValidity      String
+  uid              Int
+  messageId        String?
+  fromAddress      String
+  toAddresses      String[]
+  ccAddresses      String[]
+  sentAt           DateTime?
+  importedAt       DateTime       @default(now())
+  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+
+  @@unique([mailbox, folder, uidValidity, uid])
+  @@index([messageId])
+}
+
+model MailboxSyncRun {
+  id             String   @id @default(cuid())
+  mailbox        String
+  status         String
+  importedCount  Int      @default(0)
+  skippedCount   Int      @default(0)
+  error          String?
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+
+  @@index([startedAt])
+  @@index([status])
 }
 
 model WorkItem {
