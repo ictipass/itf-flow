@@ -25,6 +25,13 @@ is the accountable owner and the others receive action-visible copies.
 Every seeded staff account uses `SEED_PASSWORD` (`Demo123!` by default). Seed credentials are for
 local demonstrations only and must never be enabled in production.
 
+The seeded system administrator account is `admin@itf.gov.ng`. It uses `SEED_PASSWORD` and exists
+only to expose configuration and connection-testing controls during development.
+
+If a mailbox password contains `#`, spaces, or other shell-sensitive characters, enclose the entire
+value in double quotes in `.env`. ITF Flow reports authentication, timeout, TLS, and folder failures
+without exposing server responses or credentials in the browser.
+
 ## Workspace registration
 
 Register this launch URL in ITF Workspace:

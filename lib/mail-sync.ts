@@ -32,6 +32,9 @@ export async function verifyMailConnections() {
     port: config.imapPort,
     secure: config.imapSecure,
     auth: { user: config.username, pass: config.password },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
     logger: false,
   });
   await imap.connect();
@@ -42,6 +45,9 @@ export async function verifyMailConnections() {
     port: config.smtpPort,
     secure: config.smtpSecure,
     auth: { user: config.username, pass: config.password },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
   });
   await smtp.verify();
 }
@@ -59,6 +65,9 @@ export async function syncMailbox() {
     port: config.imapPort,
     secure: config.imapSecure,
     auth: { user: config.username, pass: config.password },
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 60_000,
     logger: false,
   });
 

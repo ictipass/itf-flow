@@ -45,6 +45,28 @@ async function requestContext() {
   };
 }
 
+function mailFailureReason(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  const values = typeof error === "object" && error
+    ? error as Record<string, unknown>
+    : {};
+  const details = [
+    values.code,
+    values.responseStatus,
+    values.responseText,
+    values.responseCode,
+    values.command,
+  ].map(String).join(" ").toLowerCase();
+  const combined = `${message} ${details}`;
+  if (combined.includes("auth") || combined.includes("login") || combined.includes("535")) {
+    return "authentication";
+  }
+  if (combined.includes("timeout") || combined.includes("timed out")) return "timeout";
+  if (combined.includes("certificate") || combined.includes("tls")) return "tls";
+  if (combined.includes("mailbox") || combined.includes("folder")) return "folder";
+  return "unknown";
+}
+
 async function persistAttachment(file: File, correspondenceId: string) {
   if (!file.size) return null;
   if (file.size > 10 * 1024 * 1024) {
@@ -85,8 +107,14 @@ export async function logoutAction() {
 export async function syncMailboxAction() {
   const user = await requireUser();
   if (!canRegister(user.role)) throw new Error("You cannot synchronize the Secretariat mailbox.");
-  const result = await syncMailbox();
-  redirect(`/intake?mail=success&imported=${result.importedCount}&skipped=${result.skippedCount}`);
+  let destination: string;
+  try {
+    const result = await syncMailbox();
+    destination = `/intake?mail=success&imported=${result.importedCount}&skipped=${result.skippedCount}`;
+  } catch (error) {
+    destination = `/intake?mail=failed&reason=${mailFailureReason(error)}`;
+  }
+  redirect(destination);
 }
 
 export async function testMailConnectionAction() {
@@ -94,8 +122,14 @@ export async function testMailConnectionAction() {
   if (user.role !== UserRole.SYSTEM_ADMIN) {
     throw new Error("Only a system administrator can test mail-server credentials.");
   }
-  await verifyMailConnections();
-  redirect("/intake?mail=connected");
+  let destination: string;
+  try {
+    await verifyMailConnections();
+    destination = "/intake?mail=connected";
+  } catch (error) {
+    destination = `/intake?mail=connection-failed&reason=${mailFailureReason(error)}`;
+  }
+  redirect(destination);
 }
 
 export async function externalSubmitAction(formData: FormData) {

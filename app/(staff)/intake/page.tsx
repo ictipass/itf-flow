@@ -10,7 +10,7 @@ import { requireUser } from "@/lib/session";
 export default async function IntakePage({
   searchParams,
 }: {
-  searchParams: Promise<{ mail?: string; imported?: string; skipped?: string }>;
+  searchParams: Promise<{ mail?: string; imported?: string; skipped?: string; reason?: string }>;
 }) {
   const user = await requireUser();
   if (!canRegister(user.role)) return <p className="notice">You do not have Secretariat intake access.</p>;
@@ -43,6 +43,8 @@ export default async function IntakePage({
         <p className="notice success">Mailbox sync completed: {notice.imported ?? "0"} imported, {notice.skipped ?? "0"} skipped.</p>
       ) : null}
       {notice.mail === "connected" ? <p className="notice success">IMAP and SMTP connections were verified.</p> : null}
+      {notice.mail === "failed" ? <p className="notice error">Mailbox sync failed safely. {notice.reason === "authentication" ? "The mail server rejected the configured username or password." : "Ask the system administrator to test the connection and review the latest sync status."}</p> : null}
+      {notice.mail === "connection-failed" ? <p className="notice error">The mail server connection could not be verified. {notice.reason === "authentication" ? "The server rejected the configured username or password." : notice.reason === "timeout" ? "The connection timed out." : notice.reason === "tls" ? "TLS certificate negotiation failed." : notice.reason === "folder" ? "The configured mailbox folder is unavailable." : "Check the credentials, TLS settings, mailbox folder, and server logs."}</p> : null}
       {!isMailEnabled() ? <p className="notice">Mailbox sync is disabled. Configure the MAIL_* environment variables and set MAIL_ENABLED=true.</p> : null}
       {lastSync ? (
         <p className="muted">Last sync: {label(lastSync.status)} at {lastSync.startedAt.toLocaleString("en-NG")}

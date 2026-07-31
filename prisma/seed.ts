@@ -4,6 +4,7 @@ import { UserRole } from "../lib/generated/prisma/client";
 import { db } from "../lib/db";
 
 const demoUsers = [
+  { staffNumber: "ITF/SYS/001", email: "admin@itf.gov.ng", name: "ITF Flow Administrator", role: UserRole.SYSTEM_ADMIN, office: "ITF Digital Services", position: "System Administrator", hierarchyLevel: 6 },
   { staffNumber: "ITF/DGS/001", email: "secretary.abuja@itf.gov.ng", name: "Amina Yusuf", role: UserRole.DG_SECRETARY, office: "DG Secretariat — Abuja", position: "DG Secretary", hierarchyLevel: 4 },
   { staffNumber: "ITF/DGS/002", email: "secretary.jos@itf.gov.ng", name: "Grace Danladi", role: UserRole.DG_SECRETARY, office: "DG Secretariat — Jos", position: "DG Secretary", hierarchyLevel: 4 },
   { staffNumber: "ITF/DGS/003", email: "secretary.lagos@itf.gov.ng", name: "Chioma Okeke", role: UserRole.DG_SECRETARY, office: "DG Secretariat — Lagos", position: "DG Secretary", hierarchyLevel: 4 },
