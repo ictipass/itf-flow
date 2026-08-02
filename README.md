@@ -18,9 +18,14 @@ is the accountable owner and the others receive action-visible copies.
 
 1. Copy `.env.example` to `.env` and configure PostgreSQL.
 2. Run `npm install`.
-3. Run `npx prisma migrate dev`.
+3. Run `npm run db:migrate`.
 4. Run `npm run db:seed`.
 5. Run `npm run dev` (port 3001 if Workspace uses port 3000).
+
+Run `npm run env:check` to validate Node.js, required configuration, database access, migration presence,
+and local document storage without printing secret values. Full cross-machine setup and restoration are
+documented in [`docs/cross-machine-handover.md`](docs/cross-machine-handover.md), with a concise
+[`fresh-machine checklist`](docs/fresh-machine-checklist.md).
 
 Every seeded staff account uses `SEED_PASSWORD` (`Demo123!` by default). Seed credentials are for
 local demonstrations only and must never be enabled in production.
