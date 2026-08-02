@@ -5,9 +5,11 @@ import { requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
 import { UserRole } from "@/lib/generated/prisma/client";
 import { canDispatch } from "@/lib/permissions";
+import { db } from "@/lib/db";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const unreadNotifications = await db.notification.count({ where: { userId: user.id, readAt: null } });
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -21,6 +23,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
             <Link href="/intake">Shared Secretariat intake</Link>
           ) : null}
           <Link href="/inbox">My inbox</Link>
+          <Link href="/notifications">Notifications{unreadNotifications ? ` (${unreadNotifications})` : ""}</Link>
           <Link href="/drafts">My drafts</Link>
           <Link href="/correspondence">All correspondence</Link>
           {canDispatch(user.role) ? <Link href="/dispatch">Dispatch registry</Link> : null}
@@ -28,7 +31,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
           <Link href="/broadcasts">Announcements</Link>
           <Link href="/guide">How it works</Link>
           {user.role === UserRole.SYSTEM_ADMIN ? (
-            <Link href="/admin/provisioning">Provisioning admin</Link>
+            <><Link href="/admin/provisioning">Provisioning admin</Link><Link href="/admin/email-outbox">Email outbox</Link></>
           ) : null}
         </nav>
         <div style={{ marginTop: "auto" }}>

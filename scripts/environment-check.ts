@@ -36,7 +36,7 @@ async function main() {
       db.user.count(),
       db.$queryRaw<Array<{ count: bigint }>>`SELECT COUNT(*)::bigint AS count FROM "_prisma_migrations" WHERE "finished_at" IS NOT NULL AND "rolled_back_at" IS NULL`,
     ]);
-    console.log(`✓ PostgreSQL reachable · ${users} users · ${migrations[0]?.count ?? 0n} applied migrations`);
+    console.log(`✓ PostgreSQL reachable · ${users} users · ${migrations[0]?.count?.toString() ?? "0"} applied migrations`);
   } catch {
     errors.push("PostgreSQL is unreachable or has not been migrated. Check DATABASE_URL and run npm run db:migrate.");
   }

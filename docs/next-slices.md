@@ -50,6 +50,7 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - In-app organizational broadcasts with scoped publishing grants, recipient snapshots, read status
   and mandatory acknowledgement. Implemented.
 - In-app notifications, email delivery and optional push notifications.
+- Event-driven in-app notifications and a durable, idempotent email outbox with manual processing, retry and dead-letter states. Implemented without continuous database polling.
 - Reminders before due dates and configurable overdue escalations.
 - Daily digest for executives, Directors and secretaries.
 - Delivery attempts, retries and dead-letter monitoring.

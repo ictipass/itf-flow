@@ -15,6 +15,7 @@ import {
   DispatchStatus,
   EventType,
   IntakeSource,
+  NotificationType,
   Priority,
   RecipientKind,
   UserRole,
@@ -27,6 +28,7 @@ import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
 import { canDispatch, canMinute, canOriginate, canRegister } from "@/lib/permissions";
 import { evaluateActionRouting } from "@/lib/reporting-lines";
+import { enqueueNotifications } from "@/lib/notifications";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
 
@@ -333,15 +335,15 @@ export async function registerCorrespondenceAction(formData: FormData) {
         },
       }),
     ));
-    if (copyRecipients.length) await tx.workItem.createMany({
-      data: copyRecipients.map((recipient) => ({
+    const copyItems = await Promise.all(copyRecipients.map((recipient) => tx.workItem.create({
+      data: {
           correspondenceId: created.id,
           assigneeId: recipient.id,
           kind: RecipientKind.COPY,
           instruction: "For your information.",
           dueAt: created.dueAt,
-        })),
-    });
+      },
+    })));
     if (purpose !== WorkPurpose.ACTION) await tx.decisionRequest.createMany({
       data: actionItems.map((item) => ({
         correspondenceId: created.id,
@@ -350,6 +352,16 @@ export async function registerCorrespondenceAction(formData: FormData) {
         purpose,
       })),
     });
+    await enqueueNotifications(tx, [
+      ...actionItems.map((item) => ({
+        userId: item.assigneeId, actorId: user.id,
+        type: purpose !== WorkPurpose.ACTION ? NotificationType.DECISION_REQUESTED : routingPolicy.isPeerReferral ? NotificationType.PEER_REFERRED : NotificationType.ASSIGNED,
+        title: purpose !== WorkPurpose.ACTION ? `${purpose.toLowerCase()} requested` : routingPolicy.isPeerReferral ? "Peer referral received" : "Correspondence assigned",
+        message: `${created.referenceNumber} requires your attention.`, href: `/correspondence/${created.id}`,
+        sourceType: "WORK_ITEM", sourceId: item.id,
+      })),
+      ...copyItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: NotificationType.COPIED, title: "Copied on correspondence", message: `${created.referenceNumber} was shared with you for information.`, href: `/correspondence/${created.id}`, sourceType: "WORK_ITEM", sourceId: item.id })),
+    ]);
     await tx.correspondenceEvent.create({
       data: {
         correspondenceId: created.id,
@@ -485,15 +497,16 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
   ) {
     throw new Error("This submission cannot be registered.");
   }
-  await db.$transaction([
-    db.correspondence.update({
+  const context = await requestContext();
+  await db.$transaction(async (tx) => {
+    await tx.correspondence.update({
       where: { id: correspondenceId },
       data: { status: CorrespondenceStatus.WITH_DG, currentOwnerId: dg.id },
-    }),
-    db.workItem.create({
+    });
+    const item = await tx.workItem.create({
       data: { correspondenceId, assigneeId: dg.id, kind: RecipientKind.ACTION },
-    }),
-    db.correspondenceEvent.create({
+    });
+    await tx.correspondenceEvent.create({
       data: {
         correspondenceId,
         actorId: user.id,
@@ -503,10 +516,15 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
         toStatus: CorrespondenceStatus.WITH_DG,
         minute: "External submission verified by the DG Secretariat and submitted to the DG.",
         metadata: { recipientIds: [dg.id] },
-        ...(await requestContext()),
+        ...context,
       },
-    }),
-  ]);
+    });
+    await enqueueNotifications(tx, [{
+      userId: dg.id, actorId: user.id, type: NotificationType.ASSIGNED,
+      title: "Secretariat correspondence registered", message: `${record.referenceNumber} is ready for DG attention.`,
+      href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: item.id,
+    }]);
+  });
   revalidatePath(`/correspondence/${correspondenceId}`);
 }
 
@@ -596,7 +614,7 @@ export async function returnToInitiatorAction(formData: FormData) {
       },
       data: { status: WorkItemStatus.CANCELLED, completedAt: new Date() },
     });
-    await tx.workItem.create({
+    const returnedItem = await tx.workItem.create({
       data: {
         correspondenceId,
         assigneeId: record.createdById!,
@@ -608,6 +626,11 @@ export async function returnToInitiatorAction(formData: FormData) {
       where: { id: correspondenceId },
       data: { status: CorrespondenceStatus.RETURNED, currentOwnerId: record.createdById },
     });
+    await enqueueNotifications(tx, [{
+      userId: returnedItem.assigneeId, actorId: user.id, type: NotificationType.RETURNED,
+      title: "Correspondence returned for correction", message: `${record.referenceNumber} was returned with a correction request.`,
+      href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: returnedItem.id,
+    }]);
     await tx.correspondenceEvent.create({
       data: {
         correspondenceId,
@@ -663,7 +686,7 @@ export async function resubmitReturnedAction(formData: FormData) {
       },
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
     });
-    await tx.workItem.create({
+    const resubmittedItem = await tx.workItem.create({
       data: {
         correspondenceId,
         assigneeId: returnedById,
@@ -675,6 +698,11 @@ export async function resubmitReturnedAction(formData: FormData) {
       where: { id: correspondenceId },
       data: { status: CorrespondenceStatus.ASSIGNED, currentOwnerId: returnedById },
     });
+    await enqueueNotifications(tx, [{
+      userId: resubmittedItem.assigneeId, actorId: user.id, type: NotificationType.ASSIGNED,
+      title: "Corrected correspondence resubmitted", message: `${record.referenceNumber} has been corrected and resubmitted.`,
+      href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: resubmittedItem.id,
+    }]);
     await tx.correspondenceEvent.create({
       data: {
         correspondenceId,
@@ -847,15 +875,15 @@ export async function routeCorrespondenceAction(formData: FormData) {
         },
       }),
     ));
-    if (copyRecipients.length) await tx.workItem.createMany({
-      data: copyRecipients.map((recipient) => ({
+    const copyItems = await Promise.all(copyRecipients.map((recipient) => tx.workItem.create({
+      data: {
           correspondenceId,
           assigneeId: recipient.id,
           kind: RecipientKind.COPY,
           instruction: "For your information.",
           dueAt: record.dueAt,
-        })),
-    });
+      },
+    })));
     if (purpose !== WorkPurpose.ACTION) await tx.decisionRequest.createMany({
       data: actionItems.map((item) => ({
         correspondenceId,
@@ -864,6 +892,10 @@ export async function routeCorrespondenceAction(formData: FormData) {
         purpose,
       })),
     });
+    await enqueueNotifications(tx, [
+      ...actionItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: purpose !== WorkPurpose.ACTION ? NotificationType.DECISION_REQUESTED : routingPolicy.isPeerReferral ? NotificationType.PEER_REFERRED : NotificationType.ASSIGNED, title: purpose !== WorkPurpose.ACTION ? `${purpose.toLowerCase()} requested` : routingPolicy.isPeerReferral ? "Peer referral received" : "Correspondence assigned", message: `${record.referenceNumber} requires your attention.`, href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: item.id })),
+      ...copyItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: NotificationType.COPIED, title: "Copied on correspondence", message: `${record.referenceNumber} was shared with you for information.`, href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: item.id })),
+    ]);
     await tx.correspondence.update({
       where: { id: correspondenceId },
       data: {
@@ -1032,6 +1064,14 @@ export async function updateDispatchStatusAction(formData: FormData) {
         ...context,
       },
     });
+    if (nextStatus === DispatchStatus.FAILED) {
+      const recipientIds = [...new Set([dispatch.createdById, dispatch.correspondence.createdById].filter((id): id is string => Boolean(id)))];
+      await enqueueNotifications(tx, recipientIds.map((userId) => ({
+        userId, actorId: user.id, type: NotificationType.DISPATCH_FAILED,
+        title: "Dispatch delivery failed", message: `${dispatch.outgoingReference} requires attention before retry.`,
+        href: `/correspondence/${dispatch.correspondenceId}`, sourceType: "DISPATCH_FAILURE", sourceId: `${dispatch.id}:${now.toISOString()}`,
+      })));
+    }
     if (closesCorrespondence) {
       await tx.correspondence.update({ where: { id: dispatch.correspondenceId }, data: { status: CorrespondenceStatus.CLOSED, currentOwnerId: null } });
       await tx.workItem.updateMany({ where: { correspondenceId: dispatch.correspondenceId, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } }, data: { status: WorkItemStatus.COMPLETED, completedAt: now } });
@@ -1126,6 +1166,12 @@ export async function recordDecisionAction(formData: FormData) {
         ...context,
       },
     });
+    await enqueueNotifications(tx, [{
+      userId: request.requestedById, actorId: user.id, type: NotificationType.DECISION_RECORDED,
+      title: `${request.purpose.toLowerCase()} decision recorded`,
+      message: `${request.correspondence.referenceNumber}: ${outcome.toLowerCase()}.`,
+      href: `/correspondence/${correspondenceId}`, sourceType: "DECISION_REQUEST", sourceId: request.id,
+    }]);
   });
   revalidatePath("/inbox");
   revalidatePath(`/correspondence/${correspondenceId}`);

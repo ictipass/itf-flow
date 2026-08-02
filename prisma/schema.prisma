@@ -96,6 +96,26 @@ enum DispatchStatus {
   FAILED
 }
 
+enum NotificationType {
+  ASSIGNED
+  COPIED
+  RETURNED
+  PEER_REFERRED
+  DECISION_REQUESTED
+  DECISION_RECORDED
+  REVISION_CREATED
+  BROADCAST_PUBLISHED
+  DISPATCH_FAILED
+}
+
+enum EmailOutboxStatus {
+  QUEUED
+  PROCESSING
+  SENT
+  FAILED
+  DEAD_LETTER
+}
+
 enum EventType {
   DRAFTED
   DRAFT_UPDATED
@@ -215,6 +235,8 @@ model User {
   madeDecisions       DecisionRequest[] @relation("DecisionMaker")
   createdRevisions    CorrespondenceRevision[]
   dispatchRecords     DispatchRecord[]
+  receivedNotifications Notification[] @relation("NotificationRecipient")
+  createdNotifications  Notification[] @relation("NotificationActor")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -512,6 +534,62 @@ model DispatchRecord {
 
   @@index([correspondenceId, createdAt])
   @@index([status, createdAt])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  actorId     String?
+  type        NotificationType
+  title       String
+  message     String
+  href        String
+  sourceType  String
+  sourceId    String
+  readAt      DateTime?
+  createdAt   DateTime         @default(now())
+  user        User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor       User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, sourceType, sourceId, type])
+  @@index([userId, readAt, createdAt])
+}
+
+model EmailOutbox {
+  id             String            @id @default(cuid())
+  idempotencyKey String            @unique
+  userId         String?
+  toAddress      String
+  subject        String
+  textBody       String
+  status         EmailOutboxStatus @default(QUEUED)
+  attemptCount   Int               @default(0)
+  maxAttempts    Int               @default(5)
+  nextAttemptAt  DateTime          @default(now())
+  lockedAt       DateTime?
+  sentAt         DateTime?
+  lastErrorCode  String?
+  sourceType     String
+  sourceId       String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  attempts       EmailDeliveryAttempt[]
+
+  @@index([status, nextAttemptAt])
+  @@index([sourceType, sourceId])
+}
+
+model EmailDeliveryAttempt {
+  id          String      @id @default(cuid())
+  outboxId    String
+  attempt     Int
+  successful  Boolean
+  errorCode   String?
+  attemptedAt DateTime    @default(now())
+  outbox      EmailOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+
+  @@unique([outboxId, attempt])
+  @@index([attemptedAt])
 }
 
 model CorrespondenceEvent {

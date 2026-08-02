@@ -59,6 +59,10 @@ Stakeholder presentation materials are organized in the
 [`live-demo script`](docs/stakeholder-demo-script.md), and
 [`pre-demo checklist`](docs/stakeholder-demo-checklist.md).
 
+Event-driven in-app notifications and durable email delivery are documented in
+[`docs/notifications-and-email-outbox.md`](docs/notifications-and-email-outbox.md). The browser does not
+continuously poll PostgreSQL for notification updates.
+
 ## Current demo boundaries
 
 - Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`

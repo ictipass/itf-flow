@@ -9,10 +9,12 @@ import {
   BroadcastPriority,
   BroadcastScopeType,
   BroadcastStatus,
+  NotificationType,
   UserRole,
 } from "@/lib/generated/prisma/client";
 import { authorizeBroadcast, resolveBroadcastRecipients, type AudienceInput } from "@/lib/broadcasts";
 import { db } from "@/lib/db";
+import { enqueueNotifications } from "@/lib/notifications";
 import { requireUser } from "@/lib/session";
 
 const broadcastSchema = z.object({
@@ -74,6 +76,7 @@ export async function createBroadcastAction(formData: FormData) {
         recipients: publish ? { create: recipients.map((recipient) => ({ userId: recipient.id, recipientName: recipient.name, recipientEmail: recipient.email, recipientRole: recipient.role, recipientOffice: recipient.office, recipientDepartment: recipient.department, recipientDivision: recipient.division, recipientUnit: recipient.unit })) } : undefined,
       } });
       await tx.broadcastEvent.create({ data: { broadcastId: existingId, actorId: user.id, type: publish ? BroadcastEventType.PUBLISHED : BroadcastEventType.DRAFTED, detail: publish ? `Draft updated and published to ${recipients.length} snapshotted recipients.` : "Broadcast draft updated.", metadata: { audienceCount: audiences.length, recipientCount: recipients.length } } });
+      if (publish) await enqueueNotifications(tx, recipients.map((recipient) => ({ userId: recipient.id, actorId: user.id, type: NotificationType.BROADCAST_PUBLISHED, title: parsed.title, message: "A new organizational announcement is available.", href: `/broadcasts/${existingId}`, sourceType: "BROADCAST", sourceId: existingId })));
     });
     revalidatePath("/broadcasts"); revalidatePath(`/broadcasts/${existingId}`); revalidatePath("/dashboard");
     redirect(`/broadcasts/${existingId}`);
@@ -100,6 +103,7 @@ export async function createBroadcastAction(formData: FormData) {
       detail: publish ? `Published to ${recipients.length} snapshotted recipients.` : "Broadcast draft created.",
       metadata: { audienceCount: audiences.length, recipientCount: recipients.length },
     } });
+    if (publish) await enqueueNotifications(tx, recipients.map((recipient) => ({ userId: recipient.id, actorId: user.id, type: NotificationType.BROADCAST_PUBLISHED, title: parsed.title, message: "A new organizational announcement is available.", href: `/broadcasts/${record.id}`, sourceType: "BROADCAST", sourceId: record.id })));
     return record;
   });
   revalidatePath("/broadcasts"); revalidatePath("/dashboard");
@@ -131,6 +135,7 @@ export async function publishDraftBroadcastAction(formData: FormData) {
   await db.$transaction(async (tx) => {
     await tx.broadcast.update({ where: { id: broadcastId }, data: { status: BroadcastStatus.PUBLISHED, publishedById: user.id, publishedAt: new Date(), publishAt: broadcast.publishAt ?? new Date(), recipients: { create: recipients.map((recipient) => ({ userId: recipient.id, recipientName: recipient.name, recipientEmail: recipient.email, recipientRole: recipient.role, recipientOffice: recipient.office, recipientDepartment: recipient.department, recipientDivision: recipient.division, recipientUnit: recipient.unit })) } } });
     await tx.broadcastEvent.create({ data: { broadcastId, actorId: user.id, type: BroadcastEventType.PUBLISHED, detail: `Published to ${recipients.length} snapshotted recipients.`, metadata: { recipientCount: recipients.length } } });
+    await enqueueNotifications(tx, recipients.map((recipient) => ({ userId: recipient.id, actorId: user.id, type: NotificationType.BROADCAST_PUBLISHED, title: broadcast.title, message: "A new organizational announcement is available.", href: `/broadcasts/${broadcastId}`, sourceType: "BROADCAST", sourceId: broadcastId })));
   });
   revalidatePath("/broadcasts"); revalidatePath(`/broadcasts/${broadcastId}`); revalidatePath("/dashboard");
 }
