@@ -4,18 +4,20 @@ import {
   acceptExternalSubmissionAction,
   acknowledgeAction,
   claimIntakeAction,
+  prepareDispatchAction,
   releaseIntakeAction,
   recordDecisionAction,
   resubmitReturnedAction,
   resolveAction,
   returnToInitiatorAction,
   routeCorrespondenceAction,
+  updateDispatchStatusAction,
 } from "@/app/actions";
 import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
-import { CorrespondenceStatus, EventType, UserRole, WorkItemStatus } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
-import { canMinute, canRegister } from "@/lib/permissions";
+import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
 
@@ -33,6 +35,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
+      dispatchRecords: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
+      decisionRequests: true,
     },
   });
   if (!record) notFound();
@@ -62,6 +66,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const canReturnToInitiator = Boolean(activeActionItem && !pendingDecision && record.createdById && record.createdById !== user.id);
   const latestReturnDecision = record.events.find((event) => event.type === EventType.RETURNED || event.type === EventType.DECISION_RECORDED);
   const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id && latestReturnDecision?.type === EventType.RETURNED;
+  const currentApproval = record.decisionRequests.some((request) => request.purpose === WorkPurpose.APPROVAL && request.outcome === DecisionOutcome.APPROVED && !request.supersededAt);
+  const canPrepareDispatch = canDispatch(user.role) && record.type === CorrespondenceType.OUTGOING_LETTER && (!record.requiresApproval || currentApproval) && record.status !== CorrespondenceStatus.CLOSED;
   return (
     <>
       <span className="eyebrow">{record.referenceNumber}</span>
@@ -161,8 +167,18 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               </form>
             </section>
           ) : null}
+          {canPrepareDispatch ? <section className="card"><span className="eyebrow">Outgoing delivery</span><h2>Prepare dispatch</h2><p className="muted">Official email dispatch is recorded here; automated SMTP delivery will be connected in the email-delivery slice.</p><form action={prepareDispatchAction} className="form-grid"><input type="hidden" name="correspondenceId" value={record.id} />
+            <div className="field"><label>Delivery channel</label><select name="channel" defaultValue="OFFICIAL_EMAIL"><option value="OFFICIAL_EMAIL">Official email</option><option value="PHYSICAL_DELIVERY">Physical delivery</option><option value="COURIER">Courier</option><option value="STAKEHOLDER_PORTAL">Stakeholder portal</option></select></div>
+            <div className="field"><label>Recipient name</label><input name="recipientName" required minLength={2} placeholder="Full name of the receiving person or office" /></div>
+            <div className="field"><label>Organization</label><input name="recipientOrganization" placeholder="Recipient organization or agency" /></div><div className="field"><label>Email</label><input name="recipientEmail" type="email" placeholder="recipient@example.org" /></div>
+            <div className="field span-2"><label>Delivery address</label><textarea name="recipientAddress" placeholder="Physical, courier, or portal delivery address" /></div><div className="field"><label>Tracking number</label><input name="trackingNumber" placeholder="Courier, registry, or portal tracking number" /></div>
+            <div className="field span-2"><label>Dispatch note</label><textarea name="dispatchNote" placeholder="State delivery instructions or handling notes" /></div><button className="btn span-2" type="submit">Create dispatch record</button>
+          </form></section> : null}
         </div>
         <aside className="card">
+          {record.dispatchRecords.length ? <><h2>Dispatch records</h2>{record.dispatchRecords.map((dispatch) => <div key={dispatch.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}><strong>{dispatch.outgoingReference}</strong> <span className="badge">{label(dispatch.status)}</span><p>{label(dispatch.channel)} · {dispatch.recipientName}{dispatch.recipientOrganization ? ` · ${dispatch.recipientOrganization}` : ""}</p><small className="muted">Prepared by {dispatch.createdBy.name} · {dispatch.createdAt.toLocaleString("en-NG")}</small>
+            {canDispatch(user.role) && dispatch.status !== DispatchStatus.DELIVERED ? <form action={updateDispatchStatusAction} className="grid" style={{ marginTop: 10 }}><input type="hidden" name="dispatchId" value={dispatch.id} /><div className="field"><label>Delivery update note</label><input name="note" placeholder="Delivery confirmation, failure reason, or retry note" /></div><div className="actions">{dispatch.status === DispatchStatus.PREPARED || dispatch.status === DispatchStatus.FAILED ? <button className="btn compact" name="status" value="DISPATCHED">Mark dispatched</button> : null}{dispatch.status === DispatchStatus.DISPATCHED ? <button className="btn compact" name="status" value="DELIVERED">Confirm delivery</button> : null}{dispatch.status === DispatchStatus.PREPARED || dispatch.status === DispatchStatus.DISPATCHED ? <button className="btn secondary compact" name="status" value="FAILED">Record failure</button> : null}</div></form> : null}
+          </div>)}</> : null}
           {record.workItems.some((item) => item.decisionRequest) ? <>
             <h2>Decision register</h2>
             {record.workItems.filter((item) => item.decisionRequest).map((item) => {

@@ -27,6 +27,7 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Immutable document versions, controlled correction and approval supersession. Implemented.
 - Separate author, reviewer, approving officer and dispatch authority.
 - Add outgoing dispatch records, delivery channels and acknowledgement of delivery.
+- Outgoing dispatch registry, approval gate, delivery channels, failure/retry tracking and delivery confirmation. Implemented.
 - Add document version history and compare revisions.
 
 ## Slice 4 — Secretariat operations — In progress

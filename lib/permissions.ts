@@ -30,3 +30,8 @@ export function canMinute(role: UserRole) {
   ];
   return roles.includes(role);
 }
+
+export function canDispatch(role: UserRole) {
+  const roles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
+  return roles.includes(role);
+}

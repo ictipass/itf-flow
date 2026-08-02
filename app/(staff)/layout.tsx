@@ -4,6 +4,7 @@ import { logoutAction } from "@/app/actions";
 import { requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
 import { UserRole } from "@/lib/generated/prisma/client";
+import { canDispatch } from "@/lib/permissions";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
@@ -22,6 +23,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
           <Link href="/inbox">My inbox</Link>
           <Link href="/drafts">My drafts</Link>
           <Link href="/correspondence">All correspondence</Link>
+          {canDispatch(user.role) ? <Link href="/dispatch">Dispatch registry</Link> : null}
           <Link href="/correspondence/new">Raise correspondence</Link>
           <Link href="/broadcasts">Announcements</Link>
           <Link href="/guide">How it works</Link>

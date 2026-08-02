@@ -82,6 +82,20 @@ enum DecisionOutcome {
   RETURNED
 }
 
+enum DispatchChannel {
+  OFFICIAL_EMAIL
+  PHYSICAL_DELIVERY
+  COURIER
+  STAKEHOLDER_PORTAL
+}
+
+enum DispatchStatus {
+  PREPARED
+  DISPATCHED
+  DELIVERED
+  FAILED
+}
+
 enum EventType {
   DRAFTED
   DRAFT_UPDATED
@@ -98,6 +112,10 @@ enum EventType {
   DECISION_REQUESTED
   DECISION_RECORDED
   REVISED
+  DISPATCH_PREPARED
+  DISPATCHED
+  DELIVERY_CONFIRMED
+  DELIVERY_FAILED
   RETURNED
   RESUBMITTED
   RESOLVED
@@ -196,6 +214,7 @@ model User {
   requestedDecisions  DecisionRequest[] @relation("DecisionRequester")
   madeDecisions       DecisionRequest[] @relation("DecisionMaker")
   createdRevisions    CorrespondenceRevision[]
+  dispatchRecords     DispatchRecord[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -330,6 +349,7 @@ model Correspondence {
   draftCopyRecipientIds   String[]             @default([])
   draftInstruction        String?
   draftWorkPurpose        WorkPurpose          @default(ACTION)
+  requiresApproval        Boolean              @default(false)
   createdById            String?
   externalOrganizationId String?
   createdAt              DateTime             @default(now())
@@ -344,6 +364,7 @@ model Correspondence {
   emailMessage         EmailMessage?
   decisionRequests     DecisionRequest[]
   revisions            CorrespondenceRevision[]
+  dispatchRecords       DispatchRecord[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
@@ -465,6 +486,32 @@ model CorrespondenceRevision {
 
   @@unique([correspondenceId, version])
   @@index([correspondenceId, createdAt])
+}
+
+model DispatchRecord {
+  id                    String          @id @default(cuid())
+  correspondenceId      String
+  outgoingReference     String          @unique
+  channel               DispatchChannel
+  status                DispatchStatus  @default(PREPARED)
+  recipientName         String
+  recipientOrganization String?
+  recipientEmail        String?
+  recipientAddress      String?
+  trackingNumber        String?
+  dispatchNote          String?
+  deliveryNote          String?
+  createdById           String
+  dispatchedAt          DateTime?
+  deliveredAt           DateTime?
+  failedAt              DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  correspondence        Correspondence  @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  createdBy             User            @relation(fields: [createdById], references: [id])
+
+  @@index([correspondenceId, createdAt])
+  @@index([status, createdAt])
 }
 
 model CorrespondenceEvent {

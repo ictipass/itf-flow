@@ -11,6 +11,8 @@ import {
   CorrespondenceStatus,
   CorrespondenceType,
   DecisionOutcome,
+  DispatchChannel,
+  DispatchStatus,
   EventType,
   IntakeSource,
   Priority,
@@ -23,7 +25,7 @@ import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
 import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
-import { canMinute, canOriginate, canRegister } from "@/lib/permissions";
+import { canDispatch, canMinute, canOriginate, canRegister } from "@/lib/permissions";
 import { evaluateActionRouting } from "@/lib/reporting-lines";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
@@ -307,6 +309,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
         ...parsed,
         dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
         createdById: user.id,
+        requiresApproval: purpose === WorkPurpose.APPROVAL || existingDraft?.requiresApproval === true,
         status: destinationStatus,
         currentOwnerId: actionRecipients[0].id,
     };
@@ -866,6 +869,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
       data: {
         status: CorrespondenceStatus.ASSIGNED,
         currentOwnerId: actionRecipients[0].id,
+        requiresApproval: purpose === WorkPurpose.APPROVAL ? true : record.requiresApproval,
       },
     });
     await tx.correspondenceEvent.create({
@@ -893,6 +897,149 @@ export async function routeCorrespondenceAction(formData: FormData) {
   });
   revalidatePath(`/correspondence/${correspondenceId}`);
   redirect(`/correspondence/${correspondenceId}`);
+}
+
+const dispatchSchema = z.object({
+  channel: z.enum(DispatchChannel),
+  recipientName: z.string().trim().min(2).max(200),
+  recipientOrganization: z.string().trim().max(200).optional(),
+  recipientEmail: z.string().trim().max(254).optional(),
+  recipientAddress: z.string().trim().max(1000).optional(),
+  trackingNumber: z.string().trim().max(150).optional(),
+  dispatchNote: z.string().trim().max(2000).optional(),
+});
+
+async function assertDispatchable(correspondenceId: string) {
+  const record = await db.correspondence.findUnique({
+    where: { id: correspondenceId },
+    include: {
+      decisionRequests: {
+        where: { purpose: WorkPurpose.APPROVAL, outcome: DecisionOutcome.APPROVED, supersededAt: null },
+        take: 1,
+      },
+    },
+  });
+  if (!record || record.type !== CorrespondenceType.OUTGOING_LETTER) {
+    throw new Error("Only outgoing correspondence can be dispatched.");
+  }
+  if (record.requiresApproval && !record.decisionRequests.length) {
+    throw new Error("This correspondence requires a current approval before dispatch.");
+  }
+  return record;
+}
+
+export async function prepareDispatchAction(formData: FormData) {
+  const user = await requireUser();
+  if (!canDispatch(user.role)) throw new Error("You are not authorized to prepare dispatch records.");
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const parsed = dispatchSchema.parse({
+    channel: formData.get("channel"),
+    recipientName: formData.get("recipientName"),
+    recipientOrganization: formData.get("recipientOrganization") || undefined,
+    recipientEmail: formData.get("recipientEmail") || undefined,
+    recipientAddress: formData.get("recipientAddress") || undefined,
+    trackingNumber: formData.get("trackingNumber") || undefined,
+    dispatchNote: formData.get("dispatchNote") || undefined,
+  });
+  const record = await assertDispatchable(correspondenceId);
+  if (parsed.channel === DispatchChannel.OFFICIAL_EMAIL && !z.email().safeParse(parsed.recipientEmail).success) {
+    throw new Error("A valid recipient email is required for official email dispatch.");
+  }
+  if (
+    (parsed.channel === DispatchChannel.PHYSICAL_DELIVERY || parsed.channel === DispatchChannel.COURIER) &&
+    !parsed.recipientAddress
+  ) {
+    throw new Error("A recipient address is required for physical or courier dispatch.");
+  }
+  const context = await requestContext();
+  await db.$transaction(async (tx) => {
+    const year = new Date().getFullYear();
+    const count = await tx.dispatchRecord.count({ where: { outgoingReference: { startsWith: `ITF/OUT/${year}/` } } });
+    const outgoingReference = `ITF/OUT/${year}/${String(count + 1).padStart(6, "0")}`;
+    const dispatch = await tx.dispatchRecord.create({
+      data: { correspondenceId, outgoingReference, createdById: user.id, ...parsed },
+    });
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.DISPATCH_PREPARED,
+        fromStatus: record.status,
+        toStatus: record.status,
+        minute: parsed.dispatchNote || `Dispatch prepared for ${parsed.recipientName}.`,
+        metadata: { dispatchId: dispatch.id, outgoingReference, channel: parsed.channel },
+        ...context,
+      },
+    });
+  });
+  revalidatePath("/dispatch");
+  revalidatePath(`/correspondence/${correspondenceId}`);
+  redirect(`/correspondence/${correspondenceId}`);
+}
+
+export async function updateDispatchStatusAction(formData: FormData) {
+  const user = await requireUser();
+  if (!canDispatch(user.role)) throw new Error("You are not authorized to update dispatch records.");
+  const dispatchId = String(formData.get("dispatchId") ?? "");
+  const nextStatus = z.enum(DispatchStatus).parse(formData.get("status"));
+  const note = String(formData.get("note") ?? "").trim();
+  const dispatch = await db.dispatchRecord.findUnique({ where: { id: dispatchId }, include: { correspondence: true } });
+  if (!dispatch) throw new Error("Dispatch record not found.");
+  const transitions: Record<DispatchStatus, DispatchStatus[]> = {
+    [DispatchStatus.PREPARED]: [DispatchStatus.DISPATCHED, DispatchStatus.FAILED],
+    [DispatchStatus.DISPATCHED]: [DispatchStatus.DELIVERED, DispatchStatus.FAILED],
+    [DispatchStatus.DELIVERED]: [],
+    [DispatchStatus.FAILED]: [DispatchStatus.DISPATCHED],
+  };
+  if (!transitions[dispatch.status].includes(nextStatus)) throw new Error("Invalid dispatch status transition.");
+  if ((nextStatus === DispatchStatus.DELIVERED || nextStatus === DispatchStatus.FAILED) && note.length < 5) {
+    throw new Error("A delivery or failure note of at least 5 characters is required.");
+  }
+  const now = new Date();
+  const eventType = nextStatus === DispatchStatus.DELIVERED
+    ? EventType.DELIVERY_CONFIRMED
+    : nextStatus === DispatchStatus.FAILED
+      ? EventType.DELIVERY_FAILED
+      : EventType.DISPATCHED;
+  const context = await requestContext();
+  await db.$transaction(async (tx) => {
+    await tx.dispatchRecord.update({
+      where: { id: dispatch.id },
+      data: {
+        status: nextStatus,
+        dispatchNote: nextStatus === DispatchStatus.DISPATCHED ? note || dispatch.dispatchNote : dispatch.dispatchNote,
+        deliveryNote: nextStatus === DispatchStatus.DELIVERED || nextStatus === DispatchStatus.FAILED ? note : dispatch.deliveryNote,
+        dispatchedAt: nextStatus === DispatchStatus.DISPATCHED ? now : dispatch.dispatchedAt,
+        deliveredAt: nextStatus === DispatchStatus.DELIVERED ? now : null,
+        failedAt: nextStatus === DispatchStatus.FAILED ? now : null,
+      },
+    });
+    const remainingDeliveries = nextStatus === DispatchStatus.DELIVERED
+      ? await tx.dispatchRecord.count({ where: { correspondenceId: dispatch.correspondenceId, id: { not: dispatch.id }, status: { not: DispatchStatus.DELIVERED } } })
+      : 1;
+    const closesCorrespondence = nextStatus === DispatchStatus.DELIVERED && remainingDeliveries === 0;
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId: dispatch.correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: eventType,
+        fromStatus: dispatch.correspondence.status,
+        toStatus: closesCorrespondence ? CorrespondenceStatus.CLOSED : dispatch.correspondence.status,
+        minute: note || `${dispatch.outgoingReference} marked ${nextStatus.toLowerCase()}.`,
+        metadata: { dispatchId: dispatch.id, outgoingReference: dispatch.outgoingReference, channel: dispatch.channel, dispatchStatus: nextStatus },
+        ...context,
+      },
+    });
+    if (closesCorrespondence) {
+      await tx.correspondence.update({ where: { id: dispatch.correspondenceId }, data: { status: CorrespondenceStatus.CLOSED, currentOwnerId: null } });
+      await tx.workItem.updateMany({ where: { correspondenceId: dispatch.correspondenceId, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } }, data: { status: WorkItemStatus.COMPLETED, completedAt: now } });
+    }
+  });
+  revalidatePath("/dispatch");
+  revalidatePath(`/correspondence/${dispatch.correspondenceId}`);
+  redirect(`/correspondence/${dispatch.correspondenceId}`);
 }
 
 export async function recordDecisionAction(formData: FormData) {

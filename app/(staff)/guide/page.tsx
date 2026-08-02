@@ -54,6 +54,7 @@ export default function GuidePage() {
         <p className="workflow-line">Director ↔ Director · Division Head ↔ Division Head (same department)</p>
         <p className="muted">External submissions first enter the DG Secretariat intake queue before registration and delivery to the DG.</p>
       </section>
+      <section className="card" style={{ marginTop: 18 }}><h2>Outgoing dispatch</h2><p>Authorized Secretariat and Records officers prepare outgoing delivery records, record the channel and recipient, then track dispatch through delivery or failure. Approval-controlled correspondence cannot be dispatched using a superseded or missing approval.</p></section>
     </>
   );
 }
