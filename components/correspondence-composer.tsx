@@ -23,10 +23,12 @@ type InitialDraft = {
 export function CorrespondenceComposer({
   userName,
   isRegistrar,
+  canReferToPeers,
   initial,
 }: {
   userName: string;
   isRegistrar: boolean;
+  canReferToPeers: boolean;
   initial?: InitialDraft;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
@@ -70,9 +72,13 @@ export function CorrespondenceComposer({
         initialActionRecipients={initial?.actionRecipients}
         initialCopyRecipients={initial?.copyRecipients}
         onSelectionChange={() => setDirty(true)}
-        actionHint={isRegistrar ? "Incoming letters go to the DG automatically. For internal correspondence, choose an assigned reporting-line recipient." : "Select your assigned supervisor or one or more direct reports responsible for taking action."}
+        actionHint={isRegistrar
+          ? "Incoming letters go to the DG automatically. For internal correspondence, choose an authorized recipient."
+          : canReferToPeers
+            ? "Choose your supervisor, a direct report, or an authorized peer. Peer referrals require a clear routing purpose."
+            : "Select your assigned supervisor or one or more direct reports responsible for taking action."}
       /></div>
-      <div className="field span-2"><label>Routing minute / instruction</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="For attention and necessary action…" /></div>
+      <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /></div>
       <div className="field span-2"><label>Scanned document</label><input name="attachment" type="file" accept=".pdf,.jpg,.jpeg,.png" /></div>
       <div className="actions span-2">
         <button className="btn secondary" type="submit" formAction={saveDraftAction} formNoValidate>Save draft</button>

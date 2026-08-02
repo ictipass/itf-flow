@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { CorrespondenceComposer } from "@/components/correspondence-composer";
-import { CorrespondenceStatus } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, UserRole } from "@/lib/generated/prisma/client";
 import { canRegister } from "@/lib/permissions";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
@@ -20,7 +20,7 @@ export default async function EditDraftPage({ params }: { params: Promise<{ id: 
   return <>
     <span className="eyebrow">Private working copy</span><h1>Edit draft</h1>
     <p className="muted">Only you can see this draft. Changes autosave when you leave a field.</p>
-    <CorrespondenceComposer userName={user.name} isRegistrar={canRegister(user.role)} initial={{
+    <CorrespondenceComposer userName={user.name} isRegistrar={canRegister(user.role)} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} initial={{
       id: draft.id, type: draft.type, senderName: draft.senderName, subject: draft.subject,
       senderReference: draft.senderReference ?? "", dueAt: draft.dueAt?.toISOString().slice(0, 10) ?? "",
       classification: draft.classification, priority: draft.priority, summary: draft.summary,

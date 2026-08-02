@@ -50,6 +50,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       activeStatuses.includes(item.status),
   );
   const canRoute = Boolean(activeActionItem && canMinute(user.role));
+  const canReferToPeers = user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD;
   const canHandleIntake =
     record.status === CorrespondenceStatus.SUBMITTED &&
     canRegister(user.role) &&
@@ -100,13 +101,13 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           {canRoute ? (
             <section className="card">
               <h2>Minute and route</h2>
-              <p className="muted">Formal reporting line: your assigned supervisor or direct reports.</p>
+              <p className="muted">{canReferToPeers ? "Route through the formal hierarchy or make an authorized peer referral." : "Formal reporting line: your assigned supervisor or direct reports."}</p>
               <form action={routeCorrespondenceAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
                 <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
                 <div className="field">
                   <RecipientSelector
-                    actionHint="Select your assigned supervisor or one or more direct reports."
+                    actionHint={canReferToPeers ? "Select your supervisor, direct reports, or an authorized peer. Division Head peers are limited to your department." : "Select your assigned supervisor or one or more direct reports."}
                   />
                 </div>
                 <button className="btn" type="submit">Record minute and route</button>

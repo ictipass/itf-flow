@@ -21,7 +21,7 @@ import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
 import { createReferenceNumber } from "@/lib/reference";
 import { canMinute, canOriginate, canRegister } from "@/lib/permissions";
-import { actionRecipientsFollowReportingLine } from "@/lib/reporting-lines";
+import { evaluateActionRouting } from "@/lib/reporting-lines";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
 
@@ -261,18 +261,20 @@ export async function registerCorrespondenceAction(formData: FormData) {
     throw new Error("Select at least one valid recipient.");
   }
 
-  if (
-    !isSecretariatIntake &&
-    !(await actionRecipientsFollowReportingLine({
-      actorId: user.id,
-      actorRole: user.role,
-      recipientIds: actionRecipients.map((recipient) => recipient.id),
-    }))
-  ) {
-    throw new Error("New correspondence must follow the formal communication hierarchy.");
-  }
-
   const instruction = String(formData.get("instruction") ?? "").trim();
+  const routingPolicy = isSecretariatIntake
+    ? { permitted: true, isPeerReferral: false }
+    : await evaluateActionRouting({
+        actorId: user.id,
+        actorRole: user.role,
+        recipientIds: actionRecipients.map((recipient) => recipient.id),
+      });
+  if (!routingPolicy.permitted) {
+    throw new Error("New correspondence must follow an authorized hierarchy or peer-referral path.");
+  }
+  if (routingPolicy.isPeerReferral && instruction.length < 10) {
+    throw new Error("A peer referral requires a clear purpose of at least 10 characters.");
+  }
   const draftId = String(formData.get("draftId") ?? "");
   const existingDraft = draftId
     ? await db.correspondence.findFirst({
@@ -323,7 +325,11 @@ export async function registerCorrespondenceAction(formData: FormData) {
         correspondenceId: created.id,
         actorId: user.id,
         actorType: ActorType.STAFF,
-        type: existingDraft ? EventType.SUBMITTED : EventType.REGISTERED,
+        type: routingPolicy.isPeerReferral
+          ? EventType.REFERRED
+          : existingDraft
+            ? EventType.SUBMITTED
+            : EventType.REGISTERED,
         fromStatus: existingDraft ? CorrespondenceStatus.DRAFT : null,
         toStatus: created.status,
         minute: isSecretariatIntake
@@ -332,6 +338,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
         metadata: {
           actionRecipientIds: actionRecipients.map((recipient) => recipient.id),
           copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
+          routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
         },
         ...context,
       },
@@ -681,14 +688,14 @@ export async function routeCorrespondenceAction(formData: FormData) {
   ) {
     throw new Error("Invalid routing request.");
   }
-  if (
-    !(await actionRecipientsFollowReportingLine({
+  const routingPolicy = await evaluateActionRouting({
       actorId: user.id,
       actorRole: user.role,
       recipientIds: actionRecipients.map((recipient) => recipient.id),
-    }))
-  ) {
-    throw new Error("Routing must follow the formal communication hierarchy.");
+    });
+  if (!routingPolicy.permitted) throw new Error("Routing must follow an authorized hierarchy or peer-referral path.");
+  if (routingPolicy.isPeerReferral && minute.length < 10) {
+    throw new Error("A peer referral requires a clear purpose of at least 10 characters.");
   }
   const context = await requestContext();
   await db.$transaction(async (tx) => {
@@ -726,11 +733,15 @@ export async function routeCorrespondenceAction(formData: FormData) {
         correspondenceId,
         actorId: user.id,
         actorType: ActorType.STAFF,
-        type: EventType.MINUTED,
+        type: routingPolicy.isPeerReferral ? EventType.REFERRED : EventType.MINUTED,
         fromStatus: record.status,
         toStatus: CorrespondenceStatus.ASSIGNED,
         minute,
-        metadata: { actionRecipientIds, copyRecipientIds },
+        metadata: {
+          actionRecipientIds,
+          copyRecipientIds,
+          routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
+        },
         ...context,
       },
     });

@@ -1,6 +1,7 @@
 import { CorrespondenceComposer } from "@/components/correspondence-composer";
 import { canOriginate, canRegister } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
+import { UserRole } from "@/lib/generated/prisma/client";
 
 export default async function NewCorrespondencePage() {
   const user = await requireUser();
@@ -10,6 +11,6 @@ export default async function NewCorrespondencePage() {
     <span className="eyebrow">{isRegistrar ? "Secretariat intake or internal origination" : "Internal origination"}</span>
     <h1>Raise correspondence</h1>
     <p className="muted">Save unfinished work privately, then submit it through your formal reporting line when ready.</p>
-    <CorrespondenceComposer userName={user.name} isRegistrar={isRegistrar} />
+    <CorrespondenceComposer userName={user.name} isRegistrar={isRegistrar} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} />
   </>;
 }
