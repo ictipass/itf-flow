@@ -4,6 +4,7 @@ import {
   acknowledgeAction,
   claimIntakeAction,
   releaseIntakeAction,
+  recordDecisionAction,
   resubmitReturnedAction,
   resolveAction,
   returnToInitiatorAction,
@@ -11,7 +12,7 @@ import {
 } from "@/app/actions";
 import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
-import { CorrespondenceStatus, UserRole, WorkItemStatus } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, EventType, UserRole, WorkItemStatus } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
@@ -28,7 +29,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       claimedBy: true,
       emailMessage: true,
       attachments: true,
-      workItems: { include: { assignee: true }, orderBy: { assignedAt: "desc" } },
+      workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
     },
   });
@@ -49,14 +50,16 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       item.kind === "ACTION" &&
       activeStatuses.includes(item.status),
   );
-  const canRoute = Boolean(activeActionItem && canMinute(user.role));
+  const pendingDecision = activeActionItem?.decisionRequest?.outcome === null ? activeActionItem.decisionRequest : null;
+  const canRoute = Boolean(activeActionItem && !pendingDecision && canMinute(user.role));
   const canReferToPeers = user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD;
   const canHandleIntake =
     record.status === CorrespondenceStatus.SUBMITTED &&
     canRegister(user.role) &&
     record.claimedById === user.id;
-  const canReturnToInitiator = Boolean(activeActionItem && record.createdById && record.createdById !== user.id);
-  const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id;
+  const canReturnToInitiator = Boolean(activeActionItem && !pendingDecision && record.createdById && record.createdById !== user.id);
+  const latestReturnDecision = record.events.find((event) => event.type === EventType.RETURNED || event.type === EventType.DECISION_RECORDED);
+  const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id && latestReturnDecision?.type === EventType.RETURNED;
   return (
     <>
       <span className="eyebrow">{record.referenceNumber}</span>
@@ -98,12 +101,31 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}
           {activeItem?.status === WorkItemStatus.OPEN ? <section className="card"><form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary" type="submit">Acknowledge receipt</button></form></section> : null}
+          {pendingDecision ? (
+            <section className="card">
+              <span className="eyebrow">Decision required</span><h2>{label(pendingDecision.purpose)}</h2>
+              <p className="muted">Requested by {pendingDecision.requestedBy.name}. Record the formal decision before forwarding or resolving this correspondence.</p>
+              <form action={recordDecisionAction} className="grid">
+                <input type="hidden" name="correspondenceId" value={record.id} />
+                <input type="hidden" name="decisionRequestId" value={pendingDecision.id} />
+                <div className="field"><label>Decision note</label><textarea name="note" minLength={5} required placeholder="State the basis, conditions, correction required, or reason for this decision…" /></div>
+                <div className="actions">
+                  {pendingDecision.purpose === "REVIEW" ? <button className="btn" name="outcome" value="RECOMMENDED" type="submit">Recommend</button> : null}
+                  {pendingDecision.purpose === "CONCURRENCE" ? <button className="btn" name="outcome" value="CONCURRED" type="submit">Concur</button> : null}
+                  {pendingDecision.purpose === "APPROVAL" ? <button className="btn" name="outcome" value="APPROVED" type="submit">Approve</button> : null}
+                  {pendingDecision.purpose !== "REVIEW" ? <button className="btn secondary" name="outcome" value="REJECTED" type="submit">Reject</button> : null}
+                  <button className="btn secondary" name="outcome" value="RETURNED" type="submit">Return to requester</button>
+                </div>
+              </form>
+            </section>
+          ) : null}
           {canRoute ? (
             <section className="card">
               <h2>Minute and route</h2>
               <p className="muted">{canReferToPeers ? "Route through the formal hierarchy or make an authorized peer referral." : "Formal reporting line: your assigned supervisor or direct reports."}</p>
               <form action={routeCorrespondenceAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
+                <div className="field"><label>Routing purpose</label><select name="workPurpose" defaultValue="ACTION"><option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option></select></div>
                 <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
                 <div className="field">
                   <RecipientSelector
@@ -114,7 +136,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               </form>
             </section>
           ) : null}
-          {activeActionItem ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
+          {activeActionItem && !pendingDecision ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
           {canReturnToInitiator ? (
             <section className="card">
               <h2>Return for correction</h2>
@@ -138,6 +160,17 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           ) : null}
         </div>
         <aside className="card">
+          {record.workItems.some((item) => item.decisionRequest) ? <>
+            <h2>Decision register</h2>
+            {record.workItems.filter((item) => item.decisionRequest).map((item) => {
+              const decision = item.decisionRequest!;
+              return <div key={decision.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}>
+                <strong>{label(decision.purpose)} · {decision.outcome ? label(decision.outcome) : "Pending"}</strong>
+                <p style={{ margin: "5px 0" }}>{decision.decisionNote ?? item.instruction}</p>
+                <small className="muted">Requested by {decision.requestedBy.name} for {item.assignee.name}{decision.decidedBy ? ` · decided by ${decision.decidedBy.name}` : ""}{decision.decidedAt ? ` · ${decision.decidedAt.toLocaleString("en-NG")}` : ""}</small>
+              </div>;
+            })}
+          </> : null}
           <h2>Movement & minutes</h2>
           <div className="timeline">
             {record.events.map((event) => <article className="event" key={event.id}>
@@ -147,7 +180,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             </article>)}
           </div>
           <h3>Current recipients</h3>
-          {record.workItems.filter((item) => activeStatuses.includes(item.status)).map((item) => <p key={item.id}><span className="badge">{label(item.kind)}</span> {item.assignee.name}</p>)}
+          {record.workItems.filter((item) => activeStatuses.includes(item.status)).map((item) => <p key={item.id}><span className="badge">{label(item.kind)}</span> {item.assignee.name} <small className="muted">· {label(item.purpose)}</small></p>)}
         </aside>
       </div>
     </>

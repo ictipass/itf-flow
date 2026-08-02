@@ -13,6 +13,7 @@ const recipientSteps = [
   ["Open My inbox", "New action and copied correspondence appear in your attention queue."],
   ["Open and read", "Review the subject, summary, composed text, attachments, classification, priority, due date, and all prior minutes."],
   ["Acknowledge receipt", "Use Acknowledge receipt to confirm that the correspondence is now in your custody."],
+  ["Record a requested decision", "For review, concurrence, or approval work, enter a mandatory decision note and select the permitted formal outcome before forwarding."],
   ["Treat the matter", "Carry out the requested review, decision, consultation, or operational action outside or within the supporting process."],
   ["Minute, refer, or forward", "Write a clear purpose, select an authorized hierarchy or peer recipient, optionally copy the department Director, and route it."],
   ["Resolve", "When no further routing is required, enter a resolution note and mark the correspondence resolved."],

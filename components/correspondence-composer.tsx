@@ -16,6 +16,7 @@ type InitialDraft = {
   summary: string;
   body: string;
   instruction: string;
+  workPurpose: string;
   actionRecipients: DirectoryPerson[];
   copyRecipients: DirectoryPerson[];
 };
@@ -78,6 +79,9 @@ export function CorrespondenceComposer({
             ? "Choose your supervisor, a direct report, or an authorized peer. Peer referrals require a clear routing purpose."
             : "Select your assigned supervisor or one or more direct reports responsible for taking action."}
       /></div>
+      <div className="field"><label>Routing purpose</label><select name="workPurpose" defaultValue={initial?.workPurpose ?? "ACTION"}>
+        <option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option>
+      </select></div>
       <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /></div>
       <div className="field span-2"><label>Scanned document</label><input name="attachment" type="file" accept=".pdf,.jpg,.jpeg,.png" /></div>
       <div className="actions span-2">

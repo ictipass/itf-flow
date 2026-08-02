@@ -24,7 +24,7 @@ export default async function EditDraftPage({ params }: { params: Promise<{ id: 
       id: draft.id, type: draft.type, senderName: draft.senderName, subject: draft.subject,
       senderReference: draft.senderReference ?? "", dueAt: draft.dueAt?.toISOString().slice(0, 10) ?? "",
       classification: draft.classification, priority: draft.priority, summary: draft.summary,
-      body: draft.body ?? "", instruction: draft.draftInstruction ?? "", actionRecipients, copyRecipients,
+      body: draft.body ?? "", instruction: draft.draftInstruction ?? "", workPurpose: draft.draftWorkPurpose, actionRecipients, copyRecipients,
     }} />
   </>;
 }

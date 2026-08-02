@@ -23,6 +23,7 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 
 - Save private drafts, autosave composed correspondence, and submit through the author's reporting line. Implemented.
 - Controlled Director-to-Director and same-department Division Head peer referrals. Implemented.
+- Explicit review, concurrence and approval requests with an auditable decision register. Implemented.
 - Separate author, reviewer, approving officer and dispatch authority.
 - Add outgoing dispatch records, delivery channels and acknowledgement of delivery.
 - Add document version history and compare revisions.

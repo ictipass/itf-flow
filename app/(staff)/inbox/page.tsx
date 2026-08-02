@@ -16,12 +16,12 @@ export default async function InboxPage() {
       <span className="eyebrow">Action queue</span><h1>My inbox</h1>
       <div className="card">
         <table className="table">
-          <thead><tr><th>Reference</th><th>Subject</th><th>From</th><th>Kind</th><th>Received</th></tr></thead>
+          <thead><tr><th>Reference</th><th>Subject</th><th>From</th><th>Responsibility</th><th>Received</th></tr></thead>
           <tbody>
             {items.map((item) => <tr key={item.id}>
               <td><Link href={`/correspondence/${item.correspondenceId}`}><strong>{item.correspondence.referenceNumber}</strong></Link></td>
               <td>{item.correspondence.subject}</td><td>{item.correspondence.senderName}</td>
-              <td><span className="badge">{label(item.kind)}</span></td>
+              <td><span className="badge">{label(item.kind)}</span> <span className="badge">{label(item.purpose)}</span></td>
               <td>{item.assignedAt.toLocaleDateString("en-NG")}</td>
             </tr>)}
             {!items.length ? <tr><td colSpan={5} className="muted">No open work items.</td></tr> : null}

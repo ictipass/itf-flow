@@ -10,11 +10,13 @@ import {
   Classification,
   CorrespondenceStatus,
   CorrespondenceType,
+  DecisionOutcome,
   EventType,
   IntakeSource,
   Priority,
   RecipientKind,
   UserRole,
+  WorkPurpose,
   WorkItemStatus,
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
@@ -61,6 +63,11 @@ function draftData(formData: FormData) {
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,
   });
+}
+
+function workPurpose(formData: FormData) {
+  const parsed = z.enum(WorkPurpose).safeParse(formData.get("workPurpose") ?? WorkPurpose.ACTION);
+  return parsed.success ? parsed.data : WorkPurpose.ACTION;
 }
 
 async function requestContext() {
@@ -262,6 +269,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
   }
 
   const instruction = String(formData.get("instruction") ?? "").trim();
+  const purpose = isSecretariatIntake ? WorkPurpose.ACTION : workPurpose(formData);
   const routingPolicy = isSecretariatIntake
     ? { permitted: true, isPeerReferral: false }
     : await evaluateActionRouting({
@@ -274,6 +282,12 @@ export async function registerCorrespondenceAction(formData: FormData) {
   }
   if (routingPolicy.isPeerReferral && instruction.length < 10) {
     throw new Error("A peer referral requires a clear purpose of at least 10 characters.");
+  }
+  if (purpose !== WorkPurpose.ACTION && instruction.length < 10) {
+    throw new Error("A review, concurrence, or approval request requires a clear purpose of at least 10 characters.");
+  }
+  if (purpose !== WorkPurpose.ACTION && actionRecipients.length !== 1) {
+    throw new Error("Select exactly one decision recipient. Additional staff may be copied.");
   }
   const draftId = String(formData.get("draftId") ?? "");
   const existingDraft = draftId
@@ -302,30 +316,43 @@ export async function registerCorrespondenceAction(formData: FormData) {
       : await tx.correspondence.create({
           data: { ...values, referenceNumber: await nextReference(tx) },
         });
-    await tx.workItem.createMany({
-      data: [
-        ...actionRecipients.map((recipient) => ({
+    const actionItems = await Promise.all(actionRecipients.map((recipient) =>
+      tx.workItem.create({
+        data: {
           correspondenceId: created.id,
           assigneeId: recipient.id,
           kind: RecipientKind.ACTION,
+          purpose,
           instruction: instruction || "For attention and necessary action.",
           dueAt: created.dueAt,
-        })),
-        ...copyRecipients.map((recipient) => ({
+        },
+      }),
+    ));
+    if (copyRecipients.length) await tx.workItem.createMany({
+      data: copyRecipients.map((recipient) => ({
           correspondenceId: created.id,
           assigneeId: recipient.id,
           kind: RecipientKind.COPY,
           instruction: "For your information.",
           dueAt: created.dueAt,
         })),
-      ],
+    });
+    if (purpose !== WorkPurpose.ACTION) await tx.decisionRequest.createMany({
+      data: actionItems.map((item) => ({
+        correspondenceId: created.id,
+        workItemId: item.id,
+        requestedById: user.id,
+        purpose,
+      })),
     });
     await tx.correspondenceEvent.create({
       data: {
         correspondenceId: created.id,
         actorId: user.id,
         actorType: ActorType.STAFF,
-        type: routingPolicy.isPeerReferral
+        type: purpose !== WorkPurpose.ACTION
+          ? EventType.DECISION_REQUESTED
+          : routingPolicy.isPeerReferral
           ? EventType.REFERRED
           : existingDraft
             ? EventType.SUBMITTED
@@ -339,6 +366,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
           actionRecipientIds: actionRecipients.map((recipient) => recipient.id),
           copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
           routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
+          workPurpose: purpose,
         },
         ...context,
       },
@@ -365,6 +393,7 @@ async function persistDraft(formData: FormData) {
     draftActionRecipientIds: formData.getAll("actionRecipientIds").map(String).filter(Boolean),
     draftCopyRecipientIds: formData.getAll("copyRecipientIds").map(String).filter(Boolean),
     draftInstruction: String(formData.get("instruction") ?? "").trim() || null,
+    draftWorkPurpose: workPurpose(formData),
   };
   if (draftId) {
     const draft = await db.correspondence.findFirst({
@@ -655,6 +684,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
   if (!canMinute(user.role)) throw new Error("You cannot minute or route correspondence.");
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
+  const purpose = workPurpose(formData);
   const actionRecipientIds = formData
     .getAll("actionRecipientIds")
     .map(String)
@@ -697,29 +727,46 @@ export async function routeCorrespondenceAction(formData: FormData) {
   if (routingPolicy.isPeerReferral && minute.length < 10) {
     throw new Error("A peer referral requires a clear purpose of at least 10 characters.");
   }
+  if (purpose !== WorkPurpose.ACTION && minute.length < 10) {
+    throw new Error("A review, concurrence, or approval request requires a clear purpose of at least 10 characters.");
+  }
+  if (purpose !== WorkPurpose.ACTION && actionRecipients.length !== 1) {
+    throw new Error("Select exactly one decision recipient. Additional staff may be copied.");
+  }
   const context = await requestContext();
   await db.$transaction(async (tx) => {
     await tx.workItem.updateMany({
       where: { correspondenceId, assigneeId: user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
     });
-    await tx.workItem.createMany({
-      data: [
-        ...actionRecipients.map((recipient) => ({
+    const actionItems = await Promise.all(actionRecipients.map((recipient) =>
+      tx.workItem.create({
+        data: {
           correspondenceId,
           assigneeId: recipient.id,
           kind: RecipientKind.ACTION,
+          purpose,
           instruction: minute,
           dueAt: record.dueAt,
-        })),
-        ...copyRecipients.map((recipient) => ({
+        },
+      }),
+    ));
+    if (copyRecipients.length) await tx.workItem.createMany({
+      data: copyRecipients.map((recipient) => ({
           correspondenceId,
           assigneeId: recipient.id,
           kind: RecipientKind.COPY,
           instruction: "For your information.",
           dueAt: record.dueAt,
         })),
-      ],
+    });
+    if (purpose !== WorkPurpose.ACTION) await tx.decisionRequest.createMany({
+      data: actionItems.map((item) => ({
+        correspondenceId,
+        workItemId: item.id,
+        requestedById: user.id,
+        purpose,
+      })),
     });
     await tx.correspondence.update({
       where: { id: correspondenceId },
@@ -733,7 +780,11 @@ export async function routeCorrespondenceAction(formData: FormData) {
         correspondenceId,
         actorId: user.id,
         actorType: ActorType.STAFF,
-        type: routingPolicy.isPeerReferral ? EventType.REFERRED : EventType.MINUTED,
+        type: purpose !== WorkPurpose.ACTION
+          ? EventType.DECISION_REQUESTED
+          : routingPolicy.isPeerReferral
+            ? EventType.REFERRED
+            : EventType.MINUTED,
         fromStatus: record.status,
         toStatus: CorrespondenceStatus.ASSIGNED,
         minute,
@@ -741,11 +792,102 @@ export async function routeCorrespondenceAction(formData: FormData) {
           actionRecipientIds,
           copyRecipientIds,
           routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
+          workPurpose: purpose,
         },
         ...context,
       },
     });
   });
+  revalidatePath(`/correspondence/${correspondenceId}`);
+  redirect(`/correspondence/${correspondenceId}`);
+}
+
+export async function recordDecisionAction(formData: FormData) {
+  const user = await requireUser();
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const decisionRequestId = String(formData.get("decisionRequestId") ?? "");
+  const outcome = z.enum(DecisionOutcome).parse(formData.get("outcome"));
+  const note = String(formData.get("note") ?? "").trim();
+  if (note.length < 5) throw new Error("A decision note of at least 5 characters is required.");
+
+  const request = await db.decisionRequest.findFirst({
+    where: {
+      id: decisionRequestId,
+      correspondenceId,
+      outcome: null,
+      workItem: {
+        assigneeId: user.id,
+        kind: RecipientKind.ACTION,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+    },
+    include: { correspondence: true, workItem: true },
+  });
+  if (!request) throw new Error("This decision request is unavailable or has already been decided.");
+
+  const allowed: Record<WorkPurpose, DecisionOutcome[]> = {
+    [WorkPurpose.ACTION]: [],
+    [WorkPurpose.REVIEW]: [DecisionOutcome.RECOMMENDED, DecisionOutcome.RETURNED],
+    [WorkPurpose.CONCURRENCE]: [DecisionOutcome.CONCURRED, DecisionOutcome.REJECTED, DecisionOutcome.RETURNED],
+    [WorkPurpose.APPROVAL]: [DecisionOutcome.APPROVED, DecisionOutcome.REJECTED, DecisionOutcome.RETURNED],
+  };
+  if (!allowed[request.purpose].includes(outcome)) {
+    throw new Error("That decision is not valid for this request.");
+  }
+
+  const returnsToRequester = outcome === DecisionOutcome.REJECTED || outcome === DecisionOutcome.RETURNED;
+  const context = await requestContext();
+  await db.$transaction(async (tx) => {
+    await tx.decisionRequest.update({
+      where: { id: request.id },
+      data: { outcome, decisionNote: note, decidedById: user.id, decidedAt: new Date() },
+    });
+    if (returnsToRequester) {
+      await tx.workItem.update({
+        where: { id: request.workItemId },
+        data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
+      });
+      await tx.workItem.create({
+        data: {
+          correspondenceId,
+          assigneeId: request.requestedById,
+          kind: RecipientKind.ACTION,
+          purpose: WorkPurpose.ACTION,
+          instruction: note,
+          dueAt: request.correspondence.dueAt,
+        },
+      });
+      await tx.correspondence.update({
+        where: { id: correspondenceId },
+        data: { status: CorrespondenceStatus.RETURNED, currentOwnerId: request.requestedById },
+      });
+    } else {
+      await tx.correspondence.update({
+        where: { id: correspondenceId },
+        data: { status: CorrespondenceStatus.IN_PROGRESS, currentOwnerId: user.id },
+      });
+    }
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.DECISION_RECORDED,
+        fromStatus: request.correspondence.status,
+        toStatus: returnsToRequester ? CorrespondenceStatus.RETURNED : CorrespondenceStatus.IN_PROGRESS,
+        minute: note,
+        metadata: {
+          decisionRequestId: request.id,
+          requestedById: request.requestedById,
+          workPurpose: request.purpose,
+          outcome,
+          returnedToId: returnsToRequester ? request.requestedById : undefined,
+        },
+        ...context,
+      },
+    });
+  });
+  revalidatePath("/inbox");
   revalidatePath(`/correspondence/${correspondenceId}`);
   redirect(`/correspondence/${correspondenceId}`);
 }
