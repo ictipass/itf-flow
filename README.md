@@ -54,6 +54,11 @@ Staff master-list provisioning and secure directory synchronization are document
 Organizational broadcast authorization, recipient snapshots and acknowledgement tracking are
 documented in [`docs/broadcasts.md`](docs/broadcasts.md).
 
+Stakeholder presentation materials are organized in the
+[`presentation package`](docs/stakeholder-presentation-package.md), detailed
+[`live-demo script`](docs/stakeholder-demo-script.md), and
+[`pre-demo checklist`](docs/stakeholder-demo-checklist.md).
+
 ## Current demo boundaries
 
 - Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`

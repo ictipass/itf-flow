@@ -5,6 +5,9 @@ Slices are ordered so each one produces a demonstrable, testable increment.
 Cross-machine setup, database/file restoration, environment verification and conversation-independent
 handover are documented and implemented as a project-readiness slice.
 
+The stakeholder narrative, role-based live demonstration, anticipated questions, honest MVP boundaries,
+pilot decisions and recovery checklist are documented as a presentation-readiness slice.
+
 ## Slice 2 — Organization-aware directory and reporting lines — Implemented
 
 - Replaced role-only adjacency with explicit supervisor/direct-report relationships.
