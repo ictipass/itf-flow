@@ -12,6 +12,13 @@ Slices are ordered so each one produces a demonstrable, testable increment.
 
 Acting appointments and time-bound delegation remain scheduled for Slice 7.
 
+## Slice 2A — Correspondence passage visibility — Implemented
+
+- Added a chronological, immutable correspondence journey to the detail page.
+- Shows the status after every recorded event and time spent at each point.
+- Shows the actor, role, office, minute, action recipients, copied recipients, and simultaneous routing branches.
+- Highlights current action owners, current offices, active copies, and elapsed time at the current stage.
+
 ## Slice 3 — Drafts, review and dispatch
 
 - Save drafts and autosave composed correspondence.

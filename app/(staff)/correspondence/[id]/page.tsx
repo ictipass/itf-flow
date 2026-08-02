@@ -10,6 +10,7 @@ import {
   routeCorrespondenceAction,
 } from "@/app/actions";
 import { RecipientSelector } from "@/components/recipient-selector";
+import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, UserRole, WorkItemStatus } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { canMinute, canRegister } from "@/lib/permissions";
@@ -23,6 +24,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     where: { id },
     include: {
       externalOrganization: true,
+      createdBy: true,
       claimedBy: true,
       emailMessage: true,
       attachments: true,
@@ -71,6 +73,14 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           ) : null}
         </section>
       ) : null}
+      <CorrespondencePassage
+        status={record.status}
+        receivedAt={record.receivedAt}
+        initiator={record.createdBy}
+        externalSender={record.externalOrganization?.contactName ?? null}
+        events={record.events}
+        workItems={record.workItems}
+      />
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1.3fr) minmax(320px, .7fr)", marginTop: 22 }}>
         <div className="grid">
           <section className="card">
