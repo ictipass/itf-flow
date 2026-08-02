@@ -7,7 +7,7 @@ import { label } from "@/lib/reference";
 export default async function DashboardPage() {
   const user = await requireUser();
   const now = new Date();
-  const [open, acknowledged, overdue, resolved, recent] = await Promise.all([
+  const [open, acknowledged, overdue, resolved, recent, unreadBroadcasts, pendingAcknowledgements] = await Promise.all([
     db.workItem.count({ where: { assigneeId: user.id, status: WorkItemStatus.OPEN } }),
     db.workItem.count({ where: { assigneeId: user.id, status: WorkItemStatus.ACKNOWLEDGED } }),
     db.workItem.count({ where: { assigneeId: user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] }, dueAt: { lt: now } } }),
@@ -18,6 +18,8 @@ export default async function DashboardPage() {
       orderBy: { assignedAt: "desc" },
       take: 6,
     }),
+    db.broadcastRecipient.count({ where: { userId: user.id, readAt: null, broadcast: { status: "PUBLISHED", AND: [{ OR: [{ publishAt: null }, { publishAt: { lte: now } }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] } } }),
+    db.broadcastRecipient.count({ where: { userId: user.id, acknowledgedAt: null, broadcast: { status: "PUBLISHED", mandatoryAcknowledgement: true, AND: [{ OR: [{ publishAt: null }, { publishAt: { lte: now } }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] } } }),
   ]);
   return (
     <>
@@ -31,6 +33,7 @@ export default async function DashboardPage() {
         <div className="card stat"><span className="muted">Overdue</span><strong>{overdue}</strong></div>
         <div className="card stat"><span className="muted">Completed</span><strong>{resolved}</strong></div>
       </section>
+      {(unreadBroadcasts > 0 || pendingAcknowledgements > 0) ? <Link href="/broadcasts" className="broadcast-dashboard-alert"><div><span className="eyebrow">Official announcements</span><strong>{unreadBroadcasts} unread · {pendingAcknowledgements} requiring acknowledgement</strong></div><span>Open announcements →</span></Link> : null}
       <section className="card" style={{ marginTop: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}><h2>Priority inbox</h2><Link href="/inbox" className="eyebrow">View all</Link></div>
         <table className="table">

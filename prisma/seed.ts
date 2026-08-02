@@ -1,6 +1,6 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { UserRole } from "../lib/generated/prisma/client";
+import { BroadcastCategory, BroadcastScopeType, UserRole } from "../lib/generated/prisma/client";
 import { db } from "../lib/db";
 
 const demoUsers = [
@@ -9,7 +9,8 @@ const demoUsers = [
   { staffNumber: "ITF/DGS/002", email: "secretary.jos@itf.gov.ng", name: "Grace Danladi", role: UserRole.DG_SECRETARY, office: "DG Secretariat — Jos", position: "DG Secretary", hierarchyLevel: 4 },
   { staffNumber: "ITF/DGS/003", email: "secretary.lagos@itf.gov.ng", name: "Chioma Okeke", role: UserRole.DG_SECRETARY, office: "DG Secretariat — Lagos", position: "DG Secretary", hierarchyLevel: 4 },
   { staffNumber: "ITF/DG/001", email: "dg@itf.gov.ng", name: "Director-General", role: UserRole.DG, office: "Director-General's Office", position: "Director-General", hierarchyLevel: 5 },
-  { staffNumber: "ITF/ICT/001", email: "director.ict@itf.gov.ng", name: "Director ICT", role: UserRole.DIRECTOR, office: "Headquarters", department: "Information and Communication Technology", position: "Director ICT", hierarchyLevel: 4 },
+  { staffNumber: "ITF/HR/001", email: "director.hr@itf.gov.ng", name: "Director Human Resources", role: UserRole.DIRECTOR, office: "Headquarters", department: "Human Resources", position: "Director Human Resources", hierarchyLevel: 4 },
+  { staffNumber: "ITF/ICT/001", email: "director.ict@itf.gov.ng", name: "Director ICT", role: UserRole.DIRECTOR, office: "Headquarters", department: "ICT", position: "Director ICT", hierarchyLevel: 4 },
   { staffNumber: "ITF/RIC/001", email: "director.ric@itf.gov.ng", name: "Director Revenue, Inspectorate and Compliance", role: UserRole.DIRECTOR, office: "Headquarters", department: "Revenue, Inspectorate and Compliance", position: "Director RIC", hierarchyLevel: 4 },
   { staffNumber: "ITF/SDO/001", email: "director.sdo@itf.gov.ng", name: "Director SDO", role: UserRole.DIRECTOR, office: "Headquarters", department: "Service Development and Operations", position: "Director SDO", hierarchyLevel: 4 },
   { staffNumber: "ITF/ICT/010", email: "head.pass@itf.gov.ng", name: "Head PASS Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "PASS", position: "Division Head", hierarchyLevel: 3 },
@@ -24,6 +25,7 @@ const reportingLines: Record<string, string> = {
   "secretary.jos@itf.gov.ng": "dg@itf.gov.ng",
   "secretary.lagos@itf.gov.ng": "dg@itf.gov.ng",
   "director.ict@itf.gov.ng": "dg@itf.gov.ng",
+  "director.hr@itf.gov.ng": "dg@itf.gov.ng",
   "director.ric@itf.gov.ng": "dg@itf.gov.ng",
   "director.sdo@itf.gov.ng": "dg@itf.gov.ng",
   "head.pass@itf.gov.ng": "director.ict@itf.gov.ng",
@@ -55,7 +57,22 @@ async function main() {
     });
   }
 
-  console.log(`Seeded ${demoUsers.length} ITF Flow demo users and reporting lines.`);
+  const allCategories = Object.values(BroadcastCategory);
+  const grantSpecs = [
+    { email: "dg@itf.gov.ng", scopeType: BroadcastScopeType.ORGANIZATION, scopeValue: null, allowedCategories: allCategories, canRequireAcknowledgement: true },
+    { email: "admin@itf.gov.ng", scopeType: BroadcastScopeType.ORGANIZATION, scopeValue: null, allowedCategories: [BroadcastCategory.SYSTEM, BroadcastCategory.EMERGENCY], canRequireAcknowledgement: true },
+    { email: "director.hr@itf.gov.ng", scopeType: BroadcastScopeType.ORGANIZATION, scopeValue: null, allowedCategories: [BroadcastCategory.HUMAN_RESOURCES, BroadcastCategory.POLICY, BroadcastCategory.GENERAL], canRequireAcknowledgement: true },
+    { email: "director.ict@itf.gov.ng", scopeType: BroadcastScopeType.DEPARTMENT, scopeValue: "ICT", allowedCategories: [BroadcastCategory.GENERAL, BroadcastCategory.POLICY, BroadcastCategory.SYSTEM], canRequireAcknowledgement: true },
+    { email: "director.ric@itf.gov.ng", scopeType: BroadcastScopeType.DEPARTMENT, scopeValue: "Revenue, Inspectorate and Compliance", allowedCategories: [BroadcastCategory.GENERAL, BroadcastCategory.POLICY], canRequireAcknowledgement: true },
+    { email: "director.sdo@itf.gov.ng", scopeType: BroadcastScopeType.DEPARTMENT, scopeValue: "Service Development and Operations", allowedCategories: [BroadcastCategory.GENERAL, BroadcastCategory.POLICY], canRequireAcknowledgement: true },
+    { email: "head.pass@itf.gov.ng", scopeType: BroadcastScopeType.DIVISION, scopeValue: "PASS", allowedCategories: [BroadcastCategory.GENERAL], canRequireAcknowledgement: false },
+    { email: "head.ncs@itf.gov.ng", scopeType: BroadcastScopeType.DIVISION, scopeValue: "NCS", allowedCategories: [BroadcastCategory.GENERAL], canRequireAcknowledgement: false },
+    { email: "head.hardware@itf.gov.ng", scopeType: BroadcastScopeType.DIVISION, scopeValue: "Hardware", allowedCategories: [BroadcastCategory.GENERAL], canRequireAcknowledgement: false },
+  ];
+  await db.broadcastPublisherGrant.deleteMany({ where: { userId: { in: grantSpecs.flatMap((grant) => userIds.get(grant.email) ? [userIds.get(grant.email)!] : []) } } });
+  await db.broadcastPublisherGrant.createMany({ data: grantSpecs.map(({ email, ...grant }) => ({ ...grant, userId: userIds.get(email)! })) });
+
+  console.log(`Seeded ${demoUsers.length} ITF Flow demo users, reporting lines, and ${grantSpecs.length} broadcast grants.`);
 }
 
 main().finally(() => db.$disconnect());

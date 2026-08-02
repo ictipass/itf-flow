@@ -46,6 +46,9 @@ the same `WORKSPACE_LAUNCH_TOKEN_SECRET` in both applications.
 Staff master-list provisioning and secure directory synchronization are documented in
 [`docs/provisioning.md`](docs/provisioning.md).
 
+Organizational broadcast authorization, recipient snapshots and acknowledgement tracking are
+documented in [`docs/broadcasts.md`](docs/broadcasts.md).
+
 ## Current demo boundaries
 
 - Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`

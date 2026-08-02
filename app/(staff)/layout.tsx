@@ -22,6 +22,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
           <Link href="/inbox">My inbox</Link>
           <Link href="/correspondence">All correspondence</Link>
           <Link href="/correspondence/new">Raise correspondence</Link>
+          <Link href="/broadcasts">Announcements</Link>
           <Link href="/guide">How it works</Link>
           {user.role === UserRole.SYSTEM_ADMIN ? (
             <Link href="/admin/provisioning">Provisioning admin</Link>

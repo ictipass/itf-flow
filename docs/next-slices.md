@@ -37,6 +37,8 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 
 ## Slice 5 — Notifications and escalations
 
+- In-app organizational broadcasts with scoped publishing grants, recipient snapshots, read status
+  and mandatory acknowledgement. Implemented.
 - In-app notifications, email delivery and optional push notifications.
 - Reminders before due dates and configurable overdue escalations.
 - Daily digest for executives, Directors and secretaries.

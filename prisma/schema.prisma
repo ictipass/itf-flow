@@ -96,6 +96,45 @@ enum ActorType {
   SYSTEM
 }
 
+enum BroadcastStatus {
+  DRAFT
+  PUBLISHED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum BroadcastCategory {
+  GENERAL
+  HUMAN_RESOURCES
+  POLICY
+  EMERGENCY
+  SYSTEM
+}
+
+enum BroadcastPriority {
+  ROUTINE
+  IMPORTANT
+  URGENT
+}
+
+enum BroadcastScopeType {
+  ORGANIZATION
+  OFFICE
+  DEPARTMENT
+  DIVISION
+  UNIT
+  ROLE
+  USER
+}
+
+enum BroadcastEventType {
+  DRAFTED
+  PUBLISHED
+  READ
+  ACKNOWLEDGED
+  WITHDRAWN
+}
+
 model User {
   id                  String   @id @default(cuid())
   workspaceUserId     String?  @unique
@@ -126,12 +165,107 @@ model User {
   events              CorrespondenceEvent[]
   claimedCorrespondence Correspondence[] @relation("CorrespondenceClaim")
   launchRedemptions   LaunchTokenRedemption[]
+  broadcastGrants     BroadcastPublisherGrant[]
+  createdBroadcasts   Broadcast[] @relation("BroadcastCreator")
+  publishedBroadcasts Broadcast[] @relation("BroadcastPublisher")
+  broadcastRecipients BroadcastRecipient[]
+  broadcastEvents     BroadcastEvent[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
   @@index([workspaceDepartmentId])
   @@index([workspaceDivisionId])
   @@index([workspaceUnitId])
+}
+
+model BroadcastPublisherGrant {
+  id                     String               @id @default(cuid())
+  userId                 String
+  scopeType              BroadcastScopeType
+  scopeValue             String?
+  allowedCategories      BroadcastCategory[]
+  canRequireAcknowledgement Boolean           @default(false)
+  isActive               Boolean              @default(true)
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, scopeType, scopeValue])
+  @@index([userId, isActive])
+}
+
+model Broadcast {
+  id                       String              @id @default(cuid())
+  title                    String
+  message                  String
+  category                 BroadcastCategory
+  priority                 BroadcastPriority  @default(ROUTINE)
+  status                   BroadcastStatus    @default(DRAFT)
+  mandatoryAcknowledgement Boolean            @default(false)
+  createdById              String
+  publishedById            String?
+  publishAt                DateTime?
+  expiresAt                DateTime?
+  publishedAt              DateTime?
+  withdrawnAt              DateTime?
+  withdrawalReason         String?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  createdBy                User                @relation("BroadcastCreator", fields: [createdById], references: [id])
+  publishedBy              User?               @relation("BroadcastPublisher", fields: [publishedById], references: [id])
+  audiences                BroadcastAudience[]
+  recipients               BroadcastRecipient[]
+  events                   BroadcastEvent[]
+
+  @@index([status, publishAt, expiresAt])
+  @@index([createdById, createdAt])
+}
+
+model BroadcastAudience {
+  id          String             @id @default(cuid())
+  broadcastId String
+  scopeType   BroadcastScopeType
+  scopeValue  String?
+  label       String
+  broadcast   Broadcast          @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+
+  @@index([broadcastId])
+}
+
+model BroadcastRecipient {
+  id                 String    @id @default(cuid())
+  broadcastId        String
+  userId             String
+  recipientName      String
+  recipientEmail     String
+  recipientRole      String
+  recipientOffice    String
+  recipientDepartment String?
+  recipientDivision  String?
+  recipientUnit      String?
+  deliveredAt        DateTime  @default(now())
+  readAt             DateTime?
+  acknowledgedAt     DateTime?
+  broadcast          Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  user               User      @relation(fields: [userId], references: [id])
+
+  @@unique([broadcastId, userId])
+  @@index([userId, readAt, acknowledgedAt])
+}
+
+model BroadcastEvent {
+  id          String             @id @default(cuid())
+  broadcastId String
+  actorId     String
+  type        BroadcastEventType
+  detail      String?
+  metadata    Json?
+  createdAt   DateTime           @default(now())
+  broadcast   Broadcast          @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  actor       User               @relation(fields: [actorId], references: [id])
+
+  @@index([broadcastId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model ExternalOrganization {
