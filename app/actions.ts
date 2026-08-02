@@ -37,6 +37,32 @@ const correspondenceSchema = z.object({
   dueAt: z.string().optional(),
 });
 
+const draftSchema = z.object({
+  type: z.enum(CorrespondenceType),
+  classification: z.enum(Classification),
+  priority: z.enum(Priority),
+  subject: z.string().trim().max(250),
+  summary: z.string().trim().max(2000),
+  body: z.string().trim().max(20000).optional(),
+  senderName: z.string().trim().max(200),
+  senderReference: z.string().trim().max(100).optional(),
+  dueAt: z.string().optional(),
+});
+
+function draftData(formData: FormData) {
+  return draftSchema.parse({
+    type: formData.get("type"),
+    classification: formData.get("classification"),
+    priority: formData.get("priority"),
+    subject: formData.get("subject") ?? "",
+    summary: formData.get("summary") ?? "",
+    body: formData.get("body") || undefined,
+    senderName: formData.get("senderName") ?? "",
+    senderReference: formData.get("senderReference") || undefined,
+    dueAt: formData.get("dueAt") || undefined,
+  });
+}
+
 async function requestContext() {
   const values = await headers();
   return {
@@ -247,21 +273,33 @@ export async function registerCorrespondenceAction(formData: FormData) {
   }
 
   const instruction = String(formData.get("instruction") ?? "").trim();
+  const draftId = String(formData.get("draftId") ?? "");
+  const existingDraft = draftId
+    ? await db.correspondence.findFirst({
+        where: { id: draftId, createdById: user.id, status: CorrespondenceStatus.DRAFT },
+      })
+    : null;
+  if (draftId && !existingDraft) throw new Error("This draft cannot be submitted.");
   const context = await requestContext();
   const record = await db.$transaction(async (tx) => {
-    const created = await tx.correspondence.create({
-      data: {
+    const destinationStatus = actionRecipients[0].role === UserRole.DG
+      ? CorrespondenceStatus.WITH_DG
+      : CorrespondenceStatus.ASSIGNED;
+    const values = {
         ...parsed,
         dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
-        referenceNumber: await nextReference(tx),
         createdById: user.id,
-        status:
-          actionRecipients[0].role === UserRole.DG
-            ? CorrespondenceStatus.WITH_DG
-            : CorrespondenceStatus.ASSIGNED,
+        status: destinationStatus,
         currentOwnerId: actionRecipients[0].id,
-      },
-    });
+    };
+    const created = existingDraft
+      ? await tx.correspondence.update({
+          where: { id: existingDraft.id },
+          data: { ...values, referenceNumber: await nextReference(tx) },
+        })
+      : await tx.correspondence.create({
+          data: { ...values, referenceNumber: await nextReference(tx) },
+        });
     await tx.workItem.createMany({
       data: [
         ...actionRecipients.map((recipient) => ({
@@ -285,7 +323,8 @@ export async function registerCorrespondenceAction(formData: FormData) {
         correspondenceId: created.id,
         actorId: user.id,
         actorType: ActorType.STAFF,
-        type: EventType.REGISTERED,
+        type: existingDraft ? EventType.SUBMITTED : EventType.REGISTERED,
+        fromStatus: existingDraft ? CorrespondenceStatus.DRAFT : null,
         toStatus: created.status,
         minute: isSecretariatIntake
           ? "Registered by the DG Secretariat and submitted to the DG."
@@ -305,6 +344,84 @@ export async function registerCorrespondenceAction(formData: FormData) {
     if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored } });
   }
   redirect(`/correspondence/${record.id}`);
+}
+
+async function persistDraft(formData: FormData) {
+  const user = await requireUser();
+  if (!canOriginate(user.role)) throw new Error("You cannot create correspondence drafts.");
+  const parsed = draftData(formData);
+  const draftId = String(formData.get("draftId") ?? "");
+  const data = {
+    ...parsed,
+    senderName: parsed.senderName || user.name,
+    dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
+    draftActionRecipientIds: formData.getAll("actionRecipientIds").map(String).filter(Boolean),
+    draftCopyRecipientIds: formData.getAll("copyRecipientIds").map(String).filter(Boolean),
+    draftInstruction: String(formData.get("instruction") ?? "").trim() || null,
+  };
+  if (draftId) {
+    const draft = await db.correspondence.findFirst({
+      where: { id: draftId, createdById: user.id, status: CorrespondenceStatus.DRAFT },
+    });
+    if (!draft) throw new Error("This draft is unavailable or no longer editable.");
+    await db.$transaction([
+      db.correspondence.update({ where: { id: draft.id }, data }),
+      db.correspondenceEvent.create({
+        data: {
+          correspondenceId: draft.id,
+          actorId: user.id,
+          actorType: ActorType.STAFF,
+          type: EventType.DRAFT_UPDATED,
+          fromStatus: CorrespondenceStatus.DRAFT,
+          toStatus: CorrespondenceStatus.DRAFT,
+          minute: "Draft changes saved.",
+          ...(await requestContext()),
+        },
+      }),
+    ]);
+    return draft.id;
+  }
+  const context = await requestContext();
+  const draft = await db.$transaction(async (tx) => {
+    const created = await tx.correspondence.create({
+      data: {
+        ...data,
+        referenceNumber: `DRAFT-${user.id}-${Date.now()}`,
+        createdById: user.id,
+        status: CorrespondenceStatus.DRAFT,
+      },
+    });
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId: created.id,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.DRAFTED,
+        toStatus: CorrespondenceStatus.DRAFT,
+        minute: "Correspondence draft created.",
+        ...context,
+      },
+    });
+    return created;
+  });
+  return draft.id;
+}
+
+export async function saveDraftAction(formData: FormData) {
+  const draftId = await persistDraft(formData);
+  const file = formData.get("attachment");
+  if (file instanceof File && file.size) {
+    const stored = await persistAttachment(file, draftId);
+    if (stored) await db.attachment.create({ data: { correspondenceId: draftId, ...stored } });
+  }
+  redirect(`/correspondence/${draftId}/edit?saved=1`);
+}
+
+export async function autosaveDraftAction(formData: FormData) {
+  const draftId = String(formData.get("draftId") ?? "");
+  if (!draftId) return { saved: false, savedAt: null };
+  await persistDraft(formData);
+  return { saved: true, savedAt: new Date().toISOString() };
 }
 
 export async function acceptExternalSubmissionAction(formData: FormData) {

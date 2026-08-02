@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   acceptExternalSubmissionAction,
   acknowledgeAction,
@@ -33,6 +33,10 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     },
   });
   if (!record) notFound();
+  if (record.status === CorrespondenceStatus.DRAFT) {
+    if (record.createdById === user.id) redirect(`/correspondence/${record.id}/edit`);
+    notFound();
+  }
   const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
   const broadAccess = broadRoles.includes(user.role);
   const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id);

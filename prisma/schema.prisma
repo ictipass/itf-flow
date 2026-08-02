@@ -38,6 +38,7 @@ enum Priority {
 }
 
 enum CorrespondenceStatus {
+  DRAFT
   SUBMITTED
   REGISTERED
   WITH_DG
@@ -67,6 +68,9 @@ enum WorkItemStatus {
 }
 
 enum EventType {
+  DRAFTED
+  DRAFT_UPDATED
+  DRAFT_DELETED
   SUBMITTED
   EMAIL_IMPORTED
   CLAIMED
@@ -300,6 +304,9 @@ model Correspondence {
   currentOwnerId         String?
   claimedById            String?
   claimedAt              DateTime?
+  draftActionRecipientIds String[]             @default([])
+  draftCopyRecipientIds   String[]             @default([])
+  draftInstruction        String?
   createdById            String?
   externalOrganizationId String?
   createdAt              DateTime             @default(now())

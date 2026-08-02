@@ -19,9 +19,9 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Shows the actor, role, office, minute, action recipients, copied recipients, and simultaneous routing branches.
 - Highlights current action owners, current offices, active copies, and elapsed time at the current stage.
 
-## Slice 3 — Drafts, review and dispatch
+## Slice 3 — Drafts, review and dispatch — In progress
 
-- Save drafts and autosave composed correspondence.
+- Save private drafts, autosave composed correspondence, and submit through the author's reporting line. Implemented.
 - Separate author, reviewer, approving officer and dispatch authority.
 - Add outgoing dispatch records, delivery channels and acknowledgement of delivery.
 - Add document version history and compare revisions.

@@ -20,6 +20,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
             <Link href="/intake">Shared Secretariat intake</Link>
           ) : null}
           <Link href="/inbox">My inbox</Link>
+          <Link href="/drafts">My drafts</Link>
           <Link href="/correspondence">All correspondence</Link>
           <Link href="/correspondence/new">Raise correspondence</Link>
           <Link href="/broadcasts">Announcements</Link>

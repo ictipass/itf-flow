@@ -20,6 +20,9 @@ type RecipientSelectorProps = {
   copyFieldName?: string;
   actionLabel?: string;
   actionHint?: string;
+  initialActionRecipients?: DirectoryPerson[];
+  initialCopyRecipients?: DirectoryPerson[];
+  onSelectionChange?: () => void;
 };
 
 function PersonPicker({
@@ -169,9 +172,12 @@ export function RecipientSelector({
   copyFieldName = "copyRecipientIds",
   actionLabel = "To — action recipients",
   actionHint = "These recipients are responsible for taking action.",
+  initialActionRecipients = [],
+  initialCopyRecipients = [],
+  onSelectionChange,
 }: RecipientSelectorProps) {
-  const [actionRecipients, setActionRecipients] = useState<DirectoryPerson[]>([]);
-  const [copyRecipients, setCopyRecipients] = useState<DirectoryPerson[]>([]);
+  const [actionRecipients, setActionRecipients] = useState<DirectoryPerson[]>(initialActionRecipients);
+  const [copyRecipients, setCopyRecipients] = useState<DirectoryPerson[]>(initialCopyRecipients);
 
   return (
     <div className="recipient-selector-grid">
@@ -179,7 +185,10 @@ export function RecipientSelector({
         mode="action"
         selected={actionRecipients}
         blockedIds={copyRecipients.map((person) => person.id)}
-        onChange={setActionRecipients}
+        onChange={(people) => {
+          setActionRecipients(people);
+          onSelectionChange?.();
+        }}
         label={actionLabel}
         hint={actionHint}
         fieldName={actionFieldName}
@@ -189,7 +198,10 @@ export function RecipientSelector({
         mode="copy"
         selected={copyRecipients}
         blockedIds={actionRecipients.map((person) => person.id)}
-        onChange={setCopyRecipients}
+        onChange={(people) => {
+          setCopyRecipients(people);
+          onSelectionChange?.();
+        }}
         label="Copy — CC recipients"
         hint="Copied recipients can read and track the correspondence but are not accountable owners."
         fieldName={copyFieldName}

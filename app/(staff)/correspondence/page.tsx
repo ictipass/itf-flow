@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserRole } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
@@ -9,7 +9,10 @@ export default async function CorrespondencePage() {
   const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
   const broadAccess = broadRoles.includes(user.role);
   const records = await db.correspondence.findMany({
-    where: broadAccess ? {} : { OR: [{ createdById: user.id }, { workItems: { some: { assigneeId: user.id } } }] },
+    where: {
+      status: { not: CorrespondenceStatus.DRAFT },
+      ...(broadAccess ? {} : { OR: [{ createdById: user.id }, { workItems: { some: { assigneeId: user.id } } }] }),
+    },
     orderBy: { updatedAt: "desc" },
     take: 100,
   });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MalwareScanStatus, UserRole } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, MalwareScanStatus, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { readStoredDocument } from "@/lib/document-storage";
 import { getCurrentUser } from "@/lib/session";
@@ -13,6 +13,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     include: { correspondence: { include: { workItems: { where: { assigneeId: user.id } } } } },
   });
   if (!attachment) return new NextResponse("Not found", { status: 404 });
+  if (
+    attachment.correspondence.status === CorrespondenceStatus.DRAFT &&
+    attachment.correspondence.createdById !== user.id
+  ) {
+    return new NextResponse("Not found", { status: 404 });
+  }
   const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
   const broadAccess = broadRoles.includes(user.role);
   if (!broadAccess && attachment.correspondence.createdById !== user.id && !attachment.correspondence.workItems.length) {
