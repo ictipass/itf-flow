@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
 import { getMailConfiguration, isMailEnabled } from "@/lib/mail-config";
 import { createReferenceNumber } from "@/lib/reference";
+import { captureRevision } from "@/lib/revisions";
 
 function addresses(
   value:
@@ -175,6 +176,12 @@ export async function syncMailbox() {
             // The email remains available for Secretariat review and audit.
           }
         }
+        await db.$transaction((tx) => captureRevision(
+          tx,
+          correspondence.id,
+          null,
+          "Initial email import.",
+        ));
         importedCount += 1;
       }
     } finally {

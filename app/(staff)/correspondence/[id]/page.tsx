@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import {
   acceptExternalSubmissionAction,
   acknowledgeAction,
@@ -31,6 +32,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       attachments: true,
       workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
+      revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
     },
   });
   if (!record) notFound();
@@ -151,6 +153,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           {canResubmit ? (
             <section className="card">
               <h2>Resubmit corrected correspondence</h2>
+              <p><Link className="btn secondary" href={`/correspondence/${record.id}/revise`}>Edit and create new version</Link></p>
               <form action={resubmitReturnedAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
                 <div className="field"><label>Correction note</label><textarea name="note" minLength={5} required placeholder="Describe the correction made and any supporting update…" /></div>
@@ -165,11 +168,20 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             {record.workItems.filter((item) => item.decisionRequest).map((item) => {
               const decision = item.decisionRequest!;
               return <div key={decision.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}>
-                <strong>{label(decision.purpose)} · {decision.outcome ? label(decision.outcome) : "Pending"}</strong>
+                <strong>{label(decision.purpose)} · {decision.outcome ? label(decision.outcome) : "Pending"}{decision.supersededAt ? " · Superseded" : ""}</strong>
                 <p style={{ margin: "5px 0" }}>{decision.decisionNote ?? item.instruction}</p>
                 <small className="muted">Requested by {decision.requestedBy.name} for {item.assignee.name}{decision.decidedBy ? ` · decided by ${decision.decidedBy.name}` : ""}{decision.decidedAt ? ` · ${decision.decidedAt.toLocaleString("en-NG")}` : ""}</small>
               </div>;
             })}
+          </> : null}
+          {record.revisions.length ? <>
+            <h2>Version history</h2>
+            {record.revisions.map((revision) => <details key={revision.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }} open={revision.version === record.revisions[0].version}>
+              <summary><strong>Version {revision.version}</strong> · {revision.changeNote}</summary>
+              <small className="muted">{revision.createdBy?.name ?? "External submitter / system"} · {revision.createdAt.toLocaleString("en-NG")}</small>
+              <p><strong>Subject:</strong> {revision.subject}</p><p>{revision.summary}</p>
+              {revision.body ? <div style={{ whiteSpace: "pre-wrap" }}>{revision.body}</div> : null}
+            </details>)}
           </> : null}
           <h2>Movement & minutes</h2>
           <div className="timeline">

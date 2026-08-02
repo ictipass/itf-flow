@@ -97,6 +97,7 @@ enum EventType {
   REFERRED
   DECISION_REQUESTED
   DECISION_RECORDED
+  REVISED
   RETURNED
   RESUBMITTED
   RESOLVED
@@ -194,6 +195,7 @@ model User {
   broadcastEvents     BroadcastEvent[]
   requestedDecisions  DecisionRequest[] @relation("DecisionRequester")
   madeDecisions       DecisionRequest[] @relation("DecisionMaker")
+  createdRevisions    CorrespondenceRevision[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -341,6 +343,7 @@ model Correspondence {
   events               CorrespondenceEvent[]
   emailMessage         EmailMessage?
   decisionRequests     DecisionRequest[]
+  revisions            CorrespondenceRevision[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
@@ -430,6 +433,8 @@ model DecisionRequest {
   decidedById      String?
   requestedAt      DateTime         @default(now())
   decidedAt        DateTime?
+  supersededAt     DateTime?
+  supersededByVersion Int?
   correspondence   Correspondence   @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   workItem         WorkItem         @relation(fields: [workItemId], references: [id], onDelete: Cascade)
   requestedBy      User             @relation("DecisionRequester", fields: [requestedById], references: [id])
@@ -438,6 +443,28 @@ model DecisionRequest {
   @@index([correspondenceId, requestedAt])
   @@index([requestedById, requestedAt])
   @@index([decidedById, decidedAt])
+}
+
+model CorrespondenceRevision {
+  id               String         @id @default(cuid())
+  correspondenceId String
+  version          Int
+  subject          String
+  summary          String
+  body             String?
+  classification   Classification
+  priority         Priority
+  senderReference  String?
+  dueAt            DateTime?
+  attachments      Json
+  changeNote       String
+  createdById      String?
+  createdAt        DateTime       @default(now())
+  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  createdBy        User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@unique([correspondenceId, version])
+  @@index([correspondenceId, createdAt])
 }
 
 model CorrespondenceEvent {

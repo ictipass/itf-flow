@@ -18,6 +18,7 @@ const recipientSteps = [
   ["Minute, refer, or forward", "Write a clear purpose, select an authorized hierarchy or peer recipient, optionally copy the department Director, and route it."],
   ["Resolve", "When no further routing is required, enter a resolution note and mark the correspondence resolved."],
   ["Preserve the record", "The movement timeline keeps every acknowledgement, minute, recipient, decision, actor, and timestamp."],
+  ["Correct returned content", "The original author creates a numbered corrected version with a change note before resubmitting; prior approvals are retained but marked superseded."],
 ];
 
 function StepList({ steps }: { steps: string[][] }) {

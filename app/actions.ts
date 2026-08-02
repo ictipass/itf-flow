@@ -22,6 +22,7 @@ import {
 import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
 import { createReferenceNumber } from "@/lib/reference";
+import { captureRevision } from "@/lib/revisions";
 import { canMinute, canOriginate, canRegister } from "@/lib/permissions";
 import { evaluateActionRouting } from "@/lib/reporting-lines";
 import { createSession, destroySession, requireUser } from "@/lib/session";
@@ -220,6 +221,7 @@ export async function externalSubmitAction(formData: FormData) {
     const stored = await persistAttachment(file, correspondence.id);
     if (stored) await db.attachment.create({ data: { correspondenceId: correspondence.id, ...stored } });
   }
+  await db.$transaction((tx) => captureRevision(tx, correspondence.id, null, "Initial external submission."));
   redirect(`/submitted?reference=${encodeURIComponent(correspondence.referenceNumber)}`);
 }
 
@@ -378,6 +380,12 @@ export async function registerCorrespondenceAction(formData: FormData) {
     const stored = await persistAttachment(file, record.id);
     if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored } });
   }
+  await db.$transaction((tx) => captureRevision(
+    tx,
+    record.id,
+    user.id,
+    existingDraft ? "Draft finalized and submitted." : "Initial submitted version.",
+  ));
   redirect(`/correspondence/${record.id}`);
 }
 
@@ -628,6 +636,7 @@ export async function resubmitReturnedAction(formData: FormData) {
         orderBy: { createdAt: "desc" },
         take: 1,
       },
+      revisions: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
   const returnedById = record?.events[0]?.actorId;
@@ -635,9 +644,11 @@ export async function resubmitReturnedAction(formData: FormData) {
     !record ||
     record.createdById !== user.id ||
     record.status !== CorrespondenceStatus.RETURNED ||
-    !returnedById
+    !returnedById ||
+    !record.revisions[0] ||
+    record.revisions[0].createdAt <= record.events[0].createdAt
   ) {
-    throw new Error("This correspondence cannot be resubmitted.");
+    throw new Error("Create a corrected document version before resubmitting this correspondence.");
   }
   const context = await requestContext();
   await db.$transaction(async (tx) => {
@@ -677,6 +688,88 @@ export async function resubmitReturnedAction(formData: FormData) {
   });
   revalidatePath("/inbox");
   revalidatePath(`/correspondence/${correspondenceId}`);
+}
+
+export async function reviseReturnedCorrespondenceAction(formData: FormData) {
+  const user = await requireUser();
+  const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const changeNote = String(formData.get("changeNote") ?? "").trim();
+  if (changeNote.length < 5) throw new Error("Describe the correction made.");
+  const parsed = correspondenceSchema.parse({
+    type: formData.get("type"),
+    classification: formData.get("classification"),
+    priority: formData.get("priority"),
+    subject: formData.get("subject"),
+    summary: formData.get("summary"),
+    body: formData.get("body") || undefined,
+    senderName: formData.get("senderName"),
+    senderReference: formData.get("senderReference") || undefined,
+    dueAt: formData.get("dueAt") || undefined,
+  });
+  const [record, activeItem] = await Promise.all([
+    db.correspondence.findFirst({
+      where: {
+        id: correspondenceId,
+        createdById: user.id,
+        status: CorrespondenceStatus.RETURNED,
+      },
+    }),
+    db.workItem.findFirst({
+      where: {
+        correspondenceId,
+        assigneeId: user.id,
+        kind: RecipientKind.ACTION,
+        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
+      },
+    }),
+  ]);
+  if (!record || !activeItem) throw new Error("Only the author holding a returned correspondence can revise it.");
+
+  const file = formData.get("attachment");
+  if (file instanceof File && file.size) {
+    const stored = await persistAttachment(file, correspondenceId);
+    if (stored) await db.attachment.create({ data: { correspondenceId, ...stored } });
+  }
+  const context = await requestContext();
+  const revision = await db.$transaction(async (tx) => {
+    await tx.correspondence.update({
+      where: { id: correspondenceId },
+      data: {
+        subject: parsed.subject,
+        summary: parsed.summary,
+        body: parsed.body,
+        classification: parsed.classification,
+        priority: parsed.priority,
+        senderReference: parsed.senderReference,
+        dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
+      },
+    });
+    const created = await captureRevision(tx, correspondenceId, user.id, changeNote);
+    await tx.decisionRequest.updateMany({
+      where: {
+        correspondenceId,
+        outcome: { in: [DecisionOutcome.RECOMMENDED, DecisionOutcome.CONCURRED, DecisionOutcome.APPROVED] },
+        supersededAt: null,
+      },
+      data: { supersededAt: new Date(), supersededByVersion: created.version },
+    });
+    await tx.correspondenceEvent.create({
+      data: {
+        correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.REVISED,
+        fromStatus: CorrespondenceStatus.RETURNED,
+        toStatus: CorrespondenceStatus.RETURNED,
+        minute: changeNote,
+        metadata: { version: created.version },
+        ...context,
+      },
+    });
+    return created;
+  });
+  revalidatePath(`/correspondence/${correspondenceId}`);
+  redirect(`/correspondence/${correspondenceId}?revision=${revision.version}`);
 }
 
 export async function routeCorrespondenceAction(formData: FormData) {
