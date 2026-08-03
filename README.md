@@ -63,6 +63,10 @@ Event-driven in-app notifications and durable email delivery are documented in
 [`docs/notifications-and-email-outbox.md`](docs/notifications-and-email-outbox.md). The browser does not
 continuously poll PostgreSQL for notification updates.
 
+Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).
+Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
+the next planned slice has its own detailed specification under [`docs/slices`](docs/slices/S15-automated-email-delivery.md).
+
 ## Current demo boundaries
 
 - Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`

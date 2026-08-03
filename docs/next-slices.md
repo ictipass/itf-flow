@@ -2,6 +2,9 @@
 
 Slices are ordered so each one produces a demonstrable, testable increment.
 
+The normalized status register is maintained in `docs/implementation-slice-register.md`; every slice must
+use `docs/slice-implementation-checklist.md` so another machine can continue without chat context.
+
 Cross-machine setup, database/file restoration, environment verification and conversation-independent
 handover are documented and implemented as a project-readiness slice.
 
