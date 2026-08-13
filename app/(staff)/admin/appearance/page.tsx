@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Check, Eye, History, LayoutDashboard, PanelLeft, RotateCcw, Sparkles } from "lucide-react";
+import { Check, CircleDotDashed, Eye, History, LayoutDashboard, PanelLeft, RotateCcw, Sparkles } from "lucide-react";
 import { activateStaffUiAction, clearStaffUiPreviewAction, previewStaffUiAction } from "@/app/appearance-actions";
 import { StaffUiMode, UserRole } from "@/lib/generated/prisma/client";
 import { getApplicationConfiguration, UI_PREVIEW_COOKIE } from "@/lib/appearance";
@@ -20,7 +20,7 @@ export default async function AppearancePage({ searchParams }: { searchParams: P
   return <>
     <div className="section-heading appearance-heading">
       <div><span className="eyebrow">System administration</span><h1>Staff experience</h1><p className="muted">Preview and activate the interface used by all ITF Flow staff. Workflow behavior and permissions remain unchanged.</p></div>
-      <div className="appearance-current"><small>Active organization-wide</small><strong><Check size={17} /> {configuration.staffUiMode === StaffUiMode.CLASSIC ? "Classic" : "Modern"}</strong></div>
+      <div className="appearance-current"><small>Active organization-wide</small><strong><Check size={17} /> {modeLabel(configuration.staffUiMode)}</strong></div>
     </div>
 
     {query.updated ? <p className="notice success">The organization-wide staff experience was updated successfully.</p> : null}
@@ -49,6 +49,16 @@ export default async function AppearancePage({ searchParams }: { searchParams: P
         icon={<Sparkles size={25} />}
         featured
       />
+      <AppearanceOption
+        mode={StaffUiMode.SOFT_UI}
+        title="Soft UI"
+        description="A tactile neumorphic workspace with softly raised surfaces, inset controls, and calm visual depth."
+        features={["Soft raised surfaces", "Horizontal workspace navigation", "Comfortable visual hierarchy"]}
+        active={configuration.staffUiMode === StaffUiMode.SOFT_UI}
+        version={configuration.version}
+        icon={<CircleDotDashed size={25} />}
+        soft
+      />
     </section>
 
     <section className="card appearance-history">
@@ -58,7 +68,12 @@ export default async function AppearancePage({ searchParams }: { searchParams: P
   </>;
 }
 
-function AppearanceOption({ mode, title, description, features, active, version, icon, featured = false }: {
+function modeLabel(mode: StaffUiMode) {
+  if (mode === StaffUiMode.SOFT_UI) return "Soft UI";
+  return mode === StaffUiMode.CLASSIC ? "Classic" : "Modern";
+}
+
+function AppearanceOption({ mode, title, description, features, active, version, icon, featured = false, soft = false }: {
   mode: StaffUiMode;
   title: string;
   description: string;
@@ -67,8 +82,9 @@ function AppearanceOption({ mode, title, description, features, active, version,
   version: number;
   icon: React.ReactNode;
   featured?: boolean;
+  soft?: boolean;
 }) {
-  return <article className={`appearance-option ${featured ? "featured" : ""}`}>
+  return <article className={`appearance-option ${featured ? "featured" : ""} ${soft ? "soft-preview-option" : ""}`}>
     <div className="appearance-option-preview" aria-hidden="true">
       <span className="appearance-preview-rail">{icon}</span>
       <span className="appearance-preview-body"><i /><b /><b /><b /><em /></span>

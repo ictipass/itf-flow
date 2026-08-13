@@ -1,0 +1,1 @@
+ALTER TYPE "StaffUiMode" ADD VALUE 'SOFT_UI';

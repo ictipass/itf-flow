@@ -15,6 +15,7 @@ pilot decisions and recovery checklist are documented as a presentation-readines
 
 - Preserves the Classic staff shell and dashboard as a safe fallback.
 - Adds a Modern compact navigation shell and attention-first command workspace using the approved theme.
+- Adds a third Soft UI option with neumorphic surfaces and a distinct horizontal workspace layout.
 - Lets system administrators privately preview and organization-wide activate either interface.
 - Audits each activation and protects against concurrent stale configuration changes.
 - Shares navigation authorization and dashboard data across both presentations.

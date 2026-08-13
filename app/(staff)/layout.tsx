@@ -5,6 +5,7 @@ import { getStaffAppearance } from "@/lib/appearance";
 import { getStaffNavigation } from "@/lib/staff-navigation";
 import { ClassicStaffShell } from "@/components/staff-shell/classic-staff-shell";
 import { ModernStaffShell } from "@/components/staff-shell/modern-staff-shell";
+import { SoftUiStaffShell } from "@/components/staff-shell/soft-ui-staff-shell";
 import { clearStaffUiPreviewAction } from "@/app/appearance-actions";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +15,11 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     getStaffAppearance(user.role),
   ]);
   const navigation = getStaffNavigation(user.role, unreadNotifications);
-  const Shell = appearance.mode === StaffUiMode.MODERN ? ModernStaffShell : ClassicStaffShell;
+  const Shell = appearance.mode === StaffUiMode.MODERN
+    ? ModernStaffShell
+    : appearance.mode === StaffUiMode.SOFT_UI
+      ? SoftUiStaffShell
+      : ClassicStaffShell;
   return (
     <Shell user={user} navigation={navigation}>
       {appearance.isPreview ? <div className="ui-preview-banner"><span><strong>Preview mode</strong> · Only you can see this interface.</span><form action={clearStaffUiPreviewAction}><button type="submit">Exit preview</button></form></div> : null}

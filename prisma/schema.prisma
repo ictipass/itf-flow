@@ -119,6 +119,7 @@ enum EmailOutboxStatus {
 enum StaffUiMode {
   CLASSIC
   MODERN
+  SOFT_UI
 }
 
 enum EventType {
