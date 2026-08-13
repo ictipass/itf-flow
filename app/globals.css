@@ -247,11 +247,16 @@ button, input, select, textarea { font: inherit; }
 .appearance-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 22px; }
 .appearance-option { overflow: hidden; border: 1px solid #ded6d8; border-radius: 20px; background: white; box-shadow: 0 12px 34px rgb(51 16 25 / .04); }
 .appearance-option.featured { border-color: #b87787; box-shadow: 0 18px 44px rgb(98 0 25 / .1); }
-.appearance-options:has(.soft-preview-option) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.appearance-options:has(.soft-preview-option) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .soft-preview-option .appearance-option-preview { background: #e8eaed; }
 .soft-preview-option .appearance-preview-rail { color: var(--burgundy); background: #e8eaed; box-shadow: 8px 8px 16px #c8cace, -8px -8px 16px #fff; }
 .soft-preview-option .appearance-preview-body { background: #e8eaed; }
 .soft-preview-option .appearance-preview-body b, .soft-preview-option .appearance-preview-body em { background: #e8eaed; box-shadow: 7px 7px 14px #c8cace, -7px -7px 14px #fff; }
+.glass-preview-option .appearance-option-preview { background: radial-gradient(circle at 75% 10%, #79102c, transparent 38%), #09090b; }
+.glass-preview-option .appearance-preview-rail { background: rgb(255 255 255 / .08); color: #ffb4c7; border: 1px solid rgb(255 255 255 / .13); backdrop-filter: blur(8px); }
+.glass-preview-option .appearance-preview-body { background: transparent; }
+.glass-preview-option .appearance-preview-body i { background: rgb(255 255 255 / .16); }
+.glass-preview-option .appearance-preview-body b, .glass-preview-option .appearance-preview-body em { background: linear-gradient(145deg, rgb(255 255 255 / .14), rgb(255 255 255 / .035)); border: 1px solid rgb(255 255 255 / .13); box-shadow: 0 10px 22px rgb(0 0 0 / .32), inset 0 1px rgb(255 255 255 / .12); }
 .appearance-option-preview { height: 180px; display: grid; grid-template-columns: 64px 1fr; gap: 0; padding: 22px; background: #eeeae9; }
 .appearance-option:not(.featured) .appearance-option-preview { grid-template-columns: 105px 1fr; }
 .appearance-preview-rail { display: grid; place-items: start center; padding-top: 16px; border-radius: 13px 0 0 13px; background: linear-gradient(180deg, var(--burgundy), var(--burgundy-dark)); color: white; }
@@ -366,6 +371,107 @@ button, input, select, textarea { font: inherit; }
 .soft-notifications strong { font-size: .75rem; }
 .soft-notifications small, .soft-notifications time { color: #827b80; font-size: .64rem; }
 .soft-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 28px; color: #7f787d; }
+
+/* Glossy black Glass staff experience */
+.glass-shell { position: relative; isolation: isolate; min-height: 100vh; overflow: hidden; background: radial-gradient(circle at 78% -10%, #3e0716 0%, transparent 32%), radial-gradient(circle at 2% 65%, #25030d 0%, transparent 29%), #08080a; color: #f7f3f5; }
+.glass-shell::before { content: ""; position: fixed; inset: 0; z-index: -2; opacity: .24; background-image: linear-gradient(rgb(255 255 255 / .025) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / .025) 1px, transparent 1px); background-size: 48px 48px; mask-image: linear-gradient(to bottom, black, transparent 80%); }
+.glass-orb { position: fixed; z-index: -1; border-radius: 50%; filter: blur(6px); pointer-events: none; }
+.glass-orb-one { top: 120px; right: -110px; width: 330px; height: 330px; background: radial-gradient(circle at 30% 30%, rgb(190 26 68 / .48), rgb(73 0 19 / .08) 68%); }
+.glass-orb-two { bottom: -170px; left: 18%; width: 380px; height: 380px; background: radial-gradient(circle, rgb(92 5 31 / .32), transparent 68%); }
+.glass-header { position: sticky; top: 0; z-index: 30; min-height: 80px; display: flex; align-items: center; gap: 25px; padding: 13px 28px; border-bottom: 1px solid rgb(255 255 255 / .09); background: rgb(10 10 13 / .72); box-shadow: 0 14px 40px rgb(0 0 0 / .25); backdrop-filter: blur(24px) saturate(145%); }
+.glass-brand { display: flex; align-items: center; gap: 11px; flex: 0 0 auto; }
+.glass-brand > span { display: grid; place-items: center; width: 52px; height: 52px; border: 1px solid rgb(255 255 255 / .14); border-radius: 17px; background: linear-gradient(145deg, rgb(255 255 255 / .15), rgb(255 255 255 / .035)); box-shadow: inset 0 1px rgb(255 255 255 / .2), 0 12px 30px rgb(0 0 0 / .35); }
+.glass-brand img { object-fit: contain; }
+.glass-brand > div { display: grid; gap: 2px; }
+.glass-brand strong { letter-spacing: -.02em; }
+.glass-brand small { color: #a89da2; font-size: .65rem; }
+.glass-nav { display: flex; align-items: center; gap: 3px; min-width: 0; margin: auto; }
+.glass-nav a { display: flex; align-items: center; gap: 5px; padding: 9px 10px; border-radius: 999px; color: #afa6aa; font-size: .68rem; font-weight: 800; white-space: nowrap; }
+.glass-nav a:hover, .glass-nav a:focus-visible { color: white; background: rgb(255 255 255 / .09); box-shadow: inset 0 1px rgb(255 255 255 / .1); outline: none; }
+.glass-nav b { display: grid; place-items: center; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #b61d43; color: white; font-size: .58rem; }
+.glass-header-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.glass-search { display: flex; align-items: center; gap: 7px; padding: 10px 13px; border: 1px solid rgb(255 255 255 / .1); border-radius: 13px; background: rgb(255 255 255 / .055); color: #c7bec2; font-size: .7rem; }
+.glass-circle { position: relative; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgb(255 255 255 / .12); border-radius: 13px; background: linear-gradient(145deg, rgb(255 255 255 / .1), rgb(255 255 255 / .025)); color: #e4dce0; box-shadow: inset 0 1px rgb(255 255 255 / .12), 0 8px 24px rgb(0 0 0 / .25); cursor: pointer; }
+.glass-circle i { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border-radius: 50%; background: #f0486e; box-shadow: 0 0 10px #f0486e; }
+.glass-profile { display: flex; align-items: center; gap: 9px; padding: 5px 9px 5px 5px; border: 1px solid rgb(255 255 255 / .09); border-radius: 15px; background: rgb(255 255 255 / .04); }
+.glass-profile > span { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; background: linear-gradient(145deg, #a5163a, #5a071d); box-shadow: inset 0 1px rgb(255 255 255 / .18), 0 7px 18px rgb(75 0 19 / .4); font-size: .65rem; font-weight: 900; }
+.glass-profile > div { display: grid; gap: 2px; max-width: 155px; }
+.glass-profile strong, .glass-profile small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.glass-profile strong { font-size: .7rem; }
+.glass-profile small { color: #a89da2; font-size: .6rem; }
+.glass-mobile-menu { display: none; }
+.glass-content { max-width: 1540px; margin: 0 auto; padding: 25px 36px 68px; }
+.glass-context { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 25px; }
+.glass-context > span { display: flex; align-items: center; gap: 6px; color: #a99da2; font-size: .68rem; }
+.glass-context > a { display: flex; align-items: center; gap: 7px; padding: 10px 14px; border: 1px solid rgb(255 255 255 / .14); border-radius: 13px; background: linear-gradient(145deg, rgb(173 22 60 / .95), rgb(99 4 29 / .95)); color: white; box-shadow: inset 0 1px rgb(255 255 255 / .18), 0 12px 30px rgb(78 0 20 / .38); font-size: .72rem; font-weight: 900; }
+.glass-dashboard { display: grid; gap: 20px; }
+.glass-hero { display: flex; align-items: end; justify-content: space-between; gap: 28px; padding: 30px; border: 1px solid rgb(255 255 255 / .11); border-radius: 26px; background: linear-gradient(120deg, rgb(255 255 255 / .1), rgb(255 255 255 / .025) 62%), radial-gradient(circle at 85% 0%, rgb(160 18 54 / .23), transparent 36%); box-shadow: inset 0 1px rgb(255 255 255 / .13), 0 24px 70px rgb(0 0 0 / .28); backdrop-filter: blur(20px) saturate(135%); }
+.glass-kicker { color: #ee7896; text-transform: uppercase; letter-spacing: .15em; font-size: .64rem; font-weight: 900; }
+.glass-hero h1 { margin: 8px 0; font-size: clamp(2.25rem, 4.2vw, 4rem); letter-spacing: -.06em; line-height: .95; }
+.glass-hero h1 em { color: #f29bb1; font-style: normal; }
+.glass-hero p { margin: 0; color: #b5aaaf; }
+.glass-hero-count { min-width: 220px; display: grid; justify-items: end; gap: 6px; padding: 18px 20px; border: 1px solid rgb(255 255 255 / .12); border-radius: 19px; background: rgb(6 6 8 / .38); box-shadow: inset 0 1px rgb(255 255 255 / .08); }
+.glass-hero-count small { color: #a99da2; }
+.glass-hero-count strong { font-size: 2.4rem; line-height: 1; }
+.glass-hero-count a { display: flex; align-items: center; gap: 5px; color: #ed8ba3; font-size: .69rem; font-weight: 900; }
+.glass-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.glass-metrics > a { display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 12px; padding: 16px; border: 1px solid rgb(255 255 255 / .1); border-radius: 19px; background: linear-gradient(145deg, rgb(255 255 255 / .095), rgb(255 255 255 / .025)); box-shadow: inset 0 1px rgb(255 255 255 / .1), 0 14px 35px rgb(0 0 0 / .22); backdrop-filter: blur(15px); }
+.glass-metrics > a > span { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; background: rgb(174 26 63 / .17); color: #ef7996; }
+.glass-metrics > a > div { display: grid; gap: 2px; }
+.glass-metrics small { color: #a99da2; font-size: .65rem; }
+.glass-metrics strong { font-size: 1.65rem; }
+.glass-metrics > a > svg { color: #71676c; }
+.glass-metrics > a.alert { border-color: rgb(217 66 92 / .25); }
+.glass-dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(290px, .72fr); gap: 18px; align-items: start; }
+.glass-panel { border: 1px solid rgb(255 255 255 / .1); border-radius: 22px; background: linear-gradient(145deg, rgb(255 255 255 / .085), rgb(255 255 255 / .022)); box-shadow: inset 0 1px rgb(255 255 255 / .1), 0 20px 55px rgb(0 0 0 / .24); backdrop-filter: blur(18px) saturate(125%); overflow: hidden; }
+.glass-panel-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; padding: 20px; }
+.glass-panel-heading h2 { margin: 5px 0 0; font-size: 1.05rem; }
+.glass-panel-heading > a { display: flex; align-items: center; gap: 5px; color: #eb829c; font-size: .68rem; font-weight: 900; }
+.glass-work-list { padding: 0 11px 12px; }
+.glass-work-list > a { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 13px; border-top: 1px solid rgb(255 255 255 / .07); }
+.glass-work-list > a:hover { border-radius: 14px; background: rgb(255 255 255 / .05); }
+.glass-priority { width: 6px; height: 36px; border-radius: 999px; background: #71696d; }
+.glass-priority.urgent { background: #dc8a2b; box-shadow: 0 0 13px rgb(220 138 43 / .35); }
+.glass-priority.immediate { background: #e14464; box-shadow: 0 0 13px rgb(225 68 100 / .4); }
+.glass-work-list > a > div { min-width: 0; display: grid; gap: 4px; }
+.glass-work-list strong, .glass-work-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.glass-work-list strong { color: #f3eef0; font-size: .78rem; }
+.glass-work-list small { color: #958a8f; font-size: .64rem; }
+.glass-work-list > a > span:last-child { display: grid; justify-items: end; gap: 4px; }
+.glass-work-list b { color: #e9849e; font-size: .62rem; }
+.glass-side-stack { display: grid; gap: 18px; }
+.glass-announcement { display: grid; grid-template-columns: 45px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 18px; }
+.glass-announcement > span { display: grid; place-items: center; width: 45px; height: 45px; border-radius: 14px; background: linear-gradient(145deg, rgb(190 28 69 / .35), rgb(91 5 27 / .25)); color: #f08aa3; box-shadow: inset 0 1px rgb(255 255 255 / .12); }
+.glass-announcement > div { display: grid; gap: 3px; }
+.glass-announcement small, .glass-announcement em { color: #a99da2; font-size: .62rem; font-style: normal; }
+.glass-announcement strong { font-size: .82rem; }
+.glass-actions { display: grid; padding: 0 12px 14px; }
+.glass-actions a { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 8px; padding: 11px; border-top: 1px solid rgb(255 255 255 / .07); color: #d7ced2; font-size: .72rem; font-weight: 800; }
+.glass-actions a > svg:first-child { color: #e97c97; }
+.glass-actions a > svg:last-child { color: #71676c; }
+.glass-activity { grid-column: 1 / -1; }
+.glass-activity-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 12px 13px; gap: 8px; }
+.glass-activity-list > a { display: grid; grid-template-columns: 35px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 12px; border: 1px solid rgb(255 255 255 / .065); border-radius: 15px; background: rgb(255 255 255 / .025); }
+.glass-activity-list > a > span { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 11px; background: rgb(255 255 255 / .055); color: #847a7e; }
+.glass-activity-list > a > span.unread { background: rgb(174 26 63 / .2); color: #ed829c; }
+.glass-activity-list > a > div { min-width: 0; display: grid; gap: 3px; }
+.glass-activity-list strong, .glass-activity-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.glass-activity-list strong { font-size: .72rem; }
+.glass-activity-list small, .glass-activity-list time { color: #958a8f; font-size: .61rem; }
+.glass-empty { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 28px; color: #958a8f; }
+.glass-shell .card, .glass-shell .broadcast-item, .glass-shell .recipient-picker, .glass-shell .audience-builder, .glass-shell .check-field, .glass-shell .appearance-option { border-color: rgb(255 255 255 / .11); background: linear-gradient(145deg, rgb(255 255 255 / .09), rgb(255 255 255 / .025)); color: #f4eff1; box-shadow: inset 0 1px rgb(255 255 255 / .1), 0 20px 55px rgb(0 0 0 / .23); backdrop-filter: blur(18px); }
+.glass-shell .muted, .glass-shell .field label, .glass-shell .table th, .glass-shell .recipient-picker-hint, .glass-shell .recipient-identity small, .glass-shell .appearance-option-copy > p { color: #aaa0a5; }
+.glass-shell .table th, .glass-shell .table td, .glass-shell .appearance-history-list article { border-color: rgb(255 255 255 / .08); }
+.glass-shell .field input, .glass-shell .field select, .glass-shell .field textarea, .glass-shell .recipient-search, .glass-shell .audience-row select, .glass-shell .appearance-activate-form textarea { border-color: rgb(255 255 255 / .12); background: rgb(0 0 0 / .28); color: white; box-shadow: inset 0 1px rgb(255 255 255 / .04); }
+.glass-shell .field input::placeholder, .glass-shell .field textarea::placeholder, .glass-shell .recipient-search::placeholder, .glass-shell .appearance-activate-form textarea::placeholder { color: #776e72; }
+.glass-shell .btn.secondary { background: rgb(255 255 255 / .09); color: #f2dbe1; }
+.glass-shell .appearance-option-copy li, .glass-shell .appearance-history-list p, .glass-shell .appearance-history-list small { color: #b3a8ad; }
+.glass-shell .appearance-current { border: 1px solid rgb(255 255 255 / .12); background: rgb(255 255 255 / .06); }
+.glass-shell .appearance-preview-notice, .glass-shell .ui-preview-banner { border-color: rgb(235 97 132 / .3); background: rgb(128 0 32 / .2); color: #f5c4d0; }
+.glass-shell .ui-preview-banner button { color: #ff9db5; }
+.glass-shell .notice { color: #2c2100; }
+.glass-shell .notice.success { color: #185c2b; }
+.glass-shell .notice.error { color: #7a102a; }
 @media (max-width: 900px) {
   .shell { grid-template-columns: 1fr; }
   .sidebar { position: static; }
@@ -414,6 +520,21 @@ button, input, select, textarea { font: inherit; }
   .soft-dashboard-grid { grid-template-columns: 1fr; }
   .soft-notification-card { grid-column: auto; }
   .soft-notifications { grid-template-columns: 1fr; }
+  .glass-header { min-height: 72px; padding: 10px 16px; }
+  .glass-brand > div, .glass-nav, .glass-search, .glass-profile { display: none; }
+  .glass-header-actions { margin-left: auto; }
+  .glass-mobile-menu { display: block; position: relative; }
+  .glass-mobile-menu summary { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgb(255 255 255 / .12); border-radius: 13px; background: rgb(255 255 255 / .06); list-style: none; }
+  .glass-mobile-menu summary::-webkit-details-marker { display: none; }
+  .glass-mobile-menu nav { position: absolute; top: 48px; right: 0; width: min(330px, calc(100vw - 32px)); display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; padding: 13px; border: 1px solid rgb(255 255 255 / .12); border-radius: 17px; background: rgb(15 11 14 / .94); box-shadow: 0 20px 50px rgb(0 0 0 / .5); backdrop-filter: blur(22px); }
+  .glass-mobile-menu nav a { display: flex; justify-content: space-between; padding: 10px; border-radius: 10px; background: rgb(255 255 255 / .055); color: #ddd4d8; font-size: .68rem; }
+  .glass-content { padding: 20px 16px 50px; }
+  .glass-hero { align-items: stretch; flex-direction: column; }
+  .glass-hero-count { min-width: 0; justify-items: start; }
+  .glass-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .glass-dashboard-grid { grid-template-columns: 1fr; }
+  .glass-activity { grid-column: auto; }
+  .glass-activity-list { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {
@@ -430,4 +551,9 @@ button, input, select, textarea { font: inherit; }
   .soft-stats { grid-template-columns: 1fr; }
   .soft-correspondence-list > a { grid-template-columns: 7px minmax(0, 1fr); }
   .soft-item-state { grid-column: 2; justify-items: start; }
+  .glass-context > span { display: none; }
+  .glass-context { justify-content: flex-end; }
+  .glass-metrics { grid-template-columns: 1fr; }
+  .glass-work-list > a { grid-template-columns: 6px minmax(0, 1fr); }
+  .glass-work-list > a > span:last-child { grid-column: 2; justify-items: start; }
 }

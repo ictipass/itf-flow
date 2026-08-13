@@ -18,7 +18,7 @@ export const getApplicationConfiguration = cache(async function getApplicationCo
 export async function getStaffAppearance(role: UserRole) {
   if (role === UserRole.SYSTEM_ADMIN) {
     const preview = (await cookies()).get(UI_PREVIEW_COOKIE)?.value;
-    if (preview === StaffUiMode.CLASSIC || preview === StaffUiMode.MODERN || preview === StaffUiMode.SOFT_UI) {
+    if (preview === StaffUiMode.CLASSIC || preview === StaffUiMode.MODERN || preview === StaffUiMode.SOFT_UI || preview === StaffUiMode.GLASS) {
       return { mode: preview, isPreview: true };
     }
   }

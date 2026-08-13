@@ -120,6 +120,7 @@ enum StaffUiMode {
   CLASSIC
   MODERN
   SOFT_UI
+  GLASS
 }
 
 enum EventType {

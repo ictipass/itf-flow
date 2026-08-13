@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Check, CircleDotDashed, Eye, History, LayoutDashboard, PanelLeft, RotateCcw, Sparkles } from "lucide-react";
+import { Check, CircleDotDashed, Eye, Gem, History, LayoutDashboard, PanelLeft, RotateCcw, Sparkles } from "lucide-react";
 import { activateStaffUiAction, clearStaffUiPreviewAction, previewStaffUiAction } from "@/app/appearance-actions";
 import { StaffUiMode, UserRole } from "@/lib/generated/prisma/client";
 import { getApplicationConfiguration, UI_PREVIEW_COOKIE } from "@/lib/appearance";
@@ -59,6 +59,16 @@ export default async function AppearancePage({ searchParams }: { searchParams: P
         icon={<CircleDotDashed size={25} />}
         soft
       />
+      <AppearanceOption
+        mode={StaffUiMode.GLASS}
+        title="Glass"
+        description="A glossy, near-black command environment with translucent panels and luminous burgundy accents."
+        features={["Immersive black canvas", "Layered glass surfaces", "High-contrast command view"]}
+        active={configuration.staffUiMode === StaffUiMode.GLASS}
+        version={configuration.version}
+        icon={<Gem size={25} />}
+        glass
+      />
     </section>
 
     <section className="card appearance-history">
@@ -70,10 +80,11 @@ export default async function AppearancePage({ searchParams }: { searchParams: P
 
 function modeLabel(mode: StaffUiMode) {
   if (mode === StaffUiMode.SOFT_UI) return "Soft UI";
+  if (mode === StaffUiMode.GLASS) return "Glass";
   return mode === StaffUiMode.CLASSIC ? "Classic" : "Modern";
 }
 
-function AppearanceOption({ mode, title, description, features, active, version, icon, featured = false, soft = false }: {
+function AppearanceOption({ mode, title, description, features, active, version, icon, featured = false, soft = false, glass = false }: {
   mode: StaffUiMode;
   title: string;
   description: string;
@@ -83,8 +94,9 @@ function AppearanceOption({ mode, title, description, features, active, version,
   icon: React.ReactNode;
   featured?: boolean;
   soft?: boolean;
+  glass?: boolean;
 }) {
-  return <article className={`appearance-option ${featured ? "featured" : ""} ${soft ? "soft-preview-option" : ""}`}>
+  return <article className={`appearance-option ${featured ? "featured" : ""} ${soft ? "soft-preview-option" : ""} ${glass ? "glass-preview-option" : ""}`}>
     <div className="appearance-option-preview" aria-hidden="true">
       <span className="appearance-preview-rail">{icon}</span>
       <span className="appearance-preview-body"><i /><b /><b /><b /><em /></span>

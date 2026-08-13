@@ -64,7 +64,7 @@ Event-driven in-app notifications and durable email delivery are documented in
 continuously poll PostgreSQL for notification updates.
 
 System administrators can privately preview and activate the preserved Classic staff interface,
-the Modern command workspace, or the neumorphic Soft UI workspace from **Appearance**. The active mode is database-backed,
+the Modern command workspace, the neumorphic Soft UI workspace, or the glossy black Glass workspace from **Appearance**. The active mode is database-backed,
 audited and defaults to Classic after migration; workflow permissions and data are shared by both modes.
 
 Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).

@@ -7,13 +7,13 @@ delivery sequence. S15 remains Automated Email Delivery and Secure Worker Proces
 
 ## Outcome
 
-ITF Flow preserves its Classic staff interface and adds structurally different Modern and Soft UI experiences.
+ITF Flow preserves its Classic staff interface and adds structurally different Modern, Soft UI and Glass experiences.
 A system administrator can privately preview any mode and activate one organization-wide without a
 deployment. Both modes use the same authorization-aware navigation and dashboard data.
 
 ## Delivered scope
 
-- `StaffUiMode` supports `CLASSIC`, `MODERN` and `SOFT_UI`, with Classic as the migration default.
+- `StaffUiMode` supports `CLASSIC`, `MODERN`, `SOFT_UI` and `GLASS`, with Classic as the migration default.
 - A singleton application configuration stores the active mode and an optimistic-concurrency version.
 - Every organization-wide change records the administrator, previous value, new value, reason and time.
 - The Appearance administration page supports private 30-minute previews, activation and rollback.
@@ -23,6 +23,8 @@ deployment. Both modes use the same authorization-aware navigation and dashboard
   attention-first metrics, priority work list, authorized quick actions and recent activity.
 - The Soft UI shell uses horizontal workspace navigation and neumorphic raised/inset surfaces, with a
   calm tactile dashboard, responsive menu, shared metrics, work queue, quick actions and activity.
+- The Glass shell uses a near-black layered canvas, translucent glossy surfaces, restrained luminous
+  burgundy accents, responsive navigation and high-contrast adaptations for existing workflow pages.
 - Navigation destinations and dashboard queries are shared so presentation mode does not alter policy.
 
 ## Security and operational rules

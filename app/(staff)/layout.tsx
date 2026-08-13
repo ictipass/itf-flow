@@ -6,6 +6,7 @@ import { getStaffNavigation } from "@/lib/staff-navigation";
 import { ClassicStaffShell } from "@/components/staff-shell/classic-staff-shell";
 import { ModernStaffShell } from "@/components/staff-shell/modern-staff-shell";
 import { SoftUiStaffShell } from "@/components/staff-shell/soft-ui-staff-shell";
+import { GlassStaffShell } from "@/components/staff-shell/glass-staff-shell";
 import { clearStaffUiPreviewAction } from "@/app/appearance-actions";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +20,8 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     ? ModernStaffShell
     : appearance.mode === StaffUiMode.SOFT_UI
       ? SoftUiStaffShell
+      : appearance.mode === StaffUiMode.GLASS
+        ? GlassStaffShell
       : ClassicStaffShell;
   return (
     <Shell user={user} navigation={navigation}>

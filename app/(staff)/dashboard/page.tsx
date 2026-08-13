@@ -5,6 +5,7 @@ import { getStaffAppearance } from "@/lib/appearance";
 import { ClassicDashboard } from "@/components/dashboard/classic-dashboard";
 import { ModernDashboard } from "@/components/dashboard/modern-dashboard";
 import { SoftUiDashboard } from "@/components/dashboard/soft-ui-dashboard";
+import { GlassDashboard } from "@/components/dashboard/glass-dashboard";
 import { canDispatch } from "@/lib/permissions";
 
 export default async function DashboardPage() {
@@ -17,6 +18,8 @@ export default async function DashboardPage() {
     ? ModernDashboard
     : appearance.mode === StaffUiMode.SOFT_UI
       ? SoftUiDashboard
+      : appearance.mode === StaffUiMode.GLASS
+        ? GlassDashboard
       : ClassicDashboard;
   return <Dashboard firstName={user.name.split(" ")[0]} data={data} showDispatch={canDispatch(user.role)} />;
 }
