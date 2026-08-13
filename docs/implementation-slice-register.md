@@ -30,18 +30,16 @@ another developer without depending on unfinished work from a later slice.
 | S12 | Stakeholder presentation package | Implemented | `2500fa5` |
 | S13 | Event-driven in-app notifications and durable email outbox | Implemented | `17e147b` |
 | S14 | Node.js LTS alignment | Implemented | `3015551` |
-| S14A | Configurable staff experience and modern dashboard | Implemented locally | Working tree; see [`slices/S14A-configurable-staff-experience.md`](slices/S14A-configurable-staff-experience.md) |
+| S14A | Configurable Classic, Modern, Soft UI and Glass staff experiences | Implemented | `5299f9e`, `8a0a466`, `7d5e846` |
+| S15 | Automated email delivery and secure worker processing | Implemented locally | Working tree; see [`slices/S15-automated-email-delivery.md`](slices/S15-automated-email-delivery.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
 ## Planned next slice
 
-After completion of the stakeholder-priority S14A interface slice, **S15 - Automated Email Delivery and Secure Worker Processing** remains the planned next workflow slice and is specified in
-[`slices/S15-automated-email-delivery.md`](slices/S15-automated-email-delivery.md).
-
-Its purpose is to connect the durable outbox to a protected scheduled processor and to connect Official
-Email dispatch records to controlled email delivery without introducing request-time SMTP calls or
-continuous database polling.
+After S15 validation and commit, **S16 - Due-date reminders, overdue escalations and executive digests**
+is the planned next workflow slice. It builds on the event-driven notifications, durable outbox and
+protected scheduled processing delivered by S13 and S15.
 
 ## Subsequent slices
 

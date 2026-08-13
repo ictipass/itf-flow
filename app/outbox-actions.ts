@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { UserRole } from "@/lib/generated/prisma/client";
-import { processEmailOutbox } from "@/lib/email-outbox";
+import { processEmailOutbox, retryEmailOutbox } from "@/lib/email-outbox";
 import { requireUser } from "@/lib/session";
 
 export async function processEmailOutboxAction() {
@@ -18,4 +18,15 @@ export async function processEmailOutboxAction() {
   }
   revalidatePath("/admin/email-outbox");
   redirect(destination);
+}
+
+export async function retryEmailOutboxAction(formData: FormData) {
+  const user = await requireUser();
+  if (user.role !== UserRole.SYSTEM_ADMIN) throw new Error("Only a system administrator can retry email delivery.");
+  const outboxId = String(formData.get("outboxId") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (reason.length < 10 || reason.length > 500) redirect("/admin/email-outbox?error=retry-reason");
+  await retryEmailOutbox(outboxId, reason, user.id);
+  revalidatePath("/admin/email-outbox");
+  redirect("/admin/email-outbox?retried=1");
 }

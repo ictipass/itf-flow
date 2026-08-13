@@ -2,8 +2,8 @@
 
 ## Status
 
-Planned next. No S15 production endpoint or Official Email dispatch integration should be inferred until
-the acceptance checklist at the end of this document passes.
+Implemented locally. The protected worker, Official Email outbox integration, SMTP-driven dispatch
+transition and administrative recovery controls are implemented pending final validation and commit.
 
 ## Outcome
 

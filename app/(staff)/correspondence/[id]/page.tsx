@@ -15,7 +15,7 @@ import {
 } from "@/app/actions";
 import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
-import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
@@ -40,6 +40,11 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     },
   });
   if (!record) notFound();
+  const dispatchEmailItems = record.dispatchRecords.length ? await db.emailOutbox.findMany({
+    where: { sourceType: "OFFICIAL_EMAIL_DISPATCH", sourceId: { in: record.dispatchRecords.map((dispatch) => dispatch.id) } },
+    select: { sourceId: true, status: true, attemptCount: true, lastErrorCode: true },
+  }) : [];
+  const dispatchEmailById = new Map(dispatchEmailItems.map((item) => [item.sourceId, item]));
   if (record.status === CorrespondenceStatus.DRAFT) {
     if (record.createdById === user.id) redirect(`/correspondence/${record.id}/edit`);
     notFound();
@@ -176,9 +181,9 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           </form></section> : null}
         </div>
         <aside className="card">
-          {record.dispatchRecords.length ? <><h2>Dispatch records</h2>{record.dispatchRecords.map((dispatch) => <div key={dispatch.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}><strong>{dispatch.outgoingReference}</strong> <span className="badge">{label(dispatch.status)}</span><p>{label(dispatch.channel)} · {dispatch.recipientName}{dispatch.recipientOrganization ? ` · ${dispatch.recipientOrganization}` : ""}</p><small className="muted">Prepared by {dispatch.createdBy.name} · {dispatch.createdAt.toLocaleString("en-NG")}</small>
-            {canDispatch(user.role) && dispatch.status !== DispatchStatus.DELIVERED ? <form action={updateDispatchStatusAction} className="grid" style={{ marginTop: 10 }}><input type="hidden" name="dispatchId" value={dispatch.id} /><div className="field"><label>Delivery update note</label><input name="note" placeholder="Delivery confirmation, failure reason, or retry note" /></div><div className="actions">{dispatch.status === DispatchStatus.PREPARED || dispatch.status === DispatchStatus.FAILED ? <button className="btn compact" name="status" value="DISPATCHED">Mark dispatched</button> : null}{dispatch.status === DispatchStatus.DISPATCHED ? <button className="btn compact" name="status" value="DELIVERED">Confirm delivery</button> : null}{dispatch.status === DispatchStatus.PREPARED || dispatch.status === DispatchStatus.DISPATCHED ? <button className="btn secondary compact" name="status" value="FAILED">Record failure</button> : null}</div></form> : null}
-          </div>)}</> : null}
+          {record.dispatchRecords.length ? <><h2>Dispatch records</h2>{record.dispatchRecords.map((dispatch) => { const emailItem = dispatchEmailById.get(dispatch.id); return <div key={dispatch.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}><strong>{dispatch.outgoingReference}</strong> <span className="badge">{label(dispatch.status)}</span><p>{label(dispatch.channel)} · {dispatch.recipientName}{dispatch.recipientOrganization ? ` · ${dispatch.recipientOrganization}` : ""}</p><small className="muted">Prepared by {dispatch.createdBy.name} · {dispatch.createdAt.toLocaleString("en-NG")}</small>{emailItem ? <p><span className="badge">Email {label(emailItem.status)}</span> <small className="muted">{emailItem.attemptCount} attempt{emailItem.attemptCount === 1 ? "" : "s"}{emailItem.lastErrorCode ? ` · ${emailItem.lastErrorCode}` : ""}</small></p> : null}
+            {canDispatch(user.role) && dispatch.status !== DispatchStatus.DELIVERED ? <form action={updateDispatchStatusAction} className="grid" style={{ marginTop: 10 }}><input type="hidden" name="dispatchId" value={dispatch.id} /><div className="field"><label>Delivery update note</label><input name="note" placeholder="Delivery confirmation, failure reason, or retry note" /></div><div className="actions">{dispatch.channel !== DispatchChannel.OFFICIAL_EMAIL && (dispatch.status === DispatchStatus.PREPARED || dispatch.status === DispatchStatus.FAILED) ? <button className="btn compact" name="status" value="DISPATCHED">Mark dispatched</button> : null}{dispatch.status === DispatchStatus.DISPATCHED ? <button className="btn compact" name="status" value="DELIVERED">Confirm delivery</button> : null}{dispatch.status === DispatchStatus.PREPARED || dispatch.status === DispatchStatus.DISPATCHED ? <button className="btn secondary compact" name="status" value="FAILED">Record failure</button> : null}</div>{dispatch.channel === DispatchChannel.OFFICIAL_EMAIL && dispatch.status === DispatchStatus.PREPARED ? <small className="muted">Queued for the protected email worker. SMTP acceptance will mark it dispatched.</small> : null}</form> : null}
+          </div>; })}</> : null}
           {record.workItems.some((item) => item.decisionRequest) ? <>
             <h2>Decision register</h2>
             {record.workItems.filter((item) => item.decisionRequest).map((item) => {

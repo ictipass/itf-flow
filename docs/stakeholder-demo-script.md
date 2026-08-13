@@ -78,8 +78,9 @@ from merely opening the announcement.
 2. Open an approved outgoing letter and prepare a dispatch record.
 3. Show its generated outgoing reference and status transitions.
 
-Expected: missing/superseded approval blocks controlled items. Explain that Official email currently
-records dispatch; automated SMTP delivery and retry workers are next.
+Expected: missing/superseded approval blocks controlled items. Explain that Official Email queues one
+durable message; the protected worker marks it dispatched only after SMTP acceptance, while recipient
+delivery remains separately confirmable. Attachments remain omitted until the production scanning gate.
 
 ## Scene 9 — Close on accountability (1 minute)
 

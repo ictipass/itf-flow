@@ -101,7 +101,8 @@ JavaScript ecosystem through versioned HTTP APIs and signed events.
 
 ### 9. Honest MVP boundaries
 
-- Official-email dispatch is recorded but automated SMTP sending/retry is not yet connected.
+- Official-email dispatch uses protected scheduled SMTP processing, bounded retry and dead-letter recovery;
+  recipient delivery remains separately confirmed and unscanned attachments are omitted.
 - IMAP synchronization is manual in the demo; production needs an authenticated scheduled worker.
 - Local uploads are unsuitable for Vercel production and multi-instance hosting.
 - Digital signatures and cryptographic certificates are not implemented; current approval is auditable,
@@ -153,7 +154,7 @@ completion rates. Review authorization and audit reports weekly during the pilot
 | Can a Director bypass the hierarchy? | Normal routing is restricted. Director peers and same-department Division Head peers are explicit audited referrals; wider bypass is not currently permitted. |
 | Can we see who has a file now? | Yes. Current action owners, copies, status, location, time at stage, and complete passage are shown. |
 | Can three Secretaries process the same letter? | They share one queue; atomic claim/release identifies who is handling an item and prevents silent duplicate registration. |
-| Does it replace email? | It consolidates the official workflow record. Intake can import email; automated outbound SMTP and retry processing are the next delivery slice. |
+| Does it replace email? | It consolidates the official workflow record. Intake can import email, and Official Email dispatch uses durable SMTP processing while preserving separate delivery confirmation. |
 | Is it ready for sensitive production documents? | Not yet. Malware scanning, quarantine, managed/EDMS storage, stronger classification enforcement, MFA, and assurance testing are production gates. |
 | Will it scale to all staff? | The directory is searched server-side and core queues are indexed, but production load and capacity testing remain required. |
 | Can non-ITF users use it? | External submission exists now. Authenticated stakeholder accounts and tracking are planned. |

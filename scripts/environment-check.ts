@@ -26,6 +26,9 @@ async function main() {
     for (const name of ["MAIL_USERNAME", "MAIL_PASSWORD", "MAIL_IMAP_HOST", "MAIL_SMTP_HOST"] as const) {
       if (!process.env[name]?.trim()) errors.push(`${name} is required when MAIL_ENABLED=true.`);
     }
+    if ((process.env.EMAIL_WORKER_SECRET?.length ?? 0) < 32) {
+      errors.push("EMAIL_WORKER_SECRET must contain at least 32 characters when MAIL_ENABLED=true.");
+    }
   } else {
     warnings.push("Mailbox integration is disabled (MAIL_ENABLED is not true). This is acceptable for local UI development.");
   }

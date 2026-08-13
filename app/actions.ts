@@ -991,6 +991,22 @@ export async function prepareDispatchAction(formData: FormData) {
     const dispatch = await tx.dispatchRecord.create({
       data: { correspondenceId, outgoingReference, createdById: user.id, ...parsed },
     });
+    if (parsed.channel === DispatchChannel.OFFICIAL_EMAIL && parsed.recipientEmail) {
+      const sensitive = record.classification === Classification.CONFIDENTIAL || record.classification === Classification.SECRET;
+      await tx.emailOutbox.create({ data: {
+        idempotencyKey: `official-email-dispatch:${dispatch.id}`,
+        toAddress: parsed.recipientEmail,
+        subject: sensitive ? `Official ITF correspondence ${outgoingReference}` : `${outgoingReference}: ${record.subject}`,
+        textBody: [
+          `An official correspondence has been prepared for ${parsed.recipientName}.`,
+          `Reference: ${outgoingReference}`,
+          sensitive ? "The subject and document content are omitted from email because of their classification." : `Subject: ${record.subject}`,
+          "Please contact the Industrial Training Fund through the official channel for the controlled document and delivery confirmation.",
+          "Attachments are not included until the production malware-scanning and document-release gate is operational.",
+        ].join("\n\n"),
+        sourceType: "OFFICIAL_EMAIL_DISPATCH", sourceId: dispatch.id,
+      } });
+    }
     await tx.correspondenceEvent.create({
       data: {
         correspondenceId,
@@ -1018,6 +1034,9 @@ export async function updateDispatchStatusAction(formData: FormData) {
   const note = String(formData.get("note") ?? "").trim();
   const dispatch = await db.dispatchRecord.findUnique({ where: { id: dispatchId }, include: { correspondence: true } });
   if (!dispatch) throw new Error("Dispatch record not found.");
+  if (dispatch.channel === DispatchChannel.OFFICIAL_EMAIL && nextStatus === DispatchStatus.DISPATCHED) {
+    throw new Error("Official email is marked dispatched only after the protected worker receives SMTP acceptance.");
+  }
   const transitions: Record<DispatchStatus, DispatchStatus[]> = {
     [DispatchStatus.PREPARED]: [DispatchStatus.DISPATCHED, DispatchStatus.FAILED],
     [DispatchStatus.DISPATCHED]: [DispatchStatus.DELIVERED, DispatchStatus.FAILED],

@@ -104,6 +104,9 @@ This local storage procedure will be replaced by shared object storage or the IT
 Start with `MAIL_ENABLED=false` until the UI and database pass `npm run env:check`. Add the mailbox
 password only through the local `.env` or the deployment secret store. Then enable mail and use the
 administrator connection test. Mail credentials are environment configuration, not database seed data.
+Automated processing also requires a separate `EMAIL_WORKER_SECRET` of at least 32 characters. Configure
+the scheduler to call `POST /api/workers/email-outbox` with a Bearer token; never reuse a staff session,
+Workspace secret or mailbox password.
 
 For Workspace integration, confirm the Workspace runs on its configured URL and registers:
 

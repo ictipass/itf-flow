@@ -11,11 +11,15 @@ sanitized error code, never credentials or full server responses. Failed items u
 backoff and stop after the configured maximum attempts. A processing lock older than ten minutes can be
 reclaimed after a worker crash.
 
-For the local demonstration, a system administrator manually processes up to 20 eligible messages from
-the Email outbox page. Production should call the same processor from an authenticated Vercel cron route
-or dedicated worker. The processor must never be invoked by an unauthenticated public endpoint.
+The processor is available through `POST /api/workers/email-outbox`, authenticated with an independent
+Bearer secret from `EMAIL_WORKER_SECRET`. It returns aggregate counts only. A system administrator may
+also process a bounded batch manually and may return failed/dead-letter items to the queue with an
+audited reason. No unauthenticated or staff-session-only scheduled invocation is accepted.
 
 This slice deliberately does not claim instant real-time push. If that becomes a requirement, use an
 event delivery service, Web Push, or appropriately hosted SSE/WebSocket infrastructure. Do not introduce
-per-user database polling. Automated outgoing-correspondence email with controlled attachments remains
-the next increment on top of this outbox.
+per-user database polling. Official Email dispatch now creates exactly one dispatch-linked outbox item;
+SMTP acceptance marks it dispatched while recipient delivery remains separately confirmable.
+
+Automated dispatch email is plain text and does not include attachments. Current demo attachments are
+generally `NOT_SCANNED`; transmitting them remains blocked until the production scanning/release gate.

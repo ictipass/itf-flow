@@ -10,5 +10,10 @@ dispatched, delivered, or failed states. Failed delivery may be retried. Deliver
 mandatory and every transition is added to the correspondence timeline.
 
 Where multiple dispatch records exist, correspondence closes only after every record is delivered.
-Official-email selection currently records controlled dispatch; automated SMTP delivery, attempts, and
-retry workers belong to the notification/email-delivery slice.
+Official Email preparation creates one idempotent durable outbox item. A protected bounded worker sends
+it through the configured SMTP server and marks the dispatch `DISPATCHED` only after SMTP acceptance.
+SMTP acceptance is not recipient delivery; authorized staff confirm delivery separately. Failed and
+dead-letter messages remain visible to administrators and require an audited reason for manual recovery.
+
+Attachments are deliberately omitted until malware scanning marks them `CLEAN` and the configured
+document provider can safely supply their content.

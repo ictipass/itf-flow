@@ -41,6 +41,7 @@
 - Do not describe current approval as a cryptographic digital signature.
 - Do not claim attachments are malware-scanned.
 - Do not claim full Secret-classification need-to-know enforcement.
-- Do not claim Official email dispatch is automatically sent yet.
+- Do not claim SMTP acceptance proves recipient delivery; delivery confirmation remains a separate step.
+- Do not claim automated dispatch emails include attachments while files remain unscanned.
 - Do not describe local disk storage as production-ready or Vercel-safe.
 - Do not promise EDMS behavior until its API and governance rules are confirmed.
