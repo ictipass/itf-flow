@@ -11,6 +11,17 @@ handover are documented and implemented as a project-readiness slice.
 The stakeholder narrative, role-based live demonstration, anticipated questions, honest MVP boundaries,
 pilot decisions and recovery checklist are documented as a presentation-readiness slice.
 
+## Slice 14A - Configurable staff experience and modern dashboard - Implemented locally
+
+- Preserves the Classic staff shell and dashboard as a safe fallback.
+- Adds a Modern compact navigation shell and attention-first command workspace using the approved theme.
+- Lets system administrators privately preview and organization-wide activate either interface.
+- Audits each activation and protects against concurrent stale configuration changes.
+- Shares navigation authorization and dashboard data across both presentations.
+
+This stakeholder-priority insertion does not renumber the implementation register. Automated email
+delivery remains S15 in the detailed slice sequence.
+
 ## Slice 2 — Organization-aware directory and reporting lines — Implemented
 
 - Replaced role-only adjacency with explicit supervisor/direct-report relationships.

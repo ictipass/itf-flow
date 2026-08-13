@@ -116,6 +116,11 @@ enum EmailOutboxStatus {
   DEAD_LETTER
 }
 
+enum StaffUiMode {
+  CLASSIC
+  MODERN
+}
+
 enum EventType {
   DRAFTED
   DRAFT_UPDATED
@@ -237,12 +242,37 @@ model User {
   dispatchRecords     DispatchRecord[]
   receivedNotifications Notification[] @relation("NotificationRecipient")
   createdNotifications  Notification[] @relation("NotificationActor")
+  updatedApplicationConfigurations ApplicationConfiguration[] @relation("ConfigurationUpdater")
+  configurationChanges ConfigurationChange[] @relation("ConfigurationChanger")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
   @@index([workspaceDepartmentId])
   @@index([workspaceDivisionId])
   @@index([workspaceUnitId])
+}
+
+model ApplicationConfiguration {
+  id          String      @id
+  staffUiMode StaffUiMode @default(CLASSIC)
+  version     Int         @default(1)
+  updatedById String?
+  updatedAt   DateTime    @updatedAt
+  updatedBy   User?       @relation("ConfigurationUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+model ConfigurationChange {
+  id            String   @id @default(cuid())
+  setting       String
+  previousValue String
+  newValue      String
+  reason        String
+  changedById   String
+  createdAt     DateTime @default(now())
+  changedBy     User     @relation("ConfigurationChanger", fields: [changedById], references: [id])
+
+  @@index([setting, createdAt])
+  @@index([changedById, createdAt])
 }
 
 model BroadcastPublisherGrant {
