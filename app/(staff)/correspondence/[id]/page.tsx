@@ -13,6 +13,7 @@ import {
   routeCorrespondenceAction,
   updateDispatchStatusAction,
 } from "@/app/actions";
+import { recordScanningMetadataAction, reassignSecretariatLocationAction, reviewDuplicateAction } from "@/app/secretariat-actions";
 import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
@@ -37,6 +38,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
       dispatchRecords: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
       decisionRequests: true,
+      secretariatRecord: { include: { duplicateOf: true, updatedBy: true, events: { include: { actor: true }, orderBy: { createdAt: "desc" } } } },
     },
   });
   if (!record) notFound();
@@ -110,6 +112,26 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
             {record.attachments.length ? <div style={{ marginTop: 20 }}><strong>Attachments</strong>{record.attachments.map((file) => <p key={file.id}><a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName}</a> <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {label(file.malwareScanStatus)})</small></p>)}</div> : null}
           </section>
+          {canRegister(user.role) ? <section className="card">
+            <span className="eyebrow">Records desk</span><h2>Scanning and physical file</h2>
+            <form action={recordScanningMetadataAction} className="form-grid">
+              <input type="hidden" name="correspondenceId" value={record.id} />
+              <div className="field"><label>Scanning desk</label><input name="scanDesk" required minLength={2} defaultValue={record.secretariatRecord?.scanDesk ?? user.office} /></div>
+              <div className="field"><label>Scanned at</label><input name="scannedAt" type="datetime-local" required defaultValue={(record.secretariatRecord?.scannedAt ?? record.receivedAt).toISOString().slice(0, 16)} /></div>
+              <div className="field"><label>Page count</label><input name="pageCount" type="number" min="1" max="10000" required defaultValue={record.secretariatRecord?.pageCount ?? 1} /></div>
+              <div className="field"><label>Current physical location</label><input name="currentLocation" required minLength={2} defaultValue={record.secretariatRecord?.currentLocation ?? "DG Secretariat - Intake Desk"} /></div>
+              <div className="field"><label>Physical file reference</label><input name="physicalFileReference" defaultValue={record.secretariatRecord?.physicalFileReference ?? ""} /></div>
+              <div className="field"><label>Audit reason</label><input name="reason" required minLength={5} placeholder="Initial scan registration or metadata correction" /></div>
+              <div className="field span-2"><label>Handling notes</label><textarea name="notes" defaultValue={record.secretariatRecord?.notes ?? ""} /></div>
+              <button className="btn span-2">{record.secretariatRecord ? "Update scanning metadata" : "Create tracking record"}</button>
+            </form>
+            {record.secretariatRecord ? <>
+              <div className="handler-strip"><div><strong>{record.secretariatRecord.trackingCode}</strong><small>{record.secretariatRecord.currentLocation} · {record.secretariatRecord.pageCount} pages · {label(record.secretariatRecord.duplicateStatus)}</small></div><Link className="btn secondary compact" href={`/intake/labels/${record.id}`}>Print QR label</Link></div>
+              <h3>Reassign physical location</h3><form action={reassignSecretariatLocationAction} className="form-grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>New location</label><input name="location" required minLength={2} placeholder="Registry shelf, desk, room or file store" /></div><div className="field"><label>Reason</label><input name="reason" required minLength={10} /></div><button className="btn secondary span-2">Record movement</button></form>
+              <h3>Duplicate review</h3>{record.secretariatRecord.duplicateOf ? <p className="notice">Potential/original match: <Link href={`/correspondence/${record.secretariatRecord.duplicateOf.id}`}><strong>{record.secretariatRecord.duplicateOf.referenceNumber}</strong></Link> · {record.secretariatRecord.duplicateOf.subject}</p> : null}
+              <form action={reviewDuplicateAction} className="form-grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Original correspondence ID (required to confirm)</label><input name="duplicateOfCorrespondenceId" defaultValue={record.secretariatRecord.duplicateOfCorrespondenceId ?? ""} /></div><div className="field"><label>Review reason</label><input name="reason" required minLength={10} /></div><div className="actions span-2"><button className="btn secondary" name="outcome" value="CLEARED">Clear duplicate flag</button><button className="btn" name="outcome" value="CONFIRMED_DUPLICATE">Confirm duplicate</button></div></form>
+            </> : null}
+          </section> : null}
           {canHandleIntake ? (
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}
@@ -203,6 +225,11 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <p><strong>Subject:</strong> {revision.subject}</p><p>{revision.summary}</p>
               {revision.body ? <div style={{ whiteSpace: "pre-wrap" }}>{revision.body}</div> : null}
             </details>)}
+          </> : null}
+          {record.secretariatRecord ? <>
+            <h2>Physical-file history</h2>
+            <p><strong>{record.secretariatRecord.trackingCode}</strong><br /><small className="muted">Current location: {record.secretariatRecord.currentLocation} · updated by {record.secretariatRecord.updatedBy.name}</small></p>
+            {record.secretariatRecord.events.map((event) => <div key={event.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 10, marginBottom: 10 }}><strong>{label(event.type)}</strong><p style={{ margin: "5px 0" }}>{event.reason}</p><small className="muted">{event.fromLocation && event.toLocation ? `${event.fromLocation} → ${event.toLocation} · ` : ""}{event.actor.name} · {event.createdAt.toLocaleString("en-NG")}</small></div>)}
           </> : null}
           <h2>Movement & minutes</h2>
           <div className="timeline">

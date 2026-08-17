@@ -11,6 +11,7 @@ import {
   CorrespondenceStatus,
   CorrespondenceType,
   DecisionOutcome,
+  DuplicateReviewStatus,
   DispatchChannel,
   DispatchStatus,
   EventType,
@@ -488,7 +489,7 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
   if (!canRegister(user.role)) throw new Error("You cannot register correspondence.");
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const dg = await db.user.findFirst({ where: { role: UserRole.DG, isActive: true } });
-  const record = await db.correspondence.findUnique({ where: { id: correspondenceId } });
+  const record = await db.correspondence.findUnique({ where: { id: correspondenceId }, include: { secretariatRecord: true } });
   if (
     !record ||
     record.status !== CorrespondenceStatus.SUBMITTED ||
@@ -496,6 +497,9 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
     !dg
   ) {
     throw new Error("This submission cannot be registered.");
+  }
+  if (record.secretariatRecord?.duplicateStatus === DuplicateReviewStatus.CONFIRMED_DUPLICATE) {
+    throw new Error("A confirmed duplicate cannot be registered as a new DG submission.");
   }
   const context = await requestContext();
   await db.$transaction(async (tx) => {

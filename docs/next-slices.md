@@ -59,6 +59,8 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Manual IMAP mailbox synchronization into the shared intake queue. Implemented.
 - Duplicate detection, scanning desk metadata, physical-file location and barcode/QR labels.
 - Reassignment between secretariat locations with reason and audit trail.
+- Scanning metadata, physical location history, scannable QR labels, duplicate suggestions and controlled
+  duplicate decisions. Implemented.
 - Service-level timers for unregistered and unacknowledged items.
 
 ## Slice 5 — Notifications and escalations

@@ -49,6 +49,7 @@ technical request context. Copied recipients receive visibility but do not becom
 
 - Public portal, scanned letters, composed memos, and manually synchronized email intake.
 - Shared Secretariat claim/release controls.
+- Scanning-desk metadata, physical-file location history, duplicate review and authenticated QR labels.
 - Searchable staff directory and explicit reporting lines.
 - Multiple action and copied recipients.
 - Drafts and autosave.

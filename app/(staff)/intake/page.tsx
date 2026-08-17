@@ -18,7 +18,7 @@ export default async function IntakePage({
   const [records, lastSync] = await Promise.all([
     db.correspondence.findMany({
       where: { status: CorrespondenceStatus.SUBMITTED },
-      include: { claimedBy: true, emailMessage: true },
+      include: { claimedBy: true, emailMessage: true, secretariatRecord: true },
       orderBy: [{ claimedAt: "asc" }, { receivedAt: "asc" }],
       take: 100,
     }),
@@ -54,14 +54,15 @@ export default async function IntakePage({
 
       <div className="card">
         <table className="table">
-          <thead><tr><th>Reference</th><th>Source</th><th>Subject</th><th>From</th><th>Handler</th><th>Action</th></tr></thead>
+          <thead><tr><th>Reference</th><th>Source</th><th>Subject</th><th>File location</th><th>Duplicate review</th><th>Handler</th><th>Action</th></tr></thead>
           <tbody>
             {records.map((record) => (
               <tr key={record.id}>
                 <td><Link href={`/correspondence/${record.id}`}><strong>{record.referenceNumber}</strong></Link></td>
                 <td><span className="badge">{label(record.intakeSource)}</span></td>
                 <td>{record.subject}</td>
-                <td>{record.senderName}</td>
+                <td>{record.secretariatRecord ? <><strong>{record.secretariatRecord.currentLocation}</strong><br /><small className="muted">{record.secretariatRecord.trackingCode}</small></> : <span className="muted">Not recorded</span>}</td>
+                <td>{record.secretariatRecord ? <span className="badge">{label(record.secretariatRecord.duplicateStatus)}</span> : "—"}</td>
                 <td>
                   {record.claimedBy
                     ? <><strong>{record.claimedBy.name}</strong><br /><small className="muted">{record.claimedBy.office}</small></>
@@ -79,7 +80,7 @@ export default async function IntakePage({
                 </td>
               </tr>
             ))}
-            {!records.length ? <tr><td colSpan={6} className="muted">The shared intake queue is clear.</td></tr> : null}
+            {!records.length ? <tr><td colSpan={7} className="muted">The shared intake queue is clear.</td></tr> : null}
           </tbody>
         </table>
       </div>

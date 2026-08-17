@@ -71,6 +71,10 @@ Due-date reminders, overdue reporting-line escalations and role-scoped daily dig
 protected scheduled worker and the durable email outbox. Administrators configure policy and inspect
 execution history from **Reminder automation**.
 
+Secretariat and Records staff can register scan metadata, track the current physical-file location,
+print authenticated QR tracking labels and review likely duplicate intake without claiming malware
+scanning or EDMS storage.
+
 Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).
 Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
 the next planned slice has its own detailed specification under [`docs/slices`](docs/slices/S15-automated-email-delivery.md).

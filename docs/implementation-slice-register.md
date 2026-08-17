@@ -32,14 +32,14 @@ another developer without depending on unfinished work from a later slice.
 | S14 | Node.js LTS alignment | Implemented | `3015551` |
 | S14A | Configurable Classic, Modern, Soft UI and Glass staff experiences | Implemented | `5299f9e`, `8a0a466`, `7d5e846` |
 | S15 | Automated email delivery and secure worker processing | Implemented | `1aa0ab3` |
-| S16 | Due-date reminders, overdue escalations and executive digests | Implemented | Current S16 feature commit; see [`slices/S16-reminders-escalations-digests.md`](slices/S16-reminders-escalations-digests.md) |
+| S16 | Due-date reminders, overdue escalations and executive digests | Implemented | `ffd2aea` |
+| S17 | Secretariat scanning metadata, physical location, duplicate review and reassignment | Implemented | Current S17 feature commit; see [`slices/S17-secretariat-records.md`](slices/S17-secretariat-records.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
 ## Planned next slice
 
-**S17 - Secretariat scanning metadata, physical location, duplicate review and reassignment** is the
-planned next workflow slice.
+**S18 - Full-text search, filters, registers and movement reports** is the planned next workflow slice.
 
 ## Subsequent slices
 

@@ -118,6 +118,21 @@ enum ScheduledAutomationStatus {
   FAILED
 }
 
+enum DuplicateReviewStatus {
+  NOT_REVIEWED
+  POSSIBLE_DUPLICATE
+  CONFIRMED_DUPLICATE
+  CLEARED
+}
+
+enum SecretariatRecordEventType {
+  METADATA_RECORDED
+  LOCATION_REASSIGNED
+  DUPLICATE_FLAGGED
+  DUPLICATE_CONFIRMED
+  DUPLICATE_CLEARED
+}
+
 enum EmailOutboxStatus {
   QUEUED
   PROCESSING
@@ -257,6 +272,8 @@ model User {
   updatedApplicationConfigurations ApplicationConfiguration[] @relation("ConfigurationUpdater")
   configurationChanges ConfigurationChange[] @relation("ConfigurationChanger")
   updatedReminderPolicies WorkflowReminderPolicy[] @relation("ReminderPolicyUpdater")
+  updatedSecretariatRecords SecretariatRecord[] @relation("SecretariatRecordUpdater")
+  secretariatRecordEvents SecretariatRecordEvent[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -459,12 +476,57 @@ model Correspondence {
   decisionRequests     DecisionRequest[]
   revisions            CorrespondenceRevision[]
   dispatchRecords       DispatchRecord[]
+  secretariatRecord     SecretariatRecord? @relation("SecretariatRecordCorrespondence")
+  duplicateFlags        SecretariatRecord[] @relation("SecretariatDuplicateOf")
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
   @@index([claimedById, status])
   @@index([currentOwnerId, status])
   @@index([classification])
+}
+
+model SecretariatRecord {
+  id                        String                @id @default(cuid())
+  correspondenceId          String                @unique
+  scanDesk                   String
+  scannedAt                  DateTime
+  pageCount                  Int
+  currentLocation            String
+  physicalFileReference      String?
+  trackingCode               String                @unique
+  duplicateStatus            DuplicateReviewStatus @default(NOT_REVIEWED)
+  duplicateOfCorrespondenceId String?
+  duplicateReason            String?
+  notes                      String?
+  updatedById                String
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  correspondence            Correspondence         @relation("SecretariatRecordCorrespondence", fields: [correspondenceId], references: [id], onDelete: Cascade)
+  duplicateOf               Correspondence?        @relation("SecretariatDuplicateOf", fields: [duplicateOfCorrespondenceId], references: [id], onDelete: SetNull)
+  updatedBy                 User                   @relation("SecretariatRecordUpdater", fields: [updatedById], references: [id])
+  events                    SecretariatRecordEvent[]
+
+  @@index([currentLocation, updatedAt])
+  @@index([duplicateStatus, updatedAt])
+  @@index([duplicateOfCorrespondenceId])
+}
+
+model SecretariatRecordEvent {
+  id                 String                     @id @default(cuid())
+  secretariatRecordId String
+  actorId            String
+  type               SecretariatRecordEventType
+  fromLocation       String?
+  toLocation         String?
+  reason             String
+  metadata           Json?
+  createdAt          DateTime                   @default(now())
+  secretariatRecord  SecretariatRecord          @relation(fields: [secretariatRecordId], references: [id], onDelete: Cascade)
+  actor              User                       @relation(fields: [actorId], references: [id])
+
+  @@index([secretariatRecordId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model Attachment {

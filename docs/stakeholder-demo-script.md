@@ -24,6 +24,8 @@ users do not require Workspace for public submission.
 
 Expected: the other Secretaries would see who claimed the item; registration creates an auditable event
 and places the item in DG's inbox. If public submission is already rehearsed, use that prepared record.
+Show the tracking code, current physical location and duplicate-review state; print or preview the QR
+label if time permits. Clarify that this is operational scan metadata, not malware scanning.
 
 ## Scene 3 — Staff draft and hierarchy (3 minutes)
 
