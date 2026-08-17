@@ -108,6 +108,10 @@ Automated processing also requires a separate `EMAIL_WORKER_SECRET` of at least 
 the scheduler to call `POST /api/workers/email-outbox` with a Bearer token; never reuse a staff session,
 Workspace secret or mailbox password.
 
+Reminder and escalation processing requires a different `WORKFLOW_WORKER_SECRET` of at least 32
+characters. Schedule `POST /api/workers/reminders` with its own Bearer token. Repeated daily or more
+frequent invocations are safe because reminder, escalation and digest effects are idempotent.
+
 For Workspace integration, confirm the Workspace runs on its configured URL and registers:
 
 ```text

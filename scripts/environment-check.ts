@@ -20,6 +20,7 @@ async function main() {
 
   for (const name of required) if (!process.env[name]?.trim()) errors.push(`${name} is missing.`);
   if ((process.env.SESSION_SECRET?.length ?? 0) < 32) errors.push("SESSION_SECRET must contain at least 32 characters.");
+  if ((process.env.WORKFLOW_WORKER_SECRET?.length ?? 0) < 32) warnings.push("WORKFLOW_WORKER_SECRET is missing or shorter than 32 characters; scheduled reminder processing will reject all requests.");
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith("postgresql://")) errors.push("DATABASE_URL must be a PostgreSQL connection URL.");
 
   if (process.env.MAIL_ENABLED === "true") {

@@ -106,6 +106,16 @@ enum NotificationType {
   REVISION_CREATED
   BROADCAST_PUBLISHED
   DISPATCH_FAILED
+  DUE_SOON
+  OVERDUE
+  ESCALATED
+  DAILY_DIGEST
+}
+
+enum ScheduledAutomationStatus {
+  RUNNING
+  COMPLETED
+  FAILED
 }
 
 enum EmailOutboxStatus {
@@ -246,12 +256,42 @@ model User {
   createdNotifications  Notification[] @relation("NotificationActor")
   updatedApplicationConfigurations ApplicationConfiguration[] @relation("ConfigurationUpdater")
   configurationChanges ConfigurationChange[] @relation("ConfigurationChanger")
+  updatedReminderPolicies WorkflowReminderPolicy[] @relation("ReminderPolicyUpdater")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
   @@index([workspaceDepartmentId])
   @@index([workspaceDivisionId])
   @@index([workspaceUnitId])
+}
+
+model WorkflowReminderPolicy {
+  id                    String   @id
+  enabled               Boolean  @default(true)
+  reminderLeadDays      Int      @default(2)
+  escalationAfterDays   Int      @default(1)
+  executiveDigestEnabled Boolean @default(true)
+  timeZone              String   @default("Africa/Lagos")
+  version               Int      @default(1)
+  updatedById           String?
+  updatedAt             DateTime @updatedAt
+  updatedBy             User?    @relation("ReminderPolicyUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+}
+
+model ScheduledAutomationRun {
+  id                 String                    @id @default(cuid())
+  job                String
+  status             ScheduledAutomationStatus @default(RUNNING)
+  reminderCount      Int                       @default(0)
+  overdueCount       Int                       @default(0)
+  escalationCount    Int                       @default(0)
+  digestCount        Int                       @default(0)
+  errorCode          String?
+  startedAt          DateTime                  @default(now())
+  completedAt        DateTime?
+
+  @@index([job, startedAt])
+  @@index([status, startedAt])
 }
 
 model ApplicationConfiguration {

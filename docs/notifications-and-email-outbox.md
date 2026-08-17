@@ -23,3 +23,8 @@ SMTP acceptance marks it dispatched while recipient delivery remains separately 
 
 Automated dispatch email is plain text and does not include attachments. Current demo attachments are
 generally `NOT_SCANNED`; transmitting them remains blocked until the production scanning/release gate.
+
+Scheduled deadline automation is documented in
+[`S16-reminders-escalations-digests.md`](slices/S16-reminders-escalations-digests.md). Its protected worker
+creates idempotent due-soon, overdue, supervisor-escalation and daily-digest notifications, which reuse
+this durable outbox for asynchronous email delivery.

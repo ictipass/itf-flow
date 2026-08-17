@@ -67,6 +67,10 @@ System administrators can privately preview and activate the preserved Classic s
 the Modern command workspace, the neumorphic Soft UI workspace, or the glossy black Glass workspace from **Appearance**. The active mode is database-backed,
 audited and defaults to Classic after migration; workflow permissions and data are shared by both modes.
 
+Due-date reminders, overdue reporting-line escalations and role-scoped daily digests run through a
+protected scheduled worker and the durable email outbox. Administrators configure policy and inspect
+execution history from **Reminder automation**.
+
 Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).
 Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
 the next planned slice has its own detailed specification under [`docs/slices`](docs/slices/S15-automated-email-delivery.md).

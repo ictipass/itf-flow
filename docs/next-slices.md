@@ -69,6 +69,8 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Event-driven in-app notifications and a durable, idempotent email outbox with manual processing, retry and dead-letter states. Implemented without continuous database polling.
 - Reminders before due dates and configurable overdue escalations.
 - Daily digest for executives, Directors and secretaries.
+- Due-soon reminders, overdue owner notices, reporting-line escalation, protected processing, run ledger
+  and role-scoped daily digests. Implemented.
 - Delivery attempts, retries and dead-letter monitoring.
 
 ## Slice 6 — Search, registry and records management
