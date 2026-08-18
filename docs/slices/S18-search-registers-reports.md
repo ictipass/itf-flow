@@ -1,6 +1,6 @@
 # S18 — Search, filters, registers and movement reports
 
-Status: Implemented locally; pending feature commit.
+Status: Implemented in `3075aae`.
 
 ## Practical outcome
 
