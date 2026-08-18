@@ -81,6 +81,8 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Filters by office, department, classification, priority, owner, status and date.
 - Retention schedules, archival, legal hold and disposal approvals.
 - Exportable correspondence register and movement report.
+- Classification-aware multi-field search, operational filters, filtered correspondence register and
+  passage-level movement CSV exports. Implemented.
 
 ## Slice 7 — Delegation and acting appointments
 

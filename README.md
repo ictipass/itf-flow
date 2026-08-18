@@ -76,8 +76,11 @@ print authenticated QR tracking labels and review likely duplicate intake withou
 scanning or EDMS storage.
 
 Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).
+
+The [`comprehensive user and stakeholder demo guide`](docs/user-guide.md) explains each role, expected controls,
+the recommended live-demo sequence, and the current production boundaries.
 Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
-the next planned slice has its own detailed specification under [`docs/slices`](docs/slices/S15-automated-email-delivery.md).
+the authoritative register identifies the next planned slice and its dependencies.
 
 ## Current demo boundaries
 

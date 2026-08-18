@@ -46,6 +46,10 @@ official reference and first immutable version.
 Expected: Director HR appears because Directors are authorized peers. Approval is separate from ordinary
 routing, remains in the decision register, and HR retains custody after approval to forward onward.
 
+For the complete role-by-role facilitator sequence, seeded accounts, expected controls and honest boundaries,
+use [`user-guide.md`](user-guide.md). Conclude the workflow demonstration by searching the resulting reference
+or minute in **All correspondence**, applying an owner/date filter, and downloading both filtered CSV reports.
+
 ## Scene 5 — Return, correction, and version integrity (2 minutes)
 
 Use a rehearsed returned record if time is limited.
