@@ -1,6 +1,6 @@
 # S21 — Signed approval assertions and stronger authentication
 
-Status: Implemented locally; pending feature commit.
+Status: Implemented in `6505d7c`.
 
 ## Practical outcome
 
