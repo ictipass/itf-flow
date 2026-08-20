@@ -305,6 +305,7 @@ model User {
   accessGroupMemberships AccessGroupMember[]
   createdAccessGroups AccessGroup[] @relation("AccessGroupCreator")
   sensitiveAccessEvents SensitiveAccessEvent[]
+  approvalSignatures ApprovalSignature[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -606,6 +607,7 @@ model Correspondence {
   duplicateFlags        SecretariatRecord[] @relation("SecretariatDuplicateOf")
   accessGroups          CorrespondenceAccessGroup[]
   sensitiveAccessEvents SensitiveAccessEvent[]
+  approvalSignatures    ApprovalSignature[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
@@ -744,10 +746,42 @@ model DecisionRequest {
   workItem         WorkItem         @relation(fields: [workItemId], references: [id], onDelete: Cascade)
   requestedBy      User             @relation("DecisionRequester", fields: [requestedById], references: [id])
   decidedBy        User?            @relation("DecisionMaker", fields: [decidedById], references: [id])
+  signature        ApprovalSignature?
 
   @@index([correspondenceId, requestedAt])
   @@index([requestedById, requestedAt])
   @@index([decidedById, decidedAt])
+}
+
+model ApprovalSignature {
+  id                     String   @id @default(cuid())
+  decisionRequestId      String   @unique
+  correspondenceId       String
+  revisionId             String
+  revisionVersion        Int
+  documentDigest         String
+  canonicalPayload       Json
+  signatureValue         String
+  algorithm              String   @default("HMAC-SHA256")
+  keyId                   String
+  authenticationMethod   String
+  signerId               String
+  signerName             String
+  signerRole             String
+  signerPosition         String?
+  authorityPrincipalId   String?
+  authorityPrincipalName String?
+  delegationId           String?
+  signedAt               DateTime
+  createdAt              DateTime @default(now())
+  decisionRequest        DecisionRequest @relation(fields: [decisionRequestId], references: [id], onDelete: Cascade)
+  correspondence         Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  revision               CorrespondenceRevision @relation(fields: [revisionId], references: [id])
+  signer                 User @relation(fields: [signerId], references: [id])
+
+  @@index([correspondenceId, signedAt])
+  @@index([signerId, signedAt])
+  @@index([documentDigest])
 }
 
 model CorrespondenceRevision {
@@ -767,6 +801,7 @@ model CorrespondenceRevision {
   createdAt        DateTime       @default(now())
   correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   createdBy        User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  approvalSignatures ApprovalSignature[]
 
   @@unique([correspondenceId, version])
   @@index([correspondenceId, createdAt])

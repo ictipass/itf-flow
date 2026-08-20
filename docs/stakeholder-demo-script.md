@@ -60,6 +60,11 @@ outside the group cannot discover it, then open it as a member. For a Secret rec
 step-up, viewer watermark and sensitive-access report. State that this is application password step-up—not MFA—
 and that embedded PDF watermarking/redacted renditions depend on the future EDMS rendering contract.
 
+Approval-authentication scene: open a prepared formal approval request, enter the decision note and demonstrate
+that approval requires the current password. After approval, show the verified assertion, revision number and
+digest in the decision register. Explain that correction supersedes the approval and that this server assertion
+is not being presented as PKI-backed non-repudiation.
+
 ## Scene 5 — Return, correction, and version integrity (2 minutes)
 
 Use a rehearsed returned record if time is limited.

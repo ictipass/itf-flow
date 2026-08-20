@@ -23,6 +23,7 @@ import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
+import { verifyApprovalSignature } from "@/lib/approval-signatures";
 
 export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -35,7 +36,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       claimedBy: true,
       emailMessage: true,
       attachments: true,
-      workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true } } }, orderBy: { assignedAt: "desc" } },
+      workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true, signature: { include: { revision: true } } } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
       dispatchRecords: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
@@ -158,6 +159,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <form action={recordDecisionAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
                 <input type="hidden" name="decisionRequestId" value={pendingDecision.id} />
+                {pendingDecision.purpose === "APPROVAL" ? <div className="field"><label>Re-confirm password to approve</label><input name="approvalPassword" type="password" autoComplete="current-password" required /><small className="muted">Approval creates an immutable signature assertion for the current document revision.</small></div> : null}
                 <div className="field"><label>Decision note</label><textarea name="note" minLength={5} required placeholder="State the basis, conditions, correction required, or reason for this decision…" /></div>
                 <div className="actions">
                   {pendingDecision.purpose === "REVIEW" ? <button className="btn" name="outcome" value="RECOMMENDED" type="submit">Recommend</button> : null}
@@ -228,6 +230,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               return <div key={decision.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}>
                 <strong>{label(decision.purpose)} · {decision.outcome ? label(decision.outcome) : "Pending"}{decision.supersededAt ? " · Superseded" : ""}</strong>
                 <p style={{ margin: "5px 0" }}>{decision.decisionNote ?? item.instruction}</p>
+                {decision.signature ? <div className={`notice ${verifyApprovalSignature(decision.signature) ? "success" : "error"}`}><strong>{verifyApprovalSignature(decision.signature) ? "Signature assertion verified" : "Signature verification failed"}</strong><br /><small>Revision {decision.signature.revisionVersion} · SHA-256 {decision.signature.documentDigest.slice(0, 16)}… · {decision.signature.algorithm} / {decision.signature.keyId} · authenticated by {decision.signature.authenticationMethod.toLowerCase().replaceAll("_", " ")}{decision.signature.authorityPrincipalName ? ` · acting for ${decision.signature.authorityPrincipalName}` : ""}</small></div> : decision.outcome === DecisionOutcome.APPROVED ? <p className="notice">Legacy approval: recorded before signed approval assertions were enabled.</p> : null}
                 <small className="muted">Requested by {decision.requestedBy.name} for {item.assignee.name}{decision.decidedBy ? ` · decided by ${decision.decidedBy.name}` : ""}{decision.decidedAt ? ` · ${decision.decidedAt.toLocaleString("en-NG")}` : ""}</small>
               </div>;
             })}

@@ -54,6 +54,9 @@ runtime state of the other three applications.
 Edit `.env` locally. Replace development placeholders, keep secrets out of screenshots and chat, and use
 the same `WORKSPACE_LAUNCH_TOKEN_SECRET` in ITF Flow and ITF Workspace.
 
+Keep `APPROVAL_SIGNING_SECRET` stable and transfer it only through the approved secret channel. Existing signed
+approval assertions cannot be verified if that key is lost or overwritten; future rotation must retain prior keys.
+
 ## 3. Create and initialize PostgreSQL
 
 Create an empty `itf_flow` database, then ensure `DATABASE_URL` points to it.

@@ -87,6 +87,10 @@ appointment administration remains interim until HR/Workspace supplies authorita
 Need-to-know access groups, Secret password step-up, controlled-copy marking and sensitive-access reporting
 now protect classified workflow paths. Enterprise MFA, embedded document watermarking and governed redaction
 remain explicit production integration gates.
+
+Positive formal approvals require password re-confirmation and create a verifiable HMAC-SHA256 assertion bound
+to the exact immutable revision and acting authority. This application assertion is deliberately not described
+as a certificate-backed or qualified digital signature; PKI and legal signature policy remain external decisions.
 Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
 the authoritative register identifies the next planned slice and its dependencies.
 

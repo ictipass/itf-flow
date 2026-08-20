@@ -33,6 +33,7 @@ import { enqueueNotifications } from "@/lib/notifications";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
 import { approvalRequired, authorityMetadata, workAuthority } from "@/lib/delegations";
+import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, revisionDigest, signApprovalPayload, verifyApprovalSignature } from "@/lib/approval-signatures";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -936,6 +937,7 @@ async function assertDispatchable(correspondenceId: string) {
     include: {
       decisionRequests: {
         where: { purpose: WorkPurpose.APPROVAL, outcome: DecisionOutcome.APPROVED, supersededAt: null },
+        include: { signature: { include: { revision: true } } },
         take: 1,
       },
     },
@@ -946,6 +948,7 @@ async function assertDispatchable(correspondenceId: string) {
   if (record.requiresApproval && !record.decisionRequests.length) {
     throw new Error("This correspondence requires a current approval before dispatch.");
   }
+  if (record.decisionRequests[0]?.signature && !verifyApprovalSignature(record.decisionRequests[0].signature)) throw new Error("The current approval signature could not be verified; dispatch is blocked.");
   return record;
 }
 
@@ -1121,13 +1124,45 @@ export async function recordDecisionAction(formData: FormData) {
     throw new Error("That decision is not valid for this request.");
   }
 
+  const createsSignature = request.purpose === WorkPurpose.APPROVAL && outcome === DecisionOutcome.APPROVED;
+  const latestRevision = createsSignature ? await db.correspondenceRevision.findFirst({ where: { correspondenceId }, orderBy: { version: "desc" } }) : null;
+  if (createsSignature) {
+    const password = String(formData.get("approvalPassword") ?? "");
+    if (!user.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw new Error("Password re-confirmation failed; approval was not recorded.");
+    if (!latestRevision) throw new Error("The document has no immutable revision to sign.");
+  }
+
   const returnsToRequester = outcome === DecisionOutcome.REJECTED || outcome === DecisionOutcome.RETURNED;
   const context = await requestContext();
   await db.$transaction(async (tx) => {
-    await tx.decisionRequest.update({
-      where: { id: request.id },
+    const changed = await tx.decisionRequest.updateMany({
+      where: { id: request.id, outcome: null },
       data: { outcome, decisionNote: note, decidedById: user.id, decidedAt: new Date() },
     });
+    if (changed.count !== 1) throw new Error("This decision was already recorded.");
+    if (createsSignature && latestRevision) {
+      const signedAt = new Date();
+      const documentDigest = revisionDigest(latestRevision);
+      const payload = {
+        schema: "ITF_FLOW_APPROVAL_V1", decisionRequestId: request.id, correspondenceId,
+        revisionId: latestRevision.id, revisionVersion: latestRevision.version, documentDigest,
+        outcome, decisionNote: note, signerId: user.id, signerName: user.name, signerRole: user.role,
+        authorityPrincipalId: authority.delegation ? authority.principal.id : null,
+        authorityPrincipalName: authority.delegation ? authority.principal.name : null,
+        delegationId: authority.delegation?.id ?? null, authenticationMethod: "PASSWORD_RECONFIRMATION",
+        signedAt: signedAt.toISOString(), algorithm: APPROVAL_SIGNATURE_ALGORITHM, keyId: APPROVAL_SIGNATURE_KEY_ID,
+      };
+      await tx.approvalSignature.create({ data: {
+        decisionRequestId: request.id, correspondenceId, revisionId: latestRevision.id,
+        revisionVersion: latestRevision.version, documentDigest, canonicalPayload: payload,
+        signatureValue: signApprovalPayload(payload), algorithm: APPROVAL_SIGNATURE_ALGORITHM,
+        keyId: APPROVAL_SIGNATURE_KEY_ID, authenticationMethod: "PASSWORD_RECONFIRMATION",
+        signerId: user.id, signerName: user.name, signerRole: user.role, signerPosition: user.position,
+        authorityPrincipalId: authority.delegation ? authority.principal.id : null,
+        authorityPrincipalName: authority.delegation ? authority.principal.name : null,
+        delegationId: authority.delegation?.id ?? null, signedAt,
+      } });
+    }
     if (returnsToRequester) {
       await tx.workItem.update({
         where: { id: request.workItemId },

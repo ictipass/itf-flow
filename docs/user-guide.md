@@ -66,6 +66,18 @@ that route is absent from the assigned reporting line.
 
 Expected control: prior decisions remain in the decision register when a later correction supersedes them.
 
+### Formally approving a document
+
+1. Confirm the document version, attachments, passage and decision request before selecting **Approve**.
+2. Enter a decision note and re-confirm your current password. A failed password leaves the request pending.
+3. ITF Flow signs the exact latest immutable revision and shows its revision number and digest in the register.
+4. Confirm that the decision register displays **Signature assertion verified** before relying on the approval.
+5. A corrected later revision supersedes the approval; it must be approved independently where policy requires.
+
+The assertion is an application electronic signature, not a certificate-backed qualified signature. Acting
+officers can approve only when their appointment explicitly grants approval authority, and the assertion records
+both the officer and substantive authority.
+
 ## Director-General
 
 1. Use the dashboard and inbox to review Secretariat-registered and escalated correspondence.
