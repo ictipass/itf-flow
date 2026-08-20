@@ -127,6 +127,16 @@ priority, status, active owner, office, department and received-date filters.
 Current search includes composed document text and minutes. Searchable OCR text from scanned attachments is
 not claimed here; that belongs to the EDMS/object-storage, malware-scanning and OCR slice.
 
+## Confidential and Secret correspondence
+
+- Need-to-know records are visible only to their originator and active group members who also satisfy normal
+  workflow authorization.
+- Secret access requires an eligible role and password confirmation. Elevation lasts 15 minutes.
+- Confidential and Secret screens show a controlled-copy watermark with viewer identity and date.
+- Sensitive downloads receive controlled filenames and are logged; sensitive exports are logged per record.
+- Administrators configure groups and review access under **Need-to-know access**, but administration alone does
+  not bypass group membership.
+
 ## Recommended stakeholder demonstration sequence
 
 1. Show the selected staff interface and explain that an administrator can safely switch among four layouts.

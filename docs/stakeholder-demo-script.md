@@ -55,6 +55,11 @@ desk. Sign in as the acting officer, open **Acting office inbox**, acknowledge a
 metadata attributing the action to both the officer and delegated desk. Revoke the appointment and show that the
 desk queue is no longer accessible; do not imply that local dates replace the authoritative HR record.
 
+Optional security scene: assign a prepared Confidential record to a need-to-know group, show that a participant
+outside the group cannot discover it, then open it as a member. For a Secret record, demonstrate the password
+step-up, viewer watermark and sensitive-access report. State that this is application password step-up—not MFA—
+and that embedded PDF watermarking/redacted renditions depend on the future EDMS rendering contract.
+
 ## Scene 5 — Return, correction, and version integrity (2 minutes)
 
 Use a rehearsed returned record if time is limited.

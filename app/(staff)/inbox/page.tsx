@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Classification, WorkItemStatus } from "@/lib/generated/prisma/client";
+import { WorkItemStatus } from "@/lib/generated/prisma/client";
 import { activeDelegationsFor } from "@/lib/delegations";
 import { db } from "@/lib/db";
-import { canReadClassification } from "@/lib/permissions";
+import { sensitiveRecordScope } from "@/lib/sensitive-access";
 import { requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
 
@@ -11,8 +11,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const view = (await searchParams).view === "office" ? "office" : "personal";
   const delegations = await activeDelegationsFor(user.id);
   const principalIds = delegations.map((item) => item.principalId);
+  const sensitiveScope = await sensitiveRecordScope(user);
   const items = await db.workItem.findMany({
-    where: { assigneeId: view === "office" ? { in: principalIds } : user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] }, ...(canReadClassification(user.role, Classification.SECRET) ? {} : { correspondence: { classification: { not: Classification.SECRET } } }) },
+    where: { assigneeId: view === "office" ? { in: principalIds } : user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] }, correspondence: sensitiveScope },
     include: { correspondence: true, assignee: true }, orderBy: [{ correspondence: { priority: "asc" } }, { assignedAt: "desc" }], take: 300,
   });
   const appointmentByPrincipal = new Map(delegations.map((item) => [item.principalId, item]));

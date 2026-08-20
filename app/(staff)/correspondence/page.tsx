@@ -8,7 +8,7 @@ import { normalizeRegistryParams, registryQueryString, registryWhere } from "@/l
 export default async function CorrespondencePage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const user = await requireUser();
   const params = normalizeRegistryParams(await searchParams);
-  const where = registryWhere(user, params);
+  const where = await registryWhere(user, params);
   const [records, total] = await Promise.all([db.correspondence.findMany({
     where,
     include: { workItems: { where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } }, include: { assignee: true }, orderBy: { assignedAt: "desc" }, take: 2 } },

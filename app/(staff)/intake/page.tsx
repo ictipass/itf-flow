@@ -6,6 +6,7 @@ import { isMailEnabled } from "@/lib/mail-config";
 import { canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
+import { sensitiveRecordScope } from "@/lib/sensitive-access";
 
 export default async function IntakePage({
   searchParams,
@@ -15,9 +16,10 @@ export default async function IntakePage({
   const user = await requireUser();
   if (!canRegister(user.role)) return <p className="notice">You do not have Secretariat intake access.</p>;
   const notice = await searchParams;
+  const sensitiveScope = await sensitiveRecordScope(user);
   const [records, lastSync] = await Promise.all([
     db.correspondence.findMany({
-      where: { status: CorrespondenceStatus.SUBMITTED },
+      where: { status: CorrespondenceStatus.SUBMITTED, AND: [sensitiveScope] },
       include: { claimedBy: true, emailMessage: true, secretariatRecord: true },
       orderBy: [{ claimedAt: "asc" }, { receivedAt: "asc" }],
       take: 100,

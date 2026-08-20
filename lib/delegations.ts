@@ -1,6 +1,6 @@
 import { DelegationStatus, RecipientKind, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
-import { canReadClassification } from "@/lib/permissions";
+import { canAccessSensitiveRecord } from "@/lib/sensitive-access";
 
 export const activeDelegationWhere = (delegateId: string, now = new Date()) => ({
   delegateId,
@@ -32,9 +32,11 @@ export async function workAuthority(input: {
         { assignee: { authorityDelegations: { some: { ...activeDelegationWhere(input.actor.id), ...(input.requireApproval ? { canApprove: true } : {}) } } } },
       ],
     },
-    include: { assignee: true, correspondence: true },
+    include: { assignee: true, correspondence: { include: { accessGroups: { include: { group: { include: { members: true } } } } } } },
   });
-  if (!item || !canReadClassification(input.actor.role, item.correspondence.classification)) return null;
+  if (!item) return null;
+  const policy = await canAccessSensitiveRecord({ user: input.actor, classification: item.correspondence.classification, createdById: item.correspondence.createdById, hasAccessGroups: item.correspondence.accessGroups.length > 0, groupMemberIds: [...new Set(item.correspondence.accessGroups.flatMap((entry) => entry.group.isActive ? entry.group.members.map((member) => member.userId) : []))] });
+  if (!policy.allowed) return null;
   if (item.assigneeId === input.actor.id) return { item, principal: input.actor, delegation: null };
   const delegation = await db.delegation.findFirst({
     where: { ...activeDelegationWhere(input.actor.id), principalId: item.assigneeId, ...(input.requireApproval ? { canApprove: true } : {}) },

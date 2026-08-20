@@ -7,8 +7,9 @@ export async function GET(request: Request) {
   const user = await getCurrentUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
   const params = Object.fromEntries(new URL(request.url).searchParams) as RegistryParams;
+  const where = await registryWhere(user, params);
   const records = await db.correspondence.findMany({
-    where: registryWhere(user, params),
+    where,
     include: {
       createdBy: true,
       secretariatRecord: true,
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
     orderBy: { updatedAt: "desc" },
     take: 5000,
   });
+  if (records.length) await db.sensitiveAccessEvent.createMany({ data: records.filter((record) => record.classification === "CONFIDENTIAL" || record.classification === "SECRET").map((record) => ({ correspondenceId: record.id, userId: user.id, type: "EXPORT", detail: "Correspondence register CSV" })) });
   return csvResponse([
     ["Reference", "Subject", "Sender", "Sender reference", "Type", "Classification", "Priority", "Status", "Current owner(s)", "Office(s)", "Department(s)", "Received", "Due", "Tracking code", "Physical location", "Originator"],
     ...records.map((record) => [record.referenceNumber, record.subject, record.senderName, record.senderReference, label(record.type), label(record.classification), label(record.priority), label(record.status), record.workItems.map((item) => item.assignee.name).join("; "), record.workItems.map((item) => item.assignee.office).join("; "), [...new Set(record.workItems.map((item) => item.assignee.department).filter(Boolean))].join("; "), record.receivedAt.toISOString(), record.dueAt?.toISOString(), record.secretariatRecord?.trackingCode, record.secretariatRecord?.currentLocation, record.createdBy?.name],),

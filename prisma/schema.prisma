@@ -129,6 +129,12 @@ enum DelegationEventType {
   REVOKED
 }
 
+enum SensitiveAccessType {
+  VIEW
+  DOWNLOAD
+  EXPORT
+}
+
 enum ScheduledAutomationStatus {
   RUNNING
   COMPLETED
@@ -296,6 +302,9 @@ model User {
   createdDelegations Delegation[] @relation("DelegationCreator")
   revokedDelegations Delegation[] @relation("DelegationRevoker")
   delegationEvents DelegationEvent[]
+  accessGroupMemberships AccessGroupMember[]
+  createdAccessGroups AccessGroup[] @relation("AccessGroupCreator")
+  sensitiveAccessEvents SensitiveAccessEvent[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -344,6 +353,59 @@ model DelegationEvent {
 
   @@index([delegationId, createdAt])
   @@index([actorId, createdAt])
+}
+
+model AccessGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  isActive    Boolean  @default(true)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   User     @relation("AccessGroupCreator", fields: [createdById], references: [id])
+  members     AccessGroupMember[]
+  records     CorrespondenceAccessGroup[]
+
+  @@index([isActive, name])
+}
+
+model AccessGroupMember {
+  groupId  String
+  userId   String
+  addedAt  DateTime @default(now())
+  group    AccessGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, userId])
+  @@index([userId, groupId])
+}
+
+model CorrespondenceAccessGroup {
+  correspondenceId String
+  groupId          String
+  assignedAt       DateTime @default(now())
+  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  group             AccessGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([correspondenceId, groupId])
+  @@index([groupId, correspondenceId])
+}
+
+model SensitiveAccessEvent {
+  id               String              @id @default(cuid())
+  correspondenceId String
+  userId           String
+  type             SensitiveAccessType
+  detail           String?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime            @default(now())
+  correspondence   Correspondence      @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  user             User                @relation(fields: [userId], references: [id])
+
+  @@index([correspondenceId, createdAt])
+  @@index([userId, createdAt])
 }
 
 model WorkflowReminderPolicy {
@@ -542,6 +604,8 @@ model Correspondence {
   dispatchRecords       DispatchRecord[]
   secretariatRecord     SecretariatRecord? @relation("SecretariatRecordCorrespondence")
   duplicateFlags        SecretariatRecord[] @relation("SecretariatDuplicateOf")
+  accessGroups          CorrespondenceAccessGroup[]
+  sensitiveAccessEvents SensitiveAccessEvent[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])

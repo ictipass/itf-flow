@@ -26,6 +26,7 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number):
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/email-outbox", label: "Email outbox", shortLabel: "Outbox" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/reminders", label: "Reminder automation", shortLabel: "Reminders" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/delegations", label: "Delegations and acting", shortLabel: "Acting" },
+    role === UserRole.SYSTEM_ADMIN && { href: "/admin/access-groups", label: "Need-to-know access", shortLabel: "Access" },
   ];
   return items.filter((item): item is StaffNavigationItem => Boolean(item));
 }

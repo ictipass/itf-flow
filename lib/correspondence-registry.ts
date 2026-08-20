@@ -5,7 +5,7 @@ import {
   Priority,
   UserRole,
 } from "@/lib/generated/prisma/client";
-import { canReadClassification } from "@/lib/permissions";
+import { sensitiveRecordScope } from "@/lib/sensitive-access";
 
 export type RegistryParams = {
   q?: string;
@@ -40,7 +40,7 @@ export function normalizeRegistryParams(raw: Record<string, string | string[] | 
   }));
 }
 
-export function registryWhere(user: RegistryUser, raw: RegistryParams): Prisma.CorrespondenceWhereInput {
+export async function registryWhere(user: RegistryUser, raw: RegistryParams): Promise<Prisma.CorrespondenceWhereInput> {
   const params = normalizeRegistryParams(raw);
   const q = params.q;
   const owner = params.owner;
@@ -54,9 +54,7 @@ export function registryWhere(user: RegistryUser, raw: RegistryParams): Prisma.C
   const scope: Prisma.CorrespondenceWhereInput = broadRoles.includes(user.role)
     ? {}
     : { OR: [{ createdById: user.id }, { workItems: { some: { assigneeId: user.id } } }, { workItems: { some: { assignee: { authorityDelegations: { some: { delegateId: user.id, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gte: now } } } } } } }] };
-  const classificationScope: Prisma.CorrespondenceWhereInput = canReadClassification(user.role, Classification.SECRET)
-    ? {}
-    : { classification: { not: Classification.SECRET } };
+  const classificationScope = await sensitiveRecordScope(user);
   const peopleFilter: Prisma.UserWhereInput = {
     ...(owner ? { OR: ["name", "email", "staffNumber"].map((field) => ({ [field]: { contains: owner, mode: "insensitive" as const } })) } : {}),
     ...(office ? { office: { contains: office, mode: "insensitive" } } : {}),

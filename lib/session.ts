@@ -9,6 +9,7 @@ const MAX_AGE_SECONDS = 8 * 60 * 60;
 type SessionPayload = {
   userId: string;
   expiresAt: number;
+  stepUpUntil?: number;
 };
 
 function getSecret() {
@@ -67,6 +68,19 @@ export async function createSession(userId: string) {
       maxAge: MAX_AGE_SECONDS,
     },
   );
+}
+
+export async function elevateSession(userId: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_NAME, makeToken({ userId, expiresAt: Date.now() + MAX_AGE_SECONDS * 1000, stepUpUntil: Date.now() + 15 * 60 * 1000 }), {
+    httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: MAX_AGE_SECONDS,
+  });
+}
+
+export async function hasActiveStepUp() {
+  const value = (await cookies()).get(COOKIE_NAME)?.value;
+  const session = value ? readToken(value) : null;
+  return Boolean(session?.stepUpUntil && session.stepUpUntil > Date.now());
 }
 
 export async function destroySession() {

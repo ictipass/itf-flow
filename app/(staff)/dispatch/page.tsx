@@ -4,12 +4,14 @@ import { db } from "@/lib/db";
 import { canDispatch } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
+import { sensitiveRecordScope } from "@/lib/sensitive-access";
 
 export default async function DispatchPage() {
   const user = await requireUser();
   if (!canDispatch(user.role)) return <div className="notice">You are not authorized to access the dispatch registry.</div>;
+  const sensitiveScope = await sensitiveRecordScope(user);
   const records = await db.correspondence.findMany({
-    where: { type: CorrespondenceType.OUTGOING_LETTER, status: { not: CorrespondenceStatus.DRAFT } },
+    where: { type: CorrespondenceType.OUTGOING_LETTER, status: { not: CorrespondenceStatus.DRAFT }, AND: [sensitiveScope] },
     include: {
       dispatchRecords: { orderBy: { createdAt: "desc" } },
       decisionRequests: { where: { purpose: WorkPurpose.APPROVAL, outcome: DecisionOutcome.APPROVED, supersededAt: null }, take: 1 },

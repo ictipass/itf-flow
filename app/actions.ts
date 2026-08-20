@@ -27,7 +27,7 @@ import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
 import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
-import { canDispatch, canMinute, canOriginate, canRegister } from "@/lib/permissions";
+import { canDispatch, canMinute, canOriginate, canReadClassification, canRegister } from "@/lib/permissions";
 import { evaluateActionRouting } from "@/lib/reporting-lines";
 import { enqueueNotifications } from "@/lib/notifications";
 import { createSession, destroySession, requireUser } from "@/lib/session";
@@ -245,6 +245,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,
   });
+  if (!canReadClassification(user.role, parsed.classification)) throw new Error("Your role cannot originate Secret correspondence.");
   const isSecretariatIntake =
     canRegister(user.role) && parsed.type === CorrespondenceType.INCOMING_LETTER;
   const actionRecipientIds = formData

@@ -19,9 +19,10 @@ import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { activeDelegationsFor } from "@/lib/delegations";
-import { canDispatch, canMinute, canReadClassification, canRegister } from "@/lib/permissions";
+import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
+import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
 
 export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -40,6 +41,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       dispatchRecords: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
       decisionRequests: true,
       secretariatRecord: { include: { duplicateOf: true, updatedBy: true, events: { include: { actor: true }, orderBy: { createdAt: "desc" } } } },
+      accessGroups: { include: { group: { include: { members: true } } } },
     },
   });
   if (!record) notFound();
@@ -58,7 +60,11 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
   const broadAccess = broadRoles.includes(user.role);
   const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId));
-  if ((!broadAccess && !participant) || !canReadClassification(user.role, record.classification)) notFound();
+  if (!broadAccess && !participant) notFound();
+  const sensitivePolicy = await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+  if (sensitivePolicy.needsStepUp) redirect(`/step-up?returnTo=${encodeURIComponent(`/correspondence/${record.id}`)}`);
+  if (!sensitivePolicy.allowed) notFound();
+  if (record.classification === "CONFIDENTIAL" || record.classification === "SECRET") await logSensitiveAccess({ correspondenceId: record.id, userId: user.id, type: "VIEW", detail: "Correspondence detail viewed" });
   const activeStatuses: WorkItemStatus[] = [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED];
   const activeActionItem = record.workItems.find(
     (item) =>
@@ -83,12 +89,14 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const canPrepareDispatch = canDispatch(user.role) && record.type === CorrespondenceType.OUTGOING_LETTER && (!record.requiresApproval || currentApproval) && record.status !== CorrespondenceStatus.CLOSED;
   return (
     <>
+      {record.classification === "CONFIDENTIAL" || record.classification === "SECRET" ? <div className="sensitive-watermark" aria-hidden="true">CONTROLLED COPY · {user.staffNumber ?? user.email} · {new Date().toLocaleDateString("en-NG")}</div> : null}
       <span className="eyebrow">{record.referenceNumber}</span>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
         <div><h1 style={{ maxWidth: 800 }}>{record.subject}</h1><p className="muted">From {record.senderName} · received {record.receivedAt.toLocaleString("en-NG")}</p></div>
         <div className="actions" style={{ marginTop: 0 }}><span className={`badge ${record.classification === "SECRET" ? "secret" : ""}`}>{label(record.classification)}</span><span className="badge">{label(record.status)}</span></div>
       </div>
       {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
+      {record.accessGroups.length ? <p className="notice">Need-to-know restriction: {record.accessGroups.map((item) => item.group.name).join(", ")}.</p> : null}
       {activeDelegation ? <p className="notice">Acting authority: you are handling this item for <strong>{activeDelegation.principal.name}</strong> through the <strong>{activeDelegation.officeLabel}</strong> desk until {activeDelegation.endsAt.toLocaleString("en-NG")}.{activeDelegation.canApprove ? " Formal approval authority is enabled." : " Formal approval authority is not delegated."}</p> : null}
       {record.status === CorrespondenceStatus.SUBMITTED ? (
         <section className="handler-strip">

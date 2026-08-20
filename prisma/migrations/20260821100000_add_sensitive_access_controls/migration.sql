@@ -1,0 +1,18 @@
+CREATE TYPE "SensitiveAccessType" AS ENUM ('VIEW', 'DOWNLOAD', 'EXPORT');
+CREATE TABLE "AccessGroup" ("id" TEXT NOT NULL, "name" TEXT NOT NULL, "description" TEXT NOT NULL, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdById" TEXT NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, CONSTRAINT "AccessGroup_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "AccessGroupMember" ("groupId" TEXT NOT NULL, "userId" TEXT NOT NULL, "addedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "AccessGroupMember_pkey" PRIMARY KEY ("groupId","userId"));
+CREATE TABLE "CorrespondenceAccessGroup" ("correspondenceId" TEXT NOT NULL, "groupId" TEXT NOT NULL, "assignedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "CorrespondenceAccessGroup_pkey" PRIMARY KEY ("correspondenceId","groupId"));
+CREATE TABLE "SensitiveAccessEvent" ("id" TEXT NOT NULL, "correspondenceId" TEXT NOT NULL, "userId" TEXT NOT NULL, "type" "SensitiveAccessType" NOT NULL, "detail" TEXT, "ipAddress" TEXT, "userAgent" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "SensitiveAccessEvent_pkey" PRIMARY KEY ("id"));
+CREATE UNIQUE INDEX "AccessGroup_name_key" ON "AccessGroup"("name");
+CREATE INDEX "AccessGroup_isActive_name_idx" ON "AccessGroup"("isActive","name");
+CREATE INDEX "AccessGroupMember_userId_groupId_idx" ON "AccessGroupMember"("userId","groupId");
+CREATE INDEX "CorrespondenceAccessGroup_groupId_correspondenceId_idx" ON "CorrespondenceAccessGroup"("groupId","correspondenceId");
+CREATE INDEX "SensitiveAccessEvent_correspondenceId_createdAt_idx" ON "SensitiveAccessEvent"("correspondenceId","createdAt");
+CREATE INDEX "SensitiveAccessEvent_userId_createdAt_idx" ON "SensitiveAccessEvent"("userId","createdAt");
+ALTER TABLE "AccessGroup" ADD CONSTRAINT "AccessGroup_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "AccessGroupMember" ADD CONSTRAINT "AccessGroupMember_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "AccessGroup"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "AccessGroupMember" ADD CONSTRAINT "AccessGroupMember_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CorrespondenceAccessGroup" ADD CONSTRAINT "CorrespondenceAccessGroup_correspondenceId_fkey" FOREIGN KEY ("correspondenceId") REFERENCES "Correspondence"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CorrespondenceAccessGroup" ADD CONSTRAINT "CorrespondenceAccessGroup_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "AccessGroup"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SensitiveAccessEvent" ADD CONSTRAINT "SensitiveAccessEvent_correspondenceId_fkey" FOREIGN KEY ("correspondenceId") REFERENCES "Correspondence"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "SensitiveAccessEvent" ADD CONSTRAINT "SensitiveAccessEvent_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

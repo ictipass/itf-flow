@@ -100,6 +100,9 @@ Acting appointments and time-bound delegation are implemented through S19's inte
 - Redacted copies and restricted attachments.
 - Step-up authentication for Secret correspondence.
 - Download watermarking and sensitive-access reporting.
+- Need-to-know groups, central enforcement, 15-minute password step-up for Secret records, controlled-copy
+  marking and sensitive view/download/export reporting are implemented. Enterprise MFA, embedded binary
+  watermarking and governed redaction remain later integration gates.
 
 ## Slice 9 — Digital approval and signatures
 
