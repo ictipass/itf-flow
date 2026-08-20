@@ -36,7 +36,7 @@ another developer without depending on unfinished work from a later slice.
 | S17 | Secretariat scanning metadata, physical location, duplicate review and reassignment | Implemented | `c35b86c` |
 | S18 | Full-text-style search, filters, registers and movement reports | Implemented | `3075aae`; see [`slices/S18-search-registers-reports.md`](slices/S18-search-registers-reports.md) |
 | S19 | Delegation, acting appointments and office/desk inboxes | Implemented | `0686162`; see [`slices/S19-delegation-acting-office-inboxes.md`](slices/S19-delegation-acting-office-inboxes.md) |
-| S20 | Confidentiality, need-to-know groups, watermarking and step-up access | Implemented locally | Current S20 feature commit; see [`slices/S20-sensitive-access-controls.md`](slices/S20-sensitive-access-controls.md) |
+| S20 | Confidentiality, need-to-know groups, watermarking and step-up access | Implemented | `3d276f8`; see [`slices/S20-sensitive-access-controls.md`](slices/S20-sensitive-access-controls.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 

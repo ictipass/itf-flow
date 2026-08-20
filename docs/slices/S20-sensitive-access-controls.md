@@ -1,6 +1,6 @@
 # S20 — Confidentiality, need-to-know groups, watermarking and step-up access
 
-Status: Implemented locally; pending feature commit.
+Status: Implemented in `3d276f8`.
 
 ## Practical outcome
 
