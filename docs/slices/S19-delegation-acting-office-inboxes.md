@@ -1,6 +1,6 @@
 # S19 — Delegation, acting appointments and office/desk inboxes
 
-Status: Implemented locally; pending feature commit.
+Status: Implemented in `0686162`.
 
 ## Practical outcome
 

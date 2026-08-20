@@ -35,7 +35,7 @@ another developer without depending on unfinished work from a later slice.
 | S16 | Due-date reminders, overdue escalations and executive digests | Implemented | `ffd2aea` |
 | S17 | Secretariat scanning metadata, physical location, duplicate review and reassignment | Implemented | `c35b86c` |
 | S18 | Full-text-style search, filters, registers and movement reports | Implemented | `3075aae`; see [`slices/S18-search-registers-reports.md`](slices/S18-search-registers-reports.md) |
-| S19 | Delegation, acting appointments and office/desk inboxes | Implemented locally | Current S19 feature commit; see [`slices/S19-delegation-acting-office-inboxes.md`](slices/S19-delegation-acting-office-inboxes.md) |
+| S19 | Delegation, acting appointments and office/desk inboxes | Implemented | `0686162`; see [`slices/S19-delegation-acting-office-inboxes.md`](slices/S19-delegation-acting-office-inboxes.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
