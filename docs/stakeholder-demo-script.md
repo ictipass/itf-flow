@@ -50,6 +50,11 @@ For the complete role-by-role facilitator sequence, seeded accounts, expected co
 use [`user-guide.md`](user-guide.md). Conclude the workflow demonstration by searching the resulting reference
 or minute in **All correspondence**, applying an owner/date filter, and downloading both filtered CSV reports.
 
+Optional continuity scene: as the System Administrator, create a short acting appointment for the ICT Director's
+desk. Sign in as the acting officer, open **Acting office inbox**, acknowledge a prepared item and show the passage
+metadata attributing the action to both the officer and delegated desk. Revoke the appointment and show that the
+desk queue is no longer accessible; do not imply that local dates replace the authoritative HR record.
+
 ## Scene 5 — Return, correction, and version integrity (2 minutes)
 
 Use a rehearsed returned record if time is limited.

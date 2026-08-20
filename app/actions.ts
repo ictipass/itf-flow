@@ -32,6 +32,7 @@ import { evaluateActionRouting } from "@/lib/reporting-lines";
 import { enqueueNotifications } from "@/lib/notifications";
 import { createSession, destroySession, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
+import { approvalRequired, authorityMetadata, workAuthority } from "@/lib/delegations";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -595,18 +596,8 @@ export async function returnToInitiatorAction(formData: FormData) {
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   if (reason.length < 5) throw new Error("Give a clear reason for returning the correspondence.");
-  const [record, activeActionItem] = await Promise.all([
-    db.correspondence.findUnique({ where: { id: correspondenceId } }),
-    db.workItem.findFirst({
-      where: {
-        correspondenceId,
-        assigneeId: user.id,
-        kind: RecipientKind.ACTION,
-        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
-      },
-    }),
-  ]);
-  if (!record?.createdById || !activeActionItem) {
+  const [record, authority] = await Promise.all([db.correspondence.findUnique({ where: { id: correspondenceId } }), workAuthority({ correspondenceId, actor: user })]);
+  if (!record?.createdById || !authority) {
     throw new Error("Only the current action recipient can return staff-originated correspondence.");
   }
   const context = await requestContext();
@@ -644,7 +635,7 @@ export async function returnToInitiatorAction(formData: FormData) {
         fromStatus: record.status,
         toStatus: CorrespondenceStatus.RETURNED,
         minute: reason,
-        metadata: { returnedToId: record.createdById, returnedById: user.id },
+        metadata: { returnedToId: record.createdById, returnedById: user.id, ...authorityMetadata(authority) },
         ...context,
       },
     });
@@ -809,7 +800,6 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
 
 export async function routeCorrespondenceAction(formData: FormData) {
   const user = await requireUser();
-  if (!canMinute(user.role)) throw new Error("You cannot minute or route correspondence.");
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
   const purpose = workPurpose(formData);
@@ -825,30 +815,23 @@ export async function routeCorrespondenceAction(formData: FormData) {
   if (!correspondenceId || minute.length < 3 || actionRecipientIds.length === 0) {
     throw new Error("A minute and at least one action recipient are required.");
   }
-  const [record, currentActionItem, actionRecipients, copyRecipients] = await Promise.all([
+  const authority = await workAuthority({ correspondenceId, actor: user });
+  if (!authority || !canMinute(authority.principal.role)) throw new Error("You do not hold current authority to route this correspondence.");
+  const [record, actionRecipients, copyRecipients] = await Promise.all([
     db.correspondence.findUnique({ where: { id: correspondenceId } }),
-    db.workItem.findFirst({
-      where: {
-        correspondenceId,
-        assigneeId: user.id,
-        kind: RecipientKind.ACTION,
-        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
-      },
-    }),
     db.user.findMany({ where: { id: { in: actionRecipientIds }, isActive: true } }),
     db.user.findMany({ where: { id: { in: copyRecipientIds }, isActive: true } }),
   ]);
   if (
     !record ||
-    !currentActionItem ||
     actionRecipients.length !== new Set(actionRecipientIds).size ||
     copyRecipients.length !== new Set(copyRecipientIds).size
   ) {
     throw new Error("Invalid routing request.");
   }
   const routingPolicy = await evaluateActionRouting({
-      actorId: user.id,
-      actorRole: user.role,
+      actorId: authority.principal.id,
+      actorRole: authority.principal.role,
       recipientIds: actionRecipients.map((recipient) => recipient.id),
     });
   if (!routingPolicy.permitted) throw new Error("Routing must follow an authorized hierarchy or peer-referral path.");
@@ -864,7 +847,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
   const context = await requestContext();
   await db.$transaction(async (tx) => {
     await tx.workItem.updateMany({
-      where: { correspondenceId, assigneeId: user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
+      where: { correspondenceId, assigneeId: authority.item.assigneeId, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
     });
     const actionItems = await Promise.all(actionRecipients.map((recipient) =>
@@ -926,6 +909,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
           copyRecipientIds,
           routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
           workPurpose: purpose,
+          ...authorityMetadata(authority),
         },
         ...context,
       },
@@ -1118,15 +1102,13 @@ export async function recordDecisionAction(formData: FormData) {
       id: decisionRequestId,
       correspondenceId,
       outcome: null,
-      workItem: {
-        assigneeId: user.id,
-        kind: RecipientKind.ACTION,
-        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
-      },
+      workItem: { kind: RecipientKind.ACTION, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
     },
     include: { correspondence: true, workItem: true },
   });
   if (!request) throw new Error("This decision request is unavailable or has already been decided.");
+  const authority = await workAuthority({ correspondenceId, actor: user, requireApproval: approvalRequired(request.purpose) });
+  if (!authority || authority.item.id !== request.workItemId) throw new Error("You do not hold the required authority for this decision.");
 
   const allowed: Record<WorkPurpose, DecisionOutcome[]> = {
     [WorkPurpose.ACTION]: [],
@@ -1167,7 +1149,7 @@ export async function recordDecisionAction(formData: FormData) {
     } else {
       await tx.correspondence.update({
         where: { id: correspondenceId },
-        data: { status: CorrespondenceStatus.IN_PROGRESS, currentOwnerId: user.id },
+        data: { status: CorrespondenceStatus.IN_PROGRESS, currentOwnerId: authority.item.assigneeId },
       });
     }
     await tx.correspondenceEvent.create({
@@ -1185,6 +1167,7 @@ export async function recordDecisionAction(formData: FormData) {
           workPurpose: request.purpose,
           outcome,
           returnedToId: returnsToRequester ? request.requestedById : undefined,
+          ...authorityMetadata(authority),
         },
         ...context,
       },
@@ -1204,8 +1187,10 @@ export async function recordDecisionAction(formData: FormData) {
 export async function acknowledgeAction(formData: FormData) {
   const user = await requireUser();
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
+  const authority = await workAuthority({ correspondenceId, actor: user });
+  if (!authority) throw new Error("You do not hold current authority for this correspondence.");
   await db.workItem.updateMany({
-    where: { correspondenceId, assigneeId: user.id, status: WorkItemStatus.OPEN },
+    where: { correspondenceId, assigneeId: authority.item.assigneeId, status: WorkItemStatus.OPEN },
     data: { status: WorkItemStatus.ACKNOWLEDGED, acknowledgedAt: new Date() },
   });
   await db.correspondenceEvent.create({
@@ -1214,7 +1199,8 @@ export async function acknowledgeAction(formData: FormData) {
       actorId: user.id,
       actorType: ActorType.STAFF,
       type: EventType.ACKNOWLEDGED,
-      minute: "Receipt acknowledged.",
+      minute: authority.delegation ? `Receipt acknowledged by ${user.name} acting for ${authority.principal.name}.` : "Receipt acknowledged.",
+      metadata: authorityMetadata(authority),
       ...(await requestContext()),
     },
   });
@@ -1226,23 +1212,13 @@ export async function resolveAction(formData: FormData) {
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
   if (minute.length < 3) throw new Error("A resolution note is required.");
-  const [record, currentActionItem] = await Promise.all([
-    db.correspondence.findUnique({ where: { id: correspondenceId } }),
-    db.workItem.findFirst({
-      where: {
-        correspondenceId,
-        assigneeId: user.id,
-        kind: RecipientKind.ACTION,
-        status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] },
-      },
-    }),
-  ]);
-  if (!record || !currentActionItem) {
+  const [record, authority] = await Promise.all([db.correspondence.findUnique({ where: { id: correspondenceId } }), workAuthority({ correspondenceId, actor: user })]);
+  if (!record || !authority) {
     throw new Error("Only a current action recipient can resolve correspondence.");
   }
   await db.$transaction([
     db.workItem.updateMany({
-      where: { correspondenceId, assigneeId: user.id, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
+      where: { correspondenceId, assigneeId: authority.item.assigneeId, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
     }),
     db.correspondence.update({
@@ -1258,6 +1234,7 @@ export async function resolveAction(formData: FormData) {
         fromStatus: record.status,
         toStatus: CorrespondenceStatus.RESOLVED,
         minute,
+        metadata: authorityMetadata(authority),
         ...(await requestContext()),
       },
     }),

@@ -49,10 +49,11 @@ export function registryWhere(user: RegistryUser, raw: RegistryParams): Prisma.C
   const classification = enumValue(Classification, params.classification);
   const priority = enumValue(Priority, params.priority);
   const status = enumValue(CorrespondenceStatus, params.status);
+  const now = new Date();
   const receivedAt = { gte: dateValue(params.from), lte: dateValue(params.to, true) };
   const scope: Prisma.CorrespondenceWhereInput = broadRoles.includes(user.role)
     ? {}
-    : { OR: [{ createdById: user.id }, { workItems: { some: { assigneeId: user.id } } }] };
+    : { OR: [{ createdById: user.id }, { workItems: { some: { assigneeId: user.id } } }, { workItems: { some: { assignee: { authorityDelegations: { some: { delegateId: user.id, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gte: now } } } } } } }] };
   const classificationScope: Prisma.CorrespondenceWhereInput = canReadClassification(user.role, Classification.SECRET)
     ? {}
     : { classification: { not: Classification.SECRET } };

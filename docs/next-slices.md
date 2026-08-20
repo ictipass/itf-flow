@@ -32,7 +32,7 @@ delivery remains S15 in the detailed slice sequence.
 - Cross-department action routing is blocked unless represented by an explicit reporting assignment.
 - Workspace launch exchange now synchronizes the available staff identity and organization IDs.
 
-Acting appointments and time-bound delegation remain scheduled for Slice 7.
+Acting appointments and time-bound delegation are implemented through S19's interim administrator-managed model.
 
 ## Slice 2A — Correspondence passage visibility — Implemented
 
@@ -90,6 +90,9 @@ Acting appointments and time-bound delegation remain scheduled for Slice 7.
 - Acting-position authority with explicit start/end dates.
 - Personal and office/desk inbox distinction.
 - Auditable reassignment when staff move roles.
+- Administrator-managed appointments, separate personal/acting desk inboxes, explicit approval grants,
+  automatic access expiry and dual-attribution audit metadata are implemented. Authoritative HR/Workspace
+  synchronization and permanent personnel-transfer reassignment remain integration boundaries.
 
 ## Slice 8 — Confidentiality and information barriers
 

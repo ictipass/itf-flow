@@ -18,7 +18,8 @@ import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
-import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
+import { activeDelegationsFor } from "@/lib/delegations";
+import { canDispatch, canMinute, canReadClassification, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { requireUser } from "@/lib/session";
 
@@ -42,6 +43,9 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     },
   });
   if (!record) notFound();
+  const delegations = await activeDelegationsFor(user.id);
+  const delegationByPrincipal = new Map(delegations.map((item) => [item.principalId, item]));
+  const delegatedPrincipalIds = delegations.map((item) => item.principalId);
   const dispatchEmailItems = record.dispatchRecords.length ? await db.emailOutbox.findMany({
     where: { sourceType: "OFFICIAL_EMAIL_DISPATCH", sourceId: { in: record.dispatchRecords.map((dispatch) => dispatch.id) } },
     select: { sourceId: true, status: true, attemptCount: true, lastErrorCode: true },
@@ -53,19 +57,21 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   }
   const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
   const broadAccess = broadRoles.includes(user.role);
-  const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id);
-  if (!broadAccess && !participant) notFound();
+  const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId));
+  if ((!broadAccess && !participant) || !canReadClassification(user.role, record.classification)) notFound();
   const activeStatuses: WorkItemStatus[] = [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED];
-  const activeItem = record.workItems.find((item) => item.assigneeId === user.id && activeStatuses.includes(item.status));
   const activeActionItem = record.workItems.find(
     (item) =>
-      item.assigneeId === user.id &&
+      (item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId)) &&
       item.kind === "ACTION" &&
       activeStatuses.includes(item.status),
   );
+  const activeDelegation = activeActionItem ? delegationByPrincipal.get(activeActionItem.assigneeId) : undefined;
+  const authorityRole = activeDelegation?.principal.role ?? user.role;
   const pendingDecision = activeActionItem?.decisionRequest?.outcome === null ? activeActionItem.decisionRequest : null;
-  const canRoute = Boolean(activeActionItem && !pendingDecision && canMinute(user.role));
-  const canReferToPeers = user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD;
+  const mayDecide = !pendingDecision || pendingDecision.purpose !== WorkPurpose.APPROVAL || !activeDelegation || activeDelegation.canApprove;
+  const canRoute = Boolean(activeActionItem && !pendingDecision && canMinute(authorityRole));
+  const canReferToPeers = authorityRole === UserRole.DIRECTOR || authorityRole === UserRole.DIVISION_HEAD;
   const canHandleIntake =
     record.status === CorrespondenceStatus.SUBMITTED &&
     canRegister(user.role) &&
@@ -83,6 +89,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
         <div className="actions" style={{ marginTop: 0 }}><span className={`badge ${record.classification === "SECRET" ? "secret" : ""}`}>{label(record.classification)}</span><span className="badge">{label(record.status)}</span></div>
       </div>
       {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
+      {activeDelegation ? <p className="notice">Acting authority: you are handling this item for <strong>{activeDelegation.principal.name}</strong> through the <strong>{activeDelegation.officeLabel}</strong> desk until {activeDelegation.endsAt.toLocaleString("en-NG")}.{activeDelegation.canApprove ? " Formal approval authority is enabled." : " Formal approval authority is not delegated."}</p> : null}
       {record.status === CorrespondenceStatus.SUBMITTED ? (
         <section className="handler-strip">
           <div>
@@ -135,8 +142,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           {canHandleIntake ? (
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}
-          {activeItem?.status === WorkItemStatus.OPEN ? <section className="card"><form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary" type="submit">Acknowledge receipt</button></form></section> : null}
-          {pendingDecision ? (
+          {activeActionItem?.status === WorkItemStatus.OPEN ? <section className="card"><form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary" type="submit">Acknowledge receipt</button></form></section> : null}
+          {pendingDecision && mayDecide ? (
             <section className="card">
               <span className="eyebrow">Decision required</span><h2>{label(pendingDecision.purpose)}</h2>
               <p className="muted">Requested by {pendingDecision.requestedBy.name}. Record the formal decision before forwarding or resolving this correspondence.</p>
@@ -153,7 +160,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
                 </div>
               </form>
             </section>
-          ) : null}
+          ) : pendingDecision ? <section className="card"><div className="notice">This desk appointment does not include formal approval authority. The substantive authority holder must record this decision.</div></section> : null}
           {canRoute ? (
             <section className="card">
               <h2>Minute and route</h2>

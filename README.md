@@ -79,6 +79,10 @@ Development slices are tracked in the [`implementation slice register`](docs/imp
 
 The [`comprehensive user and stakeholder demo guide`](docs/user-guide.md) explains each role, expected controls,
 the recommended live-demo sequence, and the current production boundaries.
+
+Time-bound delegations and acting appointments provide a separate acting-office inbox while retaining the
+substantive desk as owner. Approval must be explicitly delegated, every action has dual attribution, and local
+appointment administration remains interim until HR/Workspace supplies authoritative dates.
 Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
 the authoritative register identifies the next planned slice and its dependencies.
 

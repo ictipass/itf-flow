@@ -101,6 +101,17 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 Expected control: operational administration does not grant blanket access to restricted business records;
 classification rules continue to apply to registry queries and exports.
 
+### Delegation and acting appointments
+
+1. Open **Delegations and acting** and select the substantive authority holder and acting officer.
+2. Choose delegation or acting appointment, enter the office/desk label, exact start/end time and authority reason.
+3. Enable formal approval only when the appointment instrument explicitly grants that authority.
+4. The acting officer uses **My inbox → Acting office inbox**. The substantive desk remains the record owner.
+5. Revoke an appointment with a reason when it ends early. At the scheduled end time, access expires automatically.
+
+An acting officer's correspondence event shows who performed the action and the appointment under which it was
+performed. Delegation does not grant Secret access unless the acting officer's own role permits it.
+
 ## Search, filters and exports
 
 Open **All correspondence** to search permitted records by ITF reference, sender reference, sender name,

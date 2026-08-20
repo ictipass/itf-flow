@@ -110,6 +110,23 @@ enum NotificationType {
   OVERDUE
   ESCALATED
   DAILY_DIGEST
+  DELEGATION_ASSIGNED
+  DELEGATION_REVOKED
+}
+
+enum DelegationKind {
+  DELEGATION
+  ACTING_APPOINTMENT
+}
+
+enum DelegationStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum DelegationEventType {
+  CREATED
+  REVOKED
 }
 
 enum ScheduledAutomationStatus {
@@ -274,12 +291,59 @@ model User {
   updatedReminderPolicies WorkflowReminderPolicy[] @relation("ReminderPolicyUpdater")
   updatedSecretariatRecords SecretariatRecord[] @relation("SecretariatRecordUpdater")
   secretariatRecordEvents SecretariatRecordEvent[]
+  authorityDelegations Delegation[] @relation("DelegationPrincipal")
+  receivedDelegations Delegation[] @relation("DelegationDelegate")
+  createdDelegations Delegation[] @relation("DelegationCreator")
+  revokedDelegations Delegation[] @relation("DelegationRevoker")
+  delegationEvents DelegationEvent[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
   @@index([workspaceDepartmentId])
   @@index([workspaceDivisionId])
   @@index([workspaceUnitId])
+}
+
+model Delegation {
+  id                 String           @id @default(cuid())
+  principalId        String
+  delegateId         String
+  kind               DelegationKind
+  status             DelegationStatus @default(ACTIVE)
+  officeLabel        String
+  startsAt           DateTime
+  endsAt             DateTime
+  canApprove         Boolean          @default(false)
+  reason             String
+  createdById        String
+  revokedById        String?
+  revokedAt          DateTime?
+  revocationReason   String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  principal          User             @relation("DelegationPrincipal", fields: [principalId], references: [id])
+  delegate           User             @relation("DelegationDelegate", fields: [delegateId], references: [id])
+  createdBy          User             @relation("DelegationCreator", fields: [createdById], references: [id])
+  revokedBy          User?            @relation("DelegationRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+  events             DelegationEvent[]
+
+  @@index([delegateId, status, startsAt, endsAt])
+  @@index([principalId, status, startsAt, endsAt])
+}
+
+model DelegationEvent {
+  id           String              @id @default(cuid())
+  delegationId String
+  actorId      String
+  type         DelegationEventType
+  reason       String
+  metadata     Json?
+  createdAt    DateTime            @default(now())
+  delegation   Delegation          @relation(fields: [delegationId], references: [id], onDelete: Cascade)
+  actor        User                @relation(fields: [actorId], references: [id])
+
+  @@index([delegationId, createdAt])
+  @@index([actorId, createdAt])
 }
 
 model WorkflowReminderPolicy {

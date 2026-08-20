@@ -25,6 +25,12 @@ function metadataIds(metadata: unknown, keys: string[]) {
   });
 }
 
+function metadataValue(metadata: unknown, key: string) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return null;
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : null;
+}
+
 function initials(name: string) {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
@@ -82,12 +88,17 @@ export function CorrespondencePassage({ status, receivedAt, initiator, externalS
             return person ? [{ person, kind: copyIds.includes(id) ? "COPY" : "ACTION", workItem: latestItemByAssignee.get(id) }] : [];
           });
           const last = index === chronologicalEvents.length - 1;
+          const actedForId = metadataValue(event.metadata, "actedForUserId");
+          const actedFor = actedForId ? people.get(actedForId) : null;
+          const authorityOffice = metadataValue(event.metadata, "authorityOffice");
+          const authorityKind = metadataValue(event.metadata, "authorityKind");
           return (
             <article className={`passage-stage ${last ? "current" : "complete"}`} key={event.id}>
               <div className="passage-marker">{event.type === "RETURNED" ? <RotateCcw size={16} /> : last ? <CircleDot size={16} /> : <Check size={16} />}</div>
               <div className="passage-stage-body">
                 <div className="passage-stage-top"><strong>{label(event.type)}</strong><time>{event.createdAt.toLocaleString("en-NG")}</time></div>
                 <div className="passage-actor"><span className="passage-avatar">{event.actor ? initials(event.actor.name) : "ITF"}</span><div><strong>{event.actor?.name ?? "System / external sender"}</strong><small>{event.actor ? `${label(event.actor.role)} · ${event.actor.office}` : "Automated or external event"}</small></div></div>
+                {actedFor ? <p className="notice">Acted for <strong>{actedFor.name}</strong> under {authorityKind ? label(authorityKind) : "delegated authority"}{authorityOffice ? ` · ${authorityOffice}` : ""}.</p> : null}
                 {event.minute ? <p className="passage-minute">{event.minute}</p> : null}
                 <div className="passage-stage-meta"><span className="status-at-time">Status: {label(statusAtEvent[index])}</span><span><Clock3 size={13} /> {duration(event.createdAt, nextAt)} at this point</span></div>
                 {recipients.length ? <div className="passage-branches"><div className="passage-branch-label"><GitBranch size={14} /> Routed simultaneously</div>{recipients.map(({ person, kind, workItem }) => <div className="passage-recipient" key={`${event.id}-${person.id}-${kind}`}><span className="passage-avatar">{initials(person.name)}</span><div><strong>{person.name}</strong><small>{label(person.role)} · {person.office}</small></div><span className={`badge ${kind === "COPY" ? "copy" : ""}`}>{kind === "COPY" ? <Copy size={11} /> : <UserRound size={11} />} {label(kind)} · Current: {label(workItem?.status ?? "Assigned")}</span></div>)}</div> : null}
