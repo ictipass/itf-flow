@@ -129,6 +129,8 @@ Acting appointments and time-bound delegation are implemented through S19's inte
 - Notification badges in the Workspace launcher.
 - Versioned REST/webhook contracts for non-JavaScript applications.
 - Correlation IDs and centralized audit/event forwarding.
+- Revocable database sessions, MFA-bearing Workspace v2 launch, strict provisioned-role matching, central
+  logout/entitlement events, correlation logging and a privacy-safe attention-count contract are implemented.
 
 ## Slice 12 — Production document platform
 

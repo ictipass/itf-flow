@@ -8,6 +8,7 @@ const required = [
   "SESSION_SECRET",
   "WORKSPACE_LAUNCH_TOKEN_SECRET",
   "WORKSPACE_DIRECTORY_SYNC_SECRET",
+  "WORKSPACE_INTEROP_SECRET",
   "NEXT_PUBLIC_WORKSPACE_URL",
   "NEXT_PUBLIC_APP_URL",
 ] as const;
@@ -20,6 +21,9 @@ async function main() {
 
   for (const name of required) if (!process.env[name]?.trim()) errors.push(`${name} is missing.`);
   if ((process.env.SESSION_SECRET?.length ?? 0) < 32) errors.push("SESSION_SECRET must contain at least 32 characters.");
+  for (const name of ["WORKSPACE_LAUNCH_TOKEN_SECRET", "WORKSPACE_DIRECTORY_SYNC_SECRET", "WORKSPACE_INTEROP_SECRET"] as const) if ((process.env[name]?.length ?? 0) < 32) errors.push(`${name} must contain at least 32 characters.`);
+  const idleMinutes = Number(process.env.STAFF_SESSION_IDLE_MINUTES ?? "30");
+  if (!Number.isFinite(idleMinutes) || idleMinutes < 5 || idleMinutes > 480) errors.push("STAFF_SESSION_IDLE_MINUTES must be between 5 and 480.");
   if ((process.env.APPROVAL_SIGNING_SECRET?.length ?? 0) < 32) warnings.push("APPROVAL_SIGNING_SECRET is missing or shorter than 32 characters; production approval signing will fail.");
   if ((process.env.WORKFLOW_WORKER_SECRET?.length ?? 0) < 32) warnings.push("WORKFLOW_WORKER_SECRET is missing or shorter than 32 characters; scheduled reminder processing will reject all requests.");
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith("postgresql://")) errors.push("DATABASE_URL must be a PostgreSQL connection URL.");

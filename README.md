@@ -39,6 +39,12 @@ without exposing server responses or credentials in the browser.
 
 ## Workspace registration
 
+S23 adds the `itf-workspace-launch-v2` contract with explicit entitlement, MFA and central-session evidence.
+Workspace users must be provisioned before launch and their asserted role must match the locally assigned app role.
+Staff sessions are database-backed, idle/absolute-expiring and immediately revocable through the central session-event
+API. The versioned attention API returns counts only. Full payloads and configuration are documented in the
+[`S23 delivery note`](docs/slices/S23-enterprise-identity-interoperability.md).
+
 Register this launch URL in ITF Workspace:
 
 ```text
@@ -110,8 +116,8 @@ never exposes internal minutes, recipients, decisions, classifications, attachme
   for correspondence created inside `/portal`; external attachments remain blocked pending S24's EDMS controls.
 - Workflow definitions are code-controlled for the demo. A later phase should version configurable
   workflow templates while keeping server-side transition policies.
-- The Workspace handoff is one-time and audited locally, but enterprise OIDC, MFA and central logout
-  remain the production target.
+- Workspace v2 launch consumes upstream MFA and supports central logout and entitlement revocation. Production IdP
+  registration, managed key rotation and end-to-end Workspace configuration remain deployment responsibilities.
 
 ## Secretariat mailbox
 

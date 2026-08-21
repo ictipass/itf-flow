@@ -16,7 +16,7 @@ the facilitator script for a stakeholder demonstration.
    classification—not merely by which links are visible.
 
 The seeded accounts and their purpose are listed below. Passwords are not used by the local demo login;
-production identity remains a Workspace/OIDC integration responsibility.
+local passwords remain a rollout fallback; production staff normally launch from Workspace with enterprise MFA.
 
 | Category | Seeded account | Best demonstration |
 |---|---|---|
@@ -163,7 +163,8 @@ not claimed here; that belongs to the EDMS/object-storage, malware-scanning and 
 
 ## Current boundaries to state honestly
 
-- Local/demo authentication is not enterprise SSO; Workspace OIDC, MFA and central logout remain planned.
+- Workspace v2 sessions consume enterprise MFA evidence and can be centrally revoked. Local/demo authentication is a
+  controlled fallback; production IdP registration, key management and central logout delivery must still be operated.
 - Attachments are not yet on production object storage and do not yet have magic-byte validation, malware
   quarantine or OCR. Do not upload untrusted real-world files to the demonstration environment.
 - Search is database-backed multi-field text search, not OCR or a dedicated enterprise search engine.

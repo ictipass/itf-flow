@@ -39,12 +39,13 @@ another developer without depending on unfinished work from a later slice.
 | S20 | Confidentiality, need-to-know groups, watermarking and step-up access | Implemented | `3d276f8`; see [`slices/S20-sensitive-access-controls.md`](slices/S20-sensitive-access-controls.md) |
 | S21 | Digital signatures and stronger approval authentication | Implemented | `6505d7c`; see [`slices/S21-signed-approval-assertions.md`](slices/S21-signed-approval-assertions.md) |
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
+| S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented locally | Validation pending final commit; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
 ## Planned next slice
 
-**S23 - Enterprise Workspace identity, MFA, central logout and interoperability contracts** is the planned next slice.
+**S24 - EDMS/object storage, magic-byte validation, malware scanning, quarantine and OCR** is the planned next slice.
 
 ## Subsequent slices
 

@@ -1,8 +1,9 @@
-import { timingSafeEqual } from "crypto";
+import { randomUUID, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { UserRole } from "@/lib/generated/prisma/client";
+import { IntegrationEventType, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
+import { correlationId } from "@/lib/integration-auth";
 
 const userSchema = z.object({
   workspaceUserId: z.string().min(1),
@@ -27,13 +28,14 @@ const payloadSchema = z.object({
 function authorized(request: Request) {
   const configured = process.env.WORKSPACE_DIRECTORY_SYNC_SECRET;
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  if (!configured || !supplied) return false;
+  if (!configured || configured.length < 32 || !supplied) return false;
   const expected = Buffer.from(configured);
   const actual = Buffer.from(supplied);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
 export async function POST(request: Request) {
+  const requestCorrelationId = correlationId(request);
   if (!authorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -130,6 +132,9 @@ export async function POST(request: Request) {
           data: { supervisorId: supervisor?.id ?? null },
         });
       }
+      const inactiveWorkspaceIds = parsed.data.users.filter((item) => !item.isActive).map((item) => item.workspaceUserId);
+      if (inactiveWorkspaceIds.length) await tx.staffSession.updateMany({ where: { revokedAt: null, user: { workspaceUserId: { in: inactiveWorkspaceIds } } }, data: { revokedAt: new Date(), revocationReason: "Workspace directory synchronization deactivated this identity." } });
+      await tx.integrationEvent.create({ data: { eventId: randomUUID(), correlationId: requestCorrelationId, source: "itf-workspace", type: IntegrationEventType.DIRECTORY_SYNCHRONIZED, metadata: { runId: run.id, receivedCount: parsed.data.users.length } } });
     });
 
     await db.provisioningRun.update({
@@ -142,7 +147,7 @@ export async function POST(request: Request) {
         completedAt: new Date(),
       },
     });
-    return NextResponse.json({ runId: run.id, createdCount, updatedCount, inactiveCount });
+    return NextResponse.json({ runId: run.id, createdCount, updatedCount, inactiveCount }, { headers: { "X-Correlation-Id": requestCorrelationId } });
   } catch (error) {
     await db.provisioningRun.update({
       where: { id: run.id },

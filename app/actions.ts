@@ -142,7 +142,7 @@ export async function loginAction(formData: FormData) {
 
 export async function logoutAction() {
   await destroySession();
-  redirect("/");
+  redirect(process.env.NEXT_PUBLIC_WORKSPACE_LOGOUT_URL ?? "/");
 }
 
 export async function syncMailboxAction() {

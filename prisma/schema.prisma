@@ -155,6 +155,21 @@ enum PortalSecurityEventType {
   CLARIFICATION_RESPONDED
 }
 
+enum StaffAuthenticationMethod {
+  LOCAL_PASSWORD
+  WORKSPACE_LAUNCH
+  ENTERPRISE_OIDC
+}
+
+enum IntegrationEventType {
+  SESSION_CREATED
+  SESSION_REVOKED
+  CENTRAL_LOGOUT
+  ENTITLEMENT_REVOKED
+  DIRECTORY_SYNCHRONIZED
+  ATTENTION_QUERIED
+}
+
 enum ScheduledAutomationStatus {
   RUNNING
   COMPLETED
@@ -327,12 +342,50 @@ model User {
   sensitiveAccessEvents SensitiveAccessEvent[]
   approvalSignatures ApprovalSignature[]
   requestedClarifications ClarificationRequest[]
+  staffSessions       StaffSession[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
   @@index([workspaceDepartmentId])
   @@index([workspaceDivisionId])
   @@index([workspaceUnitId])
+}
+
+model StaffSession {
+  id                 String                    @id @default(cuid())
+  userId             String
+  authenticationMethod StaffAuthenticationMethod
+  identityProvider   String?
+  workspaceSessionId String?
+  mfaAuthenticatedAt DateTime?
+  stepUpUntil        DateTime?
+  expiresAt          DateTime
+  lastSeenAt         DateTime                  @default(now())
+  revokedAt          DateTime?
+  revocationReason   String?
+  createdAt          DateTime                  @default(now())
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([workspaceSessionId])
+  @@index([expiresAt])
+}
+
+model IntegrationEvent {
+  id            String               @id @default(cuid())
+  eventId       String               @unique
+  correlationId String
+  source        String
+  type          IntegrationEventType
+  userId        String?
+  workspaceUserId String?
+  sessionId     String?
+  metadata      Json?
+  createdAt     DateTime             @default(now())
+
+  @@index([correlationId, createdAt])
+  @@index([workspaceUserId, createdAt])
+  @@index([type, createdAt])
 }
 
 model Delegation {
