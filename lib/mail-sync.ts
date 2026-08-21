@@ -15,6 +15,7 @@ import { storeDocument } from "@/lib/document-storage";
 import { getMailConfiguration, isMailEnabled } from "@/lib/mail-config";
 import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
+import { resolveWorkflowPolicy } from "@/lib/workflow-templates";
 
 function addresses(
   value:
@@ -107,6 +108,7 @@ export async function syncMailbox() {
         const body = parsed.text?.trim().slice(0, 20000) || "Email received without a plain-text body.";
         const receivedAt = message.internalDate ?? parsed.date ?? new Date();
         const correspondence = await db.$transaction(async (tx) => {
+          const workflow = await resolveWorkflowPolicy(tx, { type: CorrespondenceType.INCOMING_LETTER, priority: Priority.ROUTINE });
           const count = await tx.correspondence.count({
             where: { referenceNumber: { startsWith: `ITF/FLOW/${new Date().getFullYear()}/` } },
           });
@@ -123,6 +125,9 @@ export async function syncMailbox() {
               type: CorrespondenceType.INCOMING_LETTER,
               classification: Classification.PUBLIC,
               priority: Priority.ROUTINE,
+              dueAt: workflow.dueAt,
+              workflowCategoryId: workflow.category.id,
+              workflowTemplateVersionId: workflow.version.id,
               status: CorrespondenceStatus.SUBMITTED,
               intakeSource: IntakeSource.EMAIL,
               subject: subject.slice(0, 250),

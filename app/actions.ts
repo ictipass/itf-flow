@@ -36,6 +36,7 @@ import { createSession, destroySession, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
 import { approvalRequired, authorityMetadata, workAuthority } from "@/lib/delegations";
 import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, revisionDigest, signApprovalPayload, verifyApprovalSignature } from "@/lib/approval-signatures";
+import { ensurePurposeAllowed, resolveWorkflowPolicy } from "@/lib/workflow-templates";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -194,6 +195,7 @@ export async function externalSubmitAction(formData: FormData) {
   }
   const context = await requestContext();
   const correspondence = await db.$transaction(async (tx) => {
+    const workflow = await resolveWorkflowPolicy(tx, { type: parsed.data.type, priority: parsed.data.priority, requestedDueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null });
     const organization = await tx.externalOrganization.create({
       data: {
         name: organizationName,
@@ -206,7 +208,10 @@ export async function externalSubmitAction(formData: FormData) {
     const record = await tx.correspondence.create({
       data: {
         ...parsed.data,
-        dueAt: parsed.data.dueAt ? new Date(parsed.data.dueAt) : null,
+        dueAt: workflow.dueAt,
+        workflowCategoryId: workflow.category.id,
+        workflowTemplateVersionId: workflow.version.id,
+        requiresApproval: workflow.requiresApproval,
         referenceNumber: await nextReference(tx),
         externalOrganizationId: organization.id,
         intakeSource: IntakeSource.PORTAL,
@@ -310,14 +315,19 @@ export async function registerCorrespondenceAction(formData: FormData) {
   if (draftId && !existingDraft) throw new Error("This draft cannot be submitted.");
   const context = await requestContext();
   const record = await db.$transaction(async (tx) => {
+    const workflow = await resolveWorkflowPolicy(tx, { type: parsed.type, priority: parsed.priority, requestedDueAt: parsed.dueAt ? new Date(parsed.dueAt) : null, categoryCode: String(formData.get("categoryCode") ?? "") || null });
+    if (!workflow.rules.allowedPurposes.includes(purpose)) throw new Error(`${purpose} is disabled by the active workflow policy.`);
+    if (routingPolicy.isPeerReferral && !workflow.rules.allowPeerReferral) throw new Error("Peer referral is disabled by the active workflow policy.");
     const destinationStatus = actionRecipients[0].role === UserRole.DG
       ? CorrespondenceStatus.WITH_DG
       : CorrespondenceStatus.ASSIGNED;
     const values = {
         ...parsed,
-        dueAt: parsed.dueAt ? new Date(parsed.dueAt) : null,
+        dueAt: workflow.dueAt,
+        workflowCategoryId: workflow.category.id,
+        workflowTemplateVersionId: workflow.version.id,
         createdById: user.id,
-        requiresApproval: purpose === WorkPurpose.APPROVAL || existingDraft?.requiresApproval === true,
+        requiresApproval: workflow.requiresApproval || purpose === WorkPurpose.APPROVAL || existingDraft?.requiresApproval === true,
         status: destinationStatus,
         currentOwnerId: actionRecipients[0].id,
     };
@@ -807,6 +817,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
   const purpose = workPurpose(formData);
+  const templateRules = await ensurePurposeAllowed(correspondenceId, purpose);
   const actionRecipientIds = formData
     .getAll("actionRecipientIds")
     .map(String)
@@ -839,6 +850,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
       recipientIds: actionRecipients.map((recipient) => recipient.id),
     });
   if (!routingPolicy.permitted) throw new Error("Routing must follow an authorized hierarchy or peer-referral path.");
+  if (routingPolicy.isPeerReferral && templateRules && !templateRules.allowPeerReferral) throw new Error("Peer referral is disabled by the correspondence workflow policy.");
   if (routingPolicy.isPeerReferral && minute.length < 10) {
     throw new Error("A peer referral requires a clear purpose of at least 10 characters.");
   }

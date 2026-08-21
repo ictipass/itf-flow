@@ -83,6 +83,10 @@ scanning or EDMS storage.
 
 Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).
 
+System administrators manage constrained, immutable workflow versions and category SLAs from **Workflow policies**.
+New correspondence snapshots its category and active template version; simulation previews due date, approval and
+routing capabilities without creating work. See the [`S25 delivery note`](docs/slices/S25-workflow-templates-slas-simulation.md).
+
 The [`comprehensive user and stakeholder demo guide`](docs/user-guide.md) explains each role, expected controls,
 the recommended live-demo sequence, and the current production boundaries.
 

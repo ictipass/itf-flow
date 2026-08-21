@@ -33,6 +33,11 @@ local passwords remain a rollout fallback; production staff normally launch from
 - **Action recipient:** accountable to acknowledge and treat the matter.
 - **Copy recipient:** informed and able to read, but does not own the task.
 - **Minute:** the instruction or rationale recorded with a movement.
+- **Workflow category:** the governed policy and priority-based response target selected for new correspondence.
+
+System administrators use **Workflow policies** to simulate a proposed category/purpose, create immutable Draft
+versions, activate a validated version and change category SLA days with a recorded reason. Activation applies only
+to new correspondence; existing records retain the version shown on their detail page.
 - **Current owner:** staff with an open or acknowledged action work item.
 - **Passage:** immutable sequence of submissions, acknowledgements, minutes, decisions and movements.
 - **Classification:** Public, Internal, Confidential or Secret; Secret is limited to explicitly authorized roles.

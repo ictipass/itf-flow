@@ -26,11 +26,13 @@ export function CorrespondenceComposer({
   isRegistrar,
   canReferToPeers,
   initial,
+  categories = [],
 }: {
   userName: string;
   isRegistrar: boolean;
   canReferToPeers: boolean;
   initial?: InitialDraft;
+  categories?: Array<{ code: string; name: string; correspondenceType: string; routineSlaDays: number; urgentSlaDays: number; immediateSlaDays: number }>;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
@@ -61,6 +63,7 @@ export function CorrespondenceComposer({
       <div className="field"><label>Document type</label><select name="type" defaultValue={initial?.type ?? (isRegistrar ? "INCOMING_LETTER" : "INTERNAL_MEMO")}>
         {isRegistrar ? <option value="INCOMING_LETTER">Incoming letter</option> : null}<option value="INTERNAL_MEMO">Internal memo</option><option value="OUTGOING_LETTER">Outgoing letter</option>
       </select></div>
+      <div className="field"><label>Workflow category</label><select name="categoryCode" defaultValue=""><option value="">Automatic default</option>{categories.map((category) => <option key={category.code} value={category.code}>{category.name} ({category.correspondenceType}; SLA {category.routineSlaDays}/{category.urgentSlaDays}/{category.immediateSlaDays} days)</option>)}</select></div>
       <div className="field"><label>Sender *</label><input name="senderName" defaultValue={initial?.senderName ?? userName} placeholder="Name of the originating officer or external sender" required /></div>
       <div className="field span-2"><label>Subject *</label><input name="subject" defaultValue={initial?.subject} placeholder="Briefly state what the correspondence is about" required minLength={5} /></div>
       <div className="field"><label>Sender reference</label><input name="senderReference" defaultValue={initial?.senderReference} placeholder="e.g. ITF/ICT/PASS/2026/014" /></div>

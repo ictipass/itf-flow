@@ -148,6 +148,8 @@ Acting appointments and time-bound delegation are implemented through S19's inte
 - Configurable correspondence categories, classifications, priorities and SLAs.
 - Controlled exception/escalation paths with approval.
 - Workflow simulation and change-impact preview.
+- Immutable draft/active/retired versions, constrained purpose and peer-referral policy, category business-day SLAs,
+  policy snapshots, audited activation and no-write simulation are implemented in S25.
 
 ## Slice 14 — Assurance and production rollout
 

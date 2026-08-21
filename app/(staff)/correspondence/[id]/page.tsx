@@ -45,6 +45,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       secretariatRecord: { include: { duplicateOf: true, updatedBy: true, events: { include: { actor: true }, orderBy: { createdAt: "desc" } } } },
       accessGroups: { include: { group: { include: { members: true } } } },
       clarificationRequests: { include: { requestedBy: true, respondedByExternalAccount: true }, orderBy: { requestedAt: "desc" } },
+      workflowCategory: true,
+      workflowTemplateVersion: { include: { template: true } },
     },
   });
   if (!record) notFound();
@@ -100,6 +102,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       </div>
       {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
       {record.accessGroups.length ? <p className="notice">Need-to-know restriction: {record.accessGroups.map((item) => item.group.name).join(", ")}.</p> : null}
+      {record.workflowCategory && record.workflowTemplateVersion ? <p className="notice">Workflow policy: <strong>{record.workflowCategory.name}</strong> · {record.workflowTemplateVersion.template.name} version {record.workflowTemplateVersion.version} · deadline {record.dueAt?.toLocaleDateString("en-NG") ?? "not set"}.</p> : null}
       {activeDelegation ? <p className="notice">Acting authority: you are handling this item for <strong>{activeDelegation.principal.name}</strong> through the <strong>{activeDelegation.officeLabel}</strong> desk until {activeDelegation.endsAt.toLocaleString("en-NG")}.{activeDelegation.canApprove ? " Formal approval authority is enabled." : " Formal approval authority is not delegated."}</p> : null}
       {record.status === CorrespondenceStatus.SUBMITTED ? (
         <section className="handler-strip">

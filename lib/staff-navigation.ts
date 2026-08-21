@@ -28,6 +28,7 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number):
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/delegations", label: "Delegations and acting", shortLabel: "Acting" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/access-groups", label: "Need-to-know access", shortLabel: "Access" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/documents", label: "Document security", shortLabel: "Documents" },
+    role === UserRole.SYSTEM_ADMIN && { href: "/admin/workflows", label: "Workflow policies", shortLabel: "Workflow" },
   ];
   return items.filter((item): item is StaffNavigationItem => Boolean(item));
 }
