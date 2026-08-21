@@ -40,7 +40,7 @@ another developer without depending on unfinished work from a later slice.
 | S21 | Digital signatures and stronger approval authentication | Implemented | `6505d7c`; see [`slices/S21-signed-approval-assertions.md`](slices/S21-signed-approval-assertions.md) |
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented | `ed5e171`; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
-| S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented locally | Validation pending final commit; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
+| S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
