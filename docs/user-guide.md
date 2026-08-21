@@ -136,8 +136,8 @@ priority, status, active owner, office, department and received-date filters.
 - CSV cells are escaped against spreadsheet formula injection.
 - The server reapplies visibility and Secret-classification rules during export; altering a URL cannot broaden access.
 
-Current search includes composed document text and minutes. Searchable OCR text from scanned attachments is
-not claimed here; that belongs to the EDMS/object-storage, malware-scanning and OCR slice.
+Search includes composed text and minutes. It can include released attachment extracted text, but a real OCR provider
+is not connected until S24B.
 
 ## Confidential and Secret correspondence
 
@@ -165,8 +165,8 @@ not claimed here; that belongs to the EDMS/object-storage, malware-scanning and 
 
 - Workspace v2 sessions consume enterprise MFA evidence and can be centrally revoked. Local/demo authentication is a
   controlled fallback; production IdP registration, key management and central logout delivery must still be operated.
-- Attachments are not yet on production object storage and do not yet have magic-byte validation, malware
-  quarantine or OCR. Do not upload untrusted real-world files to the demonstration environment.
+- Attachments use quarantine, hash/magic-byte validation and clean-only release. Local storage and the mock scanner
+  remain demonstration facilities; real EDMS, malware scanning and OCR are still production requirements.
 - Search is database-backed multi-field text search, not OCR or a dedicated enterprise search engine.
 - Digital signatures, acting appointments, need-to-know groups, legal hold, retention/disposal and the external
   stakeholder portal remain future slices.

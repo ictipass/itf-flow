@@ -40,12 +40,14 @@ another developer without depending on unfinished work from a later slice.
 | S21 | Digital signatures and stronger approval authentication | Implemented | `6505d7c`; see [`slices/S21-signed-approval-assertions.md`](slices/S21-signed-approval-assertions.md) |
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented | `ed5e171`; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
+| S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented locally | Validation pending final commit; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
 ## Planned next slice
 
-**S24 - EDMS/object storage, magic-byte validation, malware scanning, quarantine and OCR** is the planned next slice.
+**S24B - Real EDMS, malware-scanner and OCR adapters** is pending the external technical contract and test services.
+**S25 - Configurable workflow templates, SLAs and simulation** is the next independently implementable slice.
 
 ## Subsequent slices
 
@@ -59,7 +61,8 @@ The working tree and `git log` remain the final authority if a commit shown here
 | S21 | Digital signatures and stronger approval authentication | Depends on approved signature policy and PKI decision |
 | S22 | Authenticated external stakeholder portal | Requires identity, anti-abuse and privacy design |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Cross-application platform slice |
-| S24 | EDMS/object storage, magic-byte validation, malware scanning, quarantine and OCR | Production document gate |
+| S24A | Secure provider-neutral document-processing foundation | Local foundation; production activation remains blocked |
+| S24B | Real EDMS, malware scanning, quarantine and OCR adapters | Requires external contracts and test services |
 | S25 | Configurable workflow templates, SLAs and simulation | Requires stable business-rule ownership |
 | S26 | Assurance, observability, load/security tests, backup recovery and pilot rollout | Final production gate |
 

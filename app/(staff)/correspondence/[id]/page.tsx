@@ -128,7 +128,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <h2>Correspondence</h2>
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div style={{ marginTop: 20 }}><strong>Attachments</strong>{record.attachments.map((file) => <p key={file.id}><a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName}</a> <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {label(file.malwareScanStatus)})</small></p>)}</div> : null}
+            {record.attachments.length ? <div style={{ marginTop: 20 }}><strong>Attachments</strong>{record.attachments.map((file) => <p key={file.id}>{file.isIncluded && file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN" ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName}</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : "Excluded"} · {label(file.malwareScanStatus)})</small></p>)}</div> : null}
           </section>
           {canRegister(user.role) ? <section className="card">
             <span className="eyebrow">Records desk</span><h2>Scanning and physical file</h2>

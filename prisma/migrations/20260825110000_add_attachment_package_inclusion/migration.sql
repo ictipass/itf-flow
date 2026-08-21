@@ -1,0 +1,1 @@
+ALTER TABLE "Attachment" ADD COLUMN "isIncluded" BOOLEAN NOT NULL DEFAULT true;

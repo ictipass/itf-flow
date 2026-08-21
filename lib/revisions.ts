@@ -11,7 +11,7 @@ export async function captureRevision(
   const [record, latest] = await Promise.all([
     tx.correspondence.findUniqueOrThrow({
       where: { id: correspondenceId },
-      include: { attachments: { orderBy: { createdAt: "asc" } } },
+      include: { attachments: { where: { isIncluded: true }, orderBy: { createdAt: "asc" } } },
     }),
     tx.correspondenceRevision.aggregate({ where: { correspondenceId }, _max: { version: true } }),
   ]);

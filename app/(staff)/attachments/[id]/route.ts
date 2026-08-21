@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CorrespondenceStatus, MalwareScanStatus, UserRole } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, DocumentEventType, DocumentProcessingStatus, MalwareScanStatus, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { readStoredDocument } from "@/lib/document-storage";
 import { getCurrentUser } from "@/lib/session";
@@ -31,20 +31,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const policy = await canAccessSensitiveRecord({ user, classification: attachment.correspondence.classification, createdById: attachment.correspondence.createdById, hasAccessGroups: attachment.correspondence.accessGroups.length > 0, groupMemberIds: [...new Set(attachment.correspondence.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
   if (policy.needsStepUp) return NextResponse.redirect(new URL(`/step-up?returnTo=${encodeURIComponent(`/attachments/${attachment.id}`)}`, _request.url));
   if (!policy.allowed) return new NextResponse("Forbidden", { status: 403 });
-  if (
-    attachment.malwareScanStatus === MalwareScanStatus.INFECTED ||
-    attachment.malwareScanStatus === MalwareScanStatus.QUARANTINED
-  ) {
-    return new NextResponse("Attachment is quarantined", { status: 423 });
-  }
-  if (attachment.storageProvider !== "LOCAL") {
-    return new NextResponse("Document provider is not available", { status: 503 });
-  }
-  const bytes = await readStoredDocument(attachment.storageKey);
+  if (!attachment.isIncluded || attachment.processingStatus !== DocumentProcessingStatus.AVAILABLE || attachment.malwareScanStatus !== MalwareScanStatus.CLEAN) return new NextResponse("Attachment has not passed the document security gate", { status: 423 });
+  const bytes = await readStoredDocument(attachment.storageKey, attachment.storageProvider);
   const sensitive = attachment.correspondence.classification === "CONFIDENTIAL" || attachment.correspondence.classification === "SECRET";
   if (sensitive) await logSensitiveAccess({ correspondenceId: attachment.correspondenceId, userId: user.id, type: "DOWNLOAD", detail: attachment.originalName, userAgent: _request.headers.get("user-agent"), ipAddress: _request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() });
+  await db.documentEvent.create({ data: { attachmentId: attachment.id, type: DocumentEventType.DOWNLOADED, detail: "Authorized document download.", metadata: { userId: user.id, sensitive } } });
   const controlledName = sensitive ? `CONTROLLED-${user.staffNumber ?? user.id.slice(-8)}-${new Date().toISOString().slice(0, 10)}-${attachment.originalName}` : attachment.originalName;
-  return new NextResponse(bytes, {
+  return new NextResponse(new Uint8Array(bytes), {
     headers: {
       "Content-Type": attachment.mimeType,
       "Content-Disposition": `attachment; filename="${controlledName.replaceAll('"', "")}"`,

@@ -80,6 +80,7 @@ export async function registryWhere(user: RegistryUser, raw: RegistryParams): Pr
           { subject: { contains: q, mode: "insensitive" } },
           { summary: { contains: q, mode: "insensitive" } },
           { body: { contains: q, mode: "insensitive" } },
+          { attachments: { some: { isIncluded: true, processingStatus: "AVAILABLE", extractedText: { contains: q, mode: "insensitive" } } } },
           { events: { some: { minute: { contains: q, mode: "insensitive" } } } },
           { secretariatRecord: { is: { trackingCode: { contains: q, mode: "insensitive" } } } },
         ],

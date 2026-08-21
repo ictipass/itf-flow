@@ -28,7 +28,7 @@ export default async function SubmitPage({
         <div className="field span-2"><label>Subject *</label><input name="subject" placeholder="Briefly state the purpose of your letter" minLength={5} required /></div>
         <div className="field"><label>Your reference</label><input name="senderReference" placeholder="Your organization’s document reference" /></div>
         <div className="field"><label>Requested response date</label><input name="dueAt" type="date" /></div>
-        <div className="field"><label>Classification</label><select name="classification" defaultValue="PUBLIC"><option>PUBLIC</option><option>INTERNAL</option><option>CONFIDENTIAL</option><option>SECRET</option></select></div>
+        <div className="field"><label>Classification</label><input value="PUBLIC — classified material is not accepted here" readOnly /></div>
         <div className="field"><label>Priority</label><select name="priority" defaultValue="ROUTINE"><option>ROUTINE</option><option>URGENT</option><option>IMMEDIATE</option></select></div>
         <div className="field span-2"><label>Summary *</label><textarea name="summary" placeholder="Summarize your request and the response or action expected from ITF" minLength={10} required /></div>
         <div className="field span-2"><label>Letter or memo text</label><textarea name="body" placeholder="Enter the complete letter or memo text, if it is not only in the attachment" style={{ minHeight: 180 }} /></div>

@@ -351,6 +351,37 @@ model User {
   @@index([workspaceUnitId])
 }
 
+enum DocumentProcessingStatus {
+  QUARANTINED
+  PROCESSING
+  AVAILABLE
+  REJECTED
+  FAILED
+  LEGACY_UNVERIFIED
+}
+
+enum DocumentOcrStatus {
+  NOT_REQUESTED
+  PENDING
+  COMPLETED
+  UNAVAILABLE
+  FAILED
+}
+
+enum DocumentEventType {
+  QUARANTINED
+  VALIDATED
+  SCAN_CLEAN
+  SCAN_INFECTED
+  REJECTED
+  OCR_COMPLETED
+  OCR_FAILED
+  RELEASED
+  PROCESSING_FAILED
+  RETRY_SCHEDULED
+  DOWNLOADED
+}
+
 model StaffSession {
   id                 String                    @id @default(cuid())
   userId             String
@@ -814,11 +845,40 @@ model Attachment {
   sha256           String
   storageProvider  String         @default("LOCAL")
   externalDocumentId String?
+  externalVersionId String?
+  repositoryId      String?
+  renditionId       String?
   malwareScanStatus MalwareScanStatus @default(NOT_SCANNED)
+  processingStatus  DocumentProcessingStatus @default(QUARANTINED)
+  detectedMimeType  String?
+  ocrStatus         DocumentOcrStatus @default(NOT_REQUESTED)
+  extractedText     String?
+  processingAttempts Int @default(0)
+  nextProcessingAt  DateTime @default(now())
+  processingLockedAt DateTime?
+  processedAt       DateTime?
+  processingError   String?
+  isIncluded        Boolean @default(true)
   createdAt        DateTime       @default(now())
   correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  documentEvents    DocumentEvent[]
 
   @@index([correspondenceId])
+  @@index([processingStatus, nextProcessingAt])
+  @@index([malwareScanStatus, processingStatus])
+}
+
+model DocumentEvent {
+  id           String            @id @default(cuid())
+  attachmentId String
+  type         DocumentEventType
+  detail       String?
+  metadata     Json?
+  createdAt    DateTime          @default(now())
+  attachment   Attachment        @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@index([attachmentId, createdAt])
+  @@index([type, createdAt])
 }
 
 model EmailMessage {

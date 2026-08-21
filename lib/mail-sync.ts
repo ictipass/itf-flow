@@ -169,7 +169,7 @@ export async function syncMailbox() {
               bytes: attachment.content,
             });
             await db.attachment.create({
-              data: { correspondenceId: correspondence.id, ...stored },
+              data: { correspondenceId: correspondence.id, ...stored, documentEvents: { create: { type: "QUARANTINED", detail: "Mailbox attachment stored in quarantine." } } },
             });
           } catch {
             // Unsupported, oversized, or unsafe attachments are not persisted.

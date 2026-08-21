@@ -15,7 +15,7 @@ Email is untrusted input:
 - Only the plain-text body is displayed.
 - Remote images and HTML are not rendered.
 - Unsupported and oversized attachments are rejected.
-- Persisted attachments remain `NOT_SCANNED` during the demonstration.
+- Persisted attachments enter the S24A quarantine pipeline and remain unavailable until processing releases them.
 
 ## Production malware gate
 
@@ -25,9 +25,9 @@ Production ingestion and downloads require a scanning pipeline:
 Receive → quarantine → validate magic bytes → malware scan → release or reject
 ```
 
-ClamAV or a managed malware-scanning service may implement the scanning stage. Infected and
-quarantined attachments are already blocked by the download endpoint, but no scanner is connected
-yet. This is a release blocker, not an optional enhancement.
+The protected document worker now performs hash and magic-byte checks and calls a scanner interface. A development
+mock is available only when explicitly enabled outside production. ClamAV or a managed scanner must implement the
+production stage; when none is configured, processing fails closed and downloads remain blocked.
 
 ## Electronic document management server
 

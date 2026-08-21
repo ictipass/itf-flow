@@ -138,6 +138,9 @@ Acting appointments and time-bound delegation are implemented through S19's inte
 - Magic-byte validation, malware scanning and quarantine.
 - OCR for scanned correspondence and searchable extracted text.
 - Encryption, backup, restoration and storage lifecycle policies.
+- The provider abstraction, quarantine-first state machine, magic-byte validation, protected worker, clean-document
+  gates, extracted-text search hook and reconciliation screen are implemented as S24A. Real EDMS/scanner/OCR adapters
+  and governed records lifecycle remain S24B dependencies.
 
 ## Slice 13 — Workflow administration
 

@@ -26,6 +26,9 @@ async function main() {
   if (!Number.isFinite(idleMinutes) || idleMinutes < 5 || idleMinutes > 480) errors.push("STAFF_SESSION_IDLE_MINUTES must be between 5 and 480.");
   if ((process.env.APPROVAL_SIGNING_SECRET?.length ?? 0) < 32) warnings.push("APPROVAL_SIGNING_SECRET is missing or shorter than 32 characters; production approval signing will fail.");
   if ((process.env.WORKFLOW_WORKER_SECRET?.length ?? 0) < 32) warnings.push("WORKFLOW_WORKER_SECRET is missing or shorter than 32 characters; scheduled reminder processing will reject all requests.");
+  if ((process.env.DOCUMENT_WORKER_SECRET?.length ?? 0) < 32) warnings.push("DOCUMENT_WORKER_SECRET is missing or shorter than 32 characters; quarantined documents cannot be processed.");
+  if ((process.env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED") === "DISABLED") warnings.push("Document malware scanning is disabled; new documents remain unavailable in quarantine.");
+  if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER === "MOCK") errors.push("The mock document scanner is forbidden in production.");
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith("postgresql://")) errors.push("DATABASE_URL must be a PostgreSQL connection URL.");
 
   if (process.env.MAIL_ENABLED === "true") {

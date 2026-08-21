@@ -107,11 +107,11 @@ never exposes internal minutes, recipients, decisions, classifications, attachme
 
 ## Current demo boundaries
 
-- Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`
-  is the provider boundary for the future ITF electronic document management server.
-- File validation currently checks declared MIME type, size and SHA-256 digest. Attachments are
-  explicitly marked `NOT_SCANNED`. Production rollout is blocked until magic-byte inspection,
-  malware scanning (for example ClamAV or a managed scanner), and quarantine are operational.
+- Local disk remains demo-only, but `lib/document-storage.ts` now provides separate quarantine/released storage behind
+  the provider boundary for the future ITF EDMS.
+- S24A performs hash and magic-byte validation asynchronously and releases files only after a configured scanner
+  reports clean. No production scanner or OCR/EDMS adapter is bundled; with scanning disabled, files fail closed and
+  remain unavailable. Existing files are `LEGACY_UNVERIFIED` until reprocessed.
 - The legacy `/submit` route remains a separate one-time submission path. Authenticated tracking is available only
   for correspondence created inside `/portal`; external attachments remain blocked pending S24's EDMS controls.
 - Workflow definitions are code-controlled for the demo. A later phase should version configurable
