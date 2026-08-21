@@ -42,14 +42,14 @@ another developer without depending on unfinished work from a later slice.
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented | `ed5e171`; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
-| S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented locally | Pending commit; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
+| S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
 ## Planned next slice
 
 **S24B - Real EDMS, malware-scanner and OCR adapters** is pending the external technical contract and test services.
-**S26 - Assurance, observability, load/security tests, backup recovery and pilot rollout** has been implemented locally. External execution evidence and production sign-off remain pending.
+**S26 - Assurance, observability, load/security tests, backup recovery and pilot rollout** is implemented. External execution evidence and production sign-off remain pending.
 
 ## Subsequent slices
 
