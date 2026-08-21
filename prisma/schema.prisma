@@ -287,65 +287,66 @@ enum BroadcastEventType {
 }
 
 model User {
-  id                  String   @id @default(cuid())
-  workspaceUserId     String?  @unique
-  staffNumber         String?  @unique
-  email               String   @unique
-  name                String
-  passwordHash        String?
-  role                UserRole
-  office              String
-  department          String?
-  division            String?
-  unit                String?
-  position            String?
-  workspaceOfficeId   String?
-  workspaceDepartmentId String?
-  workspaceDivisionId String?
-  workspaceUnitId     String?
-  workspacePositionId String?
-  supervisorId        String?
-  supervisor          User?    @relation("ReportingLine", fields: [supervisorId], references: [id], onDelete: SetNull)
-  directReports       User[]   @relation("ReportingLine")
-  hierarchyLevel      Int
-  isActive            Boolean  @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  createdCorrespondence Correspondence[] @relation("CorrespondenceCreator")
-  workItems           WorkItem[]
-  events              CorrespondenceEvent[]
-  claimedCorrespondence Correspondence[] @relation("CorrespondenceClaim")
-  launchRedemptions   LaunchTokenRedemption[]
-  broadcastGrants     BroadcastPublisherGrant[]
-  createdBroadcasts   Broadcast[] @relation("BroadcastCreator")
-  publishedBroadcasts Broadcast[] @relation("BroadcastPublisher")
-  broadcastRecipients BroadcastRecipient[]
-  broadcastEvents     BroadcastEvent[]
-  requestedDecisions  DecisionRequest[] @relation("DecisionRequester")
-  madeDecisions       DecisionRequest[] @relation("DecisionMaker")
-  createdRevisions    CorrespondenceRevision[]
-  dispatchRecords     DispatchRecord[]
-  receivedNotifications Notification[] @relation("NotificationRecipient")
-  createdNotifications  Notification[] @relation("NotificationActor")
+  id                               String                     @id @default(cuid())
+  workspaceUserId                  String?                    @unique
+  staffNumber                      String?                    @unique
+  email                            String                     @unique
+  name                             String
+  passwordHash                     String?
+  role                             UserRole
+  office                           String
+  department                       String?
+  division                         String?
+  unit                             String?
+  position                         String?
+  workspaceOfficeId                String?
+  workspaceDepartmentId            String?
+  workspaceDivisionId              String?
+  workspaceUnitId                  String?
+  workspacePositionId              String?
+  supervisorId                     String?
+  supervisor                       User?                      @relation("ReportingLine", fields: [supervisorId], references: [id], onDelete: SetNull)
+  directReports                    User[]                     @relation("ReportingLine")
+  hierarchyLevel                   Int
+  isActive                         Boolean                    @default(true)
+  createdAt                        DateTime                   @default(now())
+  updatedAt                        DateTime                   @updatedAt
+  createdCorrespondence            Correspondence[]           @relation("CorrespondenceCreator")
+  workItems                        WorkItem[]
+  events                           CorrespondenceEvent[]
+  claimedCorrespondence            Correspondence[]           @relation("CorrespondenceClaim")
+  launchRedemptions                LaunchTokenRedemption[]
+  broadcastGrants                  BroadcastPublisherGrant[]
+  createdBroadcasts                Broadcast[]                @relation("BroadcastCreator")
+  publishedBroadcasts              Broadcast[]                @relation("BroadcastPublisher")
+  broadcastRecipients              BroadcastRecipient[]
+  broadcastEvents                  BroadcastEvent[]
+  requestedDecisions               DecisionRequest[]          @relation("DecisionRequester")
+  madeDecisions                    DecisionRequest[]          @relation("DecisionMaker")
+  createdRevisions                 CorrespondenceRevision[]
+  dispatchRecords                  DispatchRecord[]
+  receivedNotifications            Notification[]             @relation("NotificationRecipient")
+  createdNotifications             Notification[]             @relation("NotificationActor")
   updatedApplicationConfigurations ApplicationConfiguration[] @relation("ConfigurationUpdater")
-  configurationChanges ConfigurationChange[] @relation("ConfigurationChanger")
-  updatedReminderPolicies WorkflowReminderPolicy[] @relation("ReminderPolicyUpdater")
-  updatedSecretariatRecords SecretariatRecord[] @relation("SecretariatRecordUpdater")
-  secretariatRecordEvents SecretariatRecordEvent[]
-  authorityDelegations Delegation[] @relation("DelegationPrincipal")
-  receivedDelegations Delegation[] @relation("DelegationDelegate")
-  createdDelegations Delegation[] @relation("DelegationCreator")
-  revokedDelegations Delegation[] @relation("DelegationRevoker")
-  delegationEvents DelegationEvent[]
-  accessGroupMemberships AccessGroupMember[]
-  createdAccessGroups AccessGroup[] @relation("AccessGroupCreator")
-  sensitiveAccessEvents SensitiveAccessEvent[]
-  approvalSignatures ApprovalSignature[]
-  requestedClarifications ClarificationRequest[]
-  staffSessions       StaffSession[]
-  createdWorkflowVersions WorkflowTemplateVersion[] @relation("WorkflowVersionCreator")
-  activatedWorkflowVersions WorkflowTemplateVersion[] @relation("WorkflowVersionActivator")
-  managedWorkflowCategories WorkflowCategory[]
+  configurationChanges             ConfigurationChange[]      @relation("ConfigurationChanger")
+  updatedReminderPolicies          WorkflowReminderPolicy[]   @relation("ReminderPolicyUpdater")
+  updatedSecretariatRecords        SecretariatRecord[]        @relation("SecretariatRecordUpdater")
+  secretariatRecordEvents          SecretariatRecordEvent[]
+  authorityDelegations             Delegation[]               @relation("DelegationPrincipal")
+  receivedDelegations              Delegation[]               @relation("DelegationDelegate")
+  createdDelegations               Delegation[]               @relation("DelegationCreator")
+  revokedDelegations               Delegation[]               @relation("DelegationRevoker")
+  delegationEvents                 DelegationEvent[]
+  accessGroupMemberships           AccessGroupMember[]
+  createdAccessGroups              AccessGroup[]              @relation("AccessGroupCreator")
+  sensitiveAccessEvents            SensitiveAccessEvent[]
+  approvalSignatures               ApprovalSignature[]
+  requestedClarifications          ClarificationRequest[]
+  staffSessions                    StaffSession[]
+  createdWorkflowVersions          WorkflowTemplateVersion[]  @relation("WorkflowVersionCreator")
+  activatedWorkflowVersions        WorkflowTemplateVersion[]  @relation("WorkflowVersionActivator")
+  managedWorkflowCategories        WorkflowCategory[]
+  assuranceChecks                  AssuranceCheck[]           @relation("AssuranceCheckUpdater")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -385,6 +386,23 @@ enum DocumentEventType {
   DOWNLOADED
 }
 
+enum AssuranceStatus {
+  PENDING
+  PASSED
+  FAILED
+  BLOCKED
+  WAIVED
+}
+
+enum AssuranceCategory {
+  SECURITY
+  RELIABILITY
+  PERFORMANCE
+  OPERATIONS
+  GOVERNANCE
+  PILOT
+}
+
 enum WorkflowTemplateVersionStatus {
   DRAFT
   ACTIVE
@@ -392,19 +410,19 @@ enum WorkflowTemplateVersionStatus {
 }
 
 model StaffSession {
-  id                 String                    @id @default(cuid())
-  userId             String
+  id                   String                    @id @default(cuid())
+  userId               String
   authenticationMethod StaffAuthenticationMethod
-  identityProvider   String?
-  workspaceSessionId String?
-  mfaAuthenticatedAt DateTime?
-  stepUpUntil        DateTime?
-  expiresAt          DateTime
-  lastSeenAt         DateTime                  @default(now())
-  revokedAt          DateTime?
-  revocationReason   String?
-  createdAt          DateTime                  @default(now())
-  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  identityProvider     String?
+  workspaceSessionId   String?
+  mfaAuthenticatedAt   DateTime?
+  stepUpUntil          DateTime?
+  expiresAt            DateTime
+  lastSeenAt           DateTime                  @default(now())
+  revokedAt            DateTime?
+  revocationReason     String?
+  createdAt            DateTime                  @default(now())
+  user                 User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt, expiresAt])
   @@index([workspaceSessionId])
@@ -412,16 +430,16 @@ model StaffSession {
 }
 
 model IntegrationEvent {
-  id            String               @id @default(cuid())
-  eventId       String               @unique
-  correlationId String
-  source        String
-  type          IntegrationEventType
-  userId        String?
+  id              String               @id @default(cuid())
+  eventId         String               @unique
+  correlationId   String
+  source          String
+  type            IntegrationEventType
+  userId          String?
   workspaceUserId String?
-  sessionId     String?
-  metadata      Json?
-  createdAt     DateTime             @default(now())
+  sessionId       String?
+  metadata        Json?
+  createdAt       DateTime             @default(now())
 
   @@index([correlationId, createdAt])
   @@index([workspaceUserId, createdAt])
@@ -429,30 +447,30 @@ model IntegrationEvent {
 }
 
 model WorkflowTemplate {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String                    @id @default(cuid())
+  slug        String                    @unique
   name        String
   description String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime                  @default(now())
   versions    WorkflowTemplateVersion[]
   categories  WorkflowCategory[]
 }
 
 model WorkflowTemplateVersion {
-  id            String   @id @default(cuid())
-  templateId    String
-  version       Int
-  status        WorkflowTemplateVersionStatus @default(DRAFT)
-  rules         Json
-  changeReason  String
-  createdById   String?
-  activatedById String?
-  createdAt     DateTime @default(now())
-  activatedAt   DateTime?
-  retiredAt     DateTime?
-  template      WorkflowTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  createdBy     User? @relation("WorkflowVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  activatedBy   User? @relation("WorkflowVersionActivator", fields: [activatedById], references: [id], onDelete: SetNull)
+  id             String                        @id @default(cuid())
+  templateId     String
+  version        Int
+  status         WorkflowTemplateVersionStatus @default(DRAFT)
+  rules          Json
+  changeReason   String
+  createdById    String?
+  activatedById  String?
+  createdAt      DateTime                      @default(now())
+  activatedAt    DateTime?
+  retiredAt      DateTime?
+  template       WorkflowTemplate              @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdBy      User?                         @relation("WorkflowVersionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  activatedBy    User?                         @relation("WorkflowVersionActivator", fields: [activatedById], references: [id], onDelete: SetNull)
   correspondence Correspondence[]
 
   @@unique([templateId, version])
@@ -460,8 +478,8 @@ model WorkflowTemplateVersion {
 }
 
 model WorkflowCategory {
-  id                 String   @id @default(cuid())
-  code               String   @unique
+  id                 String             @id @default(cuid())
+  code               String             @unique
   name               String
   description        String
   correspondenceType CorrespondenceType
@@ -469,40 +487,40 @@ model WorkflowCategory {
   routineSlaDays     Int
   urgentSlaDays      Int
   immediateSlaDays   Int
-  isActive           Boolean  @default(true)
-  version            Int      @default(1)
+  isActive           Boolean            @default(true)
+  version            Int                @default(1)
   updatedById        String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  template           WorkflowTemplate @relation(fields: [templateId], references: [id])
-  updatedBy          User? @relation(fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  template           WorkflowTemplate   @relation(fields: [templateId], references: [id])
+  updatedBy          User?              @relation(fields: [updatedById], references: [id], onDelete: SetNull)
   correspondence     Correspondence[]
 
   @@index([correspondenceType, isActive])
 }
 
 model Delegation {
-  id                 String           @id @default(cuid())
-  principalId        String
-  delegateId         String
-  kind               DelegationKind
-  status             DelegationStatus @default(ACTIVE)
-  officeLabel        String
-  startsAt           DateTime
-  endsAt             DateTime
-  canApprove         Boolean          @default(false)
-  reason             String
-  createdById        String
-  revokedById        String?
-  revokedAt          DateTime?
-  revocationReason   String?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
-  principal          User             @relation("DelegationPrincipal", fields: [principalId], references: [id])
-  delegate           User             @relation("DelegationDelegate", fields: [delegateId], references: [id])
-  createdBy          User             @relation("DelegationCreator", fields: [createdById], references: [id])
-  revokedBy          User?            @relation("DelegationRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
-  events             DelegationEvent[]
+  id               String            @id @default(cuid())
+  principalId      String
+  delegateId       String
+  kind             DelegationKind
+  status           DelegationStatus  @default(ACTIVE)
+  officeLabel      String
+  startsAt         DateTime
+  endsAt           DateTime
+  canApprove       Boolean           @default(false)
+  reason           String
+  createdById      String
+  revokedById      String?
+  revokedAt        DateTime?
+  revocationReason String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  principal        User              @relation("DelegationPrincipal", fields: [principalId], references: [id])
+  delegate         User              @relation("DelegationDelegate", fields: [delegateId], references: [id])
+  createdBy        User              @relation("DelegationCreator", fields: [createdById], references: [id])
+  revokedBy        User?             @relation("DelegationRevoker", fields: [revokedById], references: [id], onDelete: SetNull)
+  events           DelegationEvent[]
 
   @@index([delegateId, status, startsAt, endsAt])
   @@index([principalId, status, startsAt, endsAt])
@@ -524,14 +542,14 @@ model DelegationEvent {
 }
 
 model AccessGroup {
-  id          String   @id @default(cuid())
-  name        String   @unique
+  id          String                      @id @default(cuid())
+  name        String                      @unique
   description String
-  isActive    Boolean  @default(true)
+  isActive    Boolean                     @default(true)
   createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdBy   User     @relation("AccessGroupCreator", fields: [createdById], references: [id])
+  createdAt   DateTime                    @default(now())
+  updatedAt   DateTime                    @updatedAt
+  createdBy   User                        @relation("AccessGroupCreator", fields: [createdById], references: [id])
   members     AccessGroupMember[]
   records     CorrespondenceAccessGroup[]
 
@@ -539,11 +557,11 @@ model AccessGroup {
 }
 
 model AccessGroupMember {
-  groupId  String
-  userId   String
-  addedAt  DateTime @default(now())
-  group    AccessGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId String
+  userId  String
+  addedAt DateTime    @default(now())
+  group   AccessGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([groupId, userId])
   @@index([userId, groupId])
@@ -552,9 +570,9 @@ model AccessGroupMember {
 model CorrespondenceAccessGroup {
   correspondenceId String
   groupId          String
-  assignedAt       DateTime @default(now())
+  assignedAt       DateTime       @default(now())
   correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  group             AccessGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group            AccessGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@id([correspondenceId, groupId])
   @@index([groupId, correspondenceId])
@@ -577,29 +595,29 @@ model SensitiveAccessEvent {
 }
 
 model WorkflowReminderPolicy {
-  id                    String   @id
-  enabled               Boolean  @default(true)
-  reminderLeadDays      Int      @default(2)
-  escalationAfterDays   Int      @default(1)
-  executiveDigestEnabled Boolean @default(true)
-  timeZone              String   @default("Africa/Lagos")
-  version               Int      @default(1)
-  updatedById           String?
-  updatedAt             DateTime @updatedAt
-  updatedBy             User?    @relation("ReminderPolicyUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  id                     String   @id
+  enabled                Boolean  @default(true)
+  reminderLeadDays       Int      @default(2)
+  escalationAfterDays    Int      @default(1)
+  executiveDigestEnabled Boolean  @default(true)
+  timeZone               String   @default("Africa/Lagos")
+  version                Int      @default(1)
+  updatedById            String?
+  updatedAt              DateTime @updatedAt
+  updatedBy              User?    @relation("ReminderPolicyUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 model ScheduledAutomationRun {
-  id                 String                    @id @default(cuid())
-  job                String
-  status             ScheduledAutomationStatus @default(RUNNING)
-  reminderCount      Int                       @default(0)
-  overdueCount       Int                       @default(0)
-  escalationCount    Int                       @default(0)
-  digestCount        Int                       @default(0)
-  errorCode          String?
-  startedAt          DateTime                  @default(now())
-  completedAt        DateTime?
+  id              String                    @id @default(cuid())
+  job             String
+  status          ScheduledAutomationStatus @default(RUNNING)
+  reminderCount   Int                       @default(0)
+  overdueCount    Int                       @default(0)
+  escalationCount Int                       @default(0)
+  digestCount     Int                       @default(0)
+  errorCode       String?
+  startedAt       DateTime                  @default(now())
+  completedAt     DateTime?
 
   @@index([job, startedAt])
   @@index([status, startedAt])
@@ -629,29 +647,29 @@ model ConfigurationChange {
 }
 
 model BroadcastPublisherGrant {
-  id                     String               @id @default(cuid())
-  userId                 String
-  scopeType              BroadcastScopeType
-  scopeValue             String?
-  allowedCategories      BroadcastCategory[]
-  canRequireAcknowledgement Boolean           @default(false)
-  isActive               Boolean              @default(true)
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
-  user                   User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                        String              @id @default(cuid())
+  userId                    String
+  scopeType                 BroadcastScopeType
+  scopeValue                String?
+  allowedCategories         BroadcastCategory[]
+  canRequireAcknowledgement Boolean             @default(false)
+  isActive                  Boolean             @default(true)
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  user                      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, scopeType, scopeValue])
   @@index([userId, isActive])
 }
 
 model Broadcast {
-  id                       String              @id @default(cuid())
+  id                       String               @id @default(cuid())
   title                    String
   message                  String
   category                 BroadcastCategory
-  priority                 BroadcastPriority  @default(ROUTINE)
-  status                   BroadcastStatus    @default(DRAFT)
-  mandatoryAcknowledgement Boolean            @default(false)
+  priority                 BroadcastPriority    @default(ROUTINE)
+  status                   BroadcastStatus      @default(DRAFT)
+  mandatoryAcknowledgement Boolean              @default(false)
   createdById              String
   publishedById            String?
   publishAt                DateTime?
@@ -659,10 +677,10 @@ model Broadcast {
   publishedAt              DateTime?
   withdrawnAt              DateTime?
   withdrawalReason         String?
-  createdAt                DateTime            @default(now())
-  updatedAt                DateTime            @updatedAt
-  createdBy                User                @relation("BroadcastCreator", fields: [createdById], references: [id])
-  publishedBy              User?               @relation("BroadcastPublisher", fields: [publishedById], references: [id])
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  createdBy                User                 @relation("BroadcastCreator", fields: [createdById], references: [id])
+  publishedBy              User?                @relation("BroadcastPublisher", fields: [publishedById], references: [id])
   audiences                BroadcastAudience[]
   recipients               BroadcastRecipient[]
   events                   BroadcastEvent[]
@@ -683,21 +701,21 @@ model BroadcastAudience {
 }
 
 model BroadcastRecipient {
-  id                 String    @id @default(cuid())
-  broadcastId        String
-  userId             String
-  recipientName      String
-  recipientEmail     String
-  recipientRole      String
-  recipientOffice    String
+  id                  String    @id @default(cuid())
+  broadcastId         String
+  userId              String
+  recipientName       String
+  recipientEmail      String
+  recipientRole       String
+  recipientOffice     String
   recipientDepartment String?
-  recipientDivision  String?
-  recipientUnit      String?
-  deliveredAt        DateTime  @default(now())
-  readAt             DateTime?
-  acknowledgedAt     DateTime?
-  broadcast          Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
-  user               User      @relation(fields: [userId], references: [id])
+  recipientDivision   String?
+  recipientUnit       String?
+  deliveredAt         DateTime  @default(now())
+  readAt              DateTime?
+  acknowledgedAt      DateTime?
+  broadcast           Broadcast @relation(fields: [broadcastId], references: [id], onDelete: Cascade)
+  user                User      @relation(fields: [userId], references: [id])
 
   @@unique([broadcastId, userId])
   @@index([userId, readAt, acknowledgedAt])
@@ -719,70 +737,70 @@ model BroadcastEvent {
 }
 
 model ExternalOrganization {
-  id           String   @id @default(cuid())
-  name         String
-  contactName  String
-  email        String
-  phone        String?
-  address      String?
-  createdAt    DateTime @default(now())
-  submissions  Correspondence[]
+  id          String                       @id @default(cuid())
+  name        String
+  contactName String
+  email       String
+  phone       String?
+  address     String?
+  createdAt   DateTime                     @default(now())
+  submissions Correspondence[]
   memberships ExternalOrganizationMember[]
 
   @@index([email])
 }
 
 model Correspondence {
-  id                     String               @id @default(cuid())
-  referenceNumber        String               @unique
-  type                   CorrespondenceType
-  classification         Classification
-  priority               Priority             @default(ROUTINE)
-  status                 CorrespondenceStatus @default(SUBMITTED)
-  intakeSource           IntakeSource         @default(MANUAL)
-  subject                String
-  summary                String
-  body                   String?
-  senderName             String
-  senderReference        String?
-  dateOnDocument         DateTime?
-  receivedAt             DateTime             @default(now())
-  dueAt                  DateTime?
-  currentOwnerId         String?
-  claimedById            String?
-  claimedAt              DateTime?
-  draftActionRecipientIds String[]             @default([])
-  draftCopyRecipientIds   String[]             @default([])
-  draftInstruction        String?
-  draftWorkPurpose        WorkPurpose          @default(ACTION)
-  requiresApproval        Boolean              @default(false)
-  createdById            String?
-  externalOrganizationId String?
+  id                           String               @id @default(cuid())
+  referenceNumber              String               @unique
+  type                         CorrespondenceType
+  classification               Classification
+  priority                     Priority             @default(ROUTINE)
+  status                       CorrespondenceStatus @default(SUBMITTED)
+  intakeSource                 IntakeSource         @default(MANUAL)
+  subject                      String
+  summary                      String
+  body                         String?
+  senderName                   String
+  senderReference              String?
+  dateOnDocument               DateTime?
+  receivedAt                   DateTime             @default(now())
+  dueAt                        DateTime?
+  currentOwnerId               String?
+  claimedById                  String?
+  claimedAt                    DateTime?
+  draftActionRecipientIds      String[]             @default([])
+  draftCopyRecipientIds        String[]             @default([])
+  draftInstruction             String?
+  draftWorkPurpose             WorkPurpose          @default(ACTION)
+  requiresApproval             Boolean              @default(false)
+  createdById                  String?
+  externalOrganizationId       String?
   submittedByExternalAccountId String?
-  workflowTemplateVersionId String?
-  workflowCategoryId String?
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
+  workflowTemplateVersionId    String?
+  workflowCategoryId           String?
+  createdAt                    DateTime             @default(now())
+  updatedAt                    DateTime             @updatedAt
 
-  createdBy            User?                 @relation("CorrespondenceCreator", fields: [createdById], references: [id])
-  claimedBy            User?                 @relation("CorrespondenceClaim", fields: [claimedById], references: [id], onDelete: SetNull)
-  externalOrganization ExternalOrganization? @relation(fields: [externalOrganizationId], references: [id])
-  submittedByExternalAccount ExternalAccount? @relation(fields: [submittedByExternalAccountId], references: [id], onDelete: SetNull)
-  workflowTemplateVersion WorkflowTemplateVersion? @relation(fields: [workflowTemplateVersionId], references: [id], onDelete: SetNull)
-  workflowCategory WorkflowCategory? @relation(fields: [workflowCategoryId], references: [id], onDelete: SetNull)
-  attachments          Attachment[]
-  workItems            WorkItem[]
-  events               CorrespondenceEvent[]
-  emailMessage         EmailMessage?
-  decisionRequests     DecisionRequest[]
-  revisions            CorrespondenceRevision[]
-  dispatchRecords       DispatchRecord[]
-  secretariatRecord     SecretariatRecord? @relation("SecretariatRecordCorrespondence")
-  duplicateFlags        SecretariatRecord[] @relation("SecretariatDuplicateOf")
-  accessGroups          CorrespondenceAccessGroup[]
-  sensitiveAccessEvents SensitiveAccessEvent[]
-  approvalSignatures    ApprovalSignature[]
-  clarificationRequests ClarificationRequest[]
+  createdBy                  User?                       @relation("CorrespondenceCreator", fields: [createdById], references: [id])
+  claimedBy                  User?                       @relation("CorrespondenceClaim", fields: [claimedById], references: [id], onDelete: SetNull)
+  externalOrganization       ExternalOrganization?       @relation(fields: [externalOrganizationId], references: [id])
+  submittedByExternalAccount ExternalAccount?            @relation(fields: [submittedByExternalAccountId], references: [id], onDelete: SetNull)
+  workflowTemplateVersion    WorkflowTemplateVersion?    @relation(fields: [workflowTemplateVersionId], references: [id], onDelete: SetNull)
+  workflowCategory           WorkflowCategory?           @relation(fields: [workflowCategoryId], references: [id], onDelete: SetNull)
+  attachments                Attachment[]
+  workItems                  WorkItem[]
+  events                     CorrespondenceEvent[]
+  emailMessage               EmailMessage?
+  decisionRequests           DecisionRequest[]
+  revisions                  CorrespondenceRevision[]
+  dispatchRecords            DispatchRecord[]
+  secretariatRecord          SecretariatRecord?          @relation("SecretariatRecordCorrespondence")
+  duplicateFlags             SecretariatRecord[]         @relation("SecretariatDuplicateOf")
+  accessGroups               CorrespondenceAccessGroup[]
+  sensitiveAccessEvents      SensitiveAccessEvent[]
+  approvalSignatures         ApprovalSignature[]
+  clarificationRequests      ClarificationRequest[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
@@ -793,19 +811,20 @@ model Correspondence {
 }
 
 model ExternalAccount {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  passwordHash  String
-  name          String
-  phone         String?
-  verifiedAt    DateTime?
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  memberships   ExternalOrganizationMember[]
-  submissions   Correspondence[]
-  verificationTokens ExternalEmailVerificationToken[]
+  id                     String                           @id @default(cuid())
+  email                  String                           @unique
+  passwordHash           String
+  name                   String
+  phone                  String?
+  verifiedAt             DateTime?
+  isActive               Boolean                          @default(true)
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  memberships            ExternalOrganizationMember[]
+  submissions            Correspondence[]
+  verificationTokens     ExternalEmailVerificationToken[]
   clarificationResponses ClarificationRequest[]
+
   @@index([isActive, verifiedAt])
 }
 
@@ -813,72 +832,76 @@ model ExternalOrganizationMember {
   organizationId String
   accountId      String
   role           ExternalMembershipRole @default(MEMBER)
-  joinedAt       DateTime @default(now())
-  organization   ExternalOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  account        ExternalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  joinedAt       DateTime               @default(now())
+  organization   ExternalOrganization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account        ExternalAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
   @@id([organizationId, accountId])
   @@index([accountId, organizationId])
 }
 
 model ExternalEmailVerificationToken {
-  id String @id @default(cuid())
+  id        String          @id @default(cuid())
   accountId String
-  tokenHash String @unique
+  tokenHash String          @unique
   expiresAt DateTime
-  usedAt DateTime?
-  createdAt DateTime @default(now())
-  account ExternalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  usedAt    DateTime?
+  createdAt DateTime        @default(now())
+  account   ExternalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
   @@index([accountId, expiresAt])
 }
 
 model PortalSecurityEvent {
-  id String @id @default(cuid())
+  id        String                  @id @default(cuid())
   emailHash String
   ipAddress String
-  type PortalSecurityEventType
-  createdAt DateTime @default(now())
+  type      PortalSecurityEventType
+  createdAt DateTime                @default(now())
+
   @@index([emailHash, type, createdAt])
   @@index([ipAddress, type, createdAt])
 }
 
 model ClarificationRequest {
-  id String @id @default(cuid())
-  correspondenceId String
-  requestedById String
-  question String
-  status ClarificationStatus @default(OPEN)
-  response String?
+  id                           String              @id @default(cuid())
+  correspondenceId             String
+  requestedById                String
+  question                     String
+  status                       ClarificationStatus @default(OPEN)
+  response                     String?
   respondedByExternalAccountId String?
-  requestedAt DateTime @default(now())
-  respondedAt DateTime?
-  closedAt DateTime?
-  correspondence Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  requestedBy User @relation(fields: [requestedById], references: [id])
-  respondedByExternalAccount ExternalAccount? @relation(fields: [respondedByExternalAccountId], references: [id], onDelete: SetNull)
+  requestedAt                  DateTime            @default(now())
+  respondedAt                  DateTime?
+  closedAt                     DateTime?
+  correspondence               Correspondence      @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  requestedBy                  User                @relation(fields: [requestedById], references: [id])
+  respondedByExternalAccount   ExternalAccount?    @relation(fields: [respondedByExternalAccountId], references: [id], onDelete: SetNull)
+
   @@index([correspondenceId, requestedAt])
   @@index([status, requestedAt])
 }
 
 model SecretariatRecord {
-  id                        String                @id @default(cuid())
-  correspondenceId          String                @unique
-  scanDesk                   String
-  scannedAt                  DateTime
-  pageCount                  Int
-  currentLocation            String
-  physicalFileReference      String?
-  trackingCode               String                @unique
-  duplicateStatus            DuplicateReviewStatus @default(NOT_REVIEWED)
+  id                          String                   @id @default(cuid())
+  correspondenceId            String                   @unique
+  scanDesk                    String
+  scannedAt                   DateTime
+  pageCount                   Int
+  currentLocation             String
+  physicalFileReference       String?
+  trackingCode                String                   @unique
+  duplicateStatus             DuplicateReviewStatus    @default(NOT_REVIEWED)
   duplicateOfCorrespondenceId String?
-  duplicateReason            String?
-  notes                      String?
-  updatedById                String
-  createdAt                  DateTime               @default(now())
-  updatedAt                  DateTime               @updatedAt
-  correspondence            Correspondence         @relation("SecretariatRecordCorrespondence", fields: [correspondenceId], references: [id], onDelete: Cascade)
-  duplicateOf               Correspondence?        @relation("SecretariatDuplicateOf", fields: [duplicateOfCorrespondenceId], references: [id], onDelete: SetNull)
-  updatedBy                 User                   @relation("SecretariatRecordUpdater", fields: [updatedById], references: [id])
-  events                    SecretariatRecordEvent[]
+  duplicateReason             String?
+  notes                       String?
+  updatedById                 String
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
+  correspondence              Correspondence           @relation("SecretariatRecordCorrespondence", fields: [correspondenceId], references: [id], onDelete: Cascade)
+  duplicateOf                 Correspondence?          @relation("SecretariatDuplicateOf", fields: [duplicateOfCorrespondenceId], references: [id], onDelete: SetNull)
+  updatedBy                   User                     @relation("SecretariatRecordUpdater", fields: [updatedById], references: [id])
+  events                      SecretariatRecordEvent[]
 
   @@index([currentLocation, updatedAt])
   @@index([duplicateStatus, updatedAt])
@@ -886,49 +909,49 @@ model SecretariatRecord {
 }
 
 model SecretariatRecordEvent {
-  id                 String                     @id @default(cuid())
+  id                  String                     @id @default(cuid())
   secretariatRecordId String
-  actorId            String
-  type               SecretariatRecordEventType
-  fromLocation       String?
-  toLocation         String?
-  reason             String
-  metadata           Json?
-  createdAt          DateTime                   @default(now())
-  secretariatRecord  SecretariatRecord          @relation(fields: [secretariatRecordId], references: [id], onDelete: Cascade)
-  actor              User                       @relation(fields: [actorId], references: [id])
+  actorId             String
+  type                SecretariatRecordEventType
+  fromLocation        String?
+  toLocation          String?
+  reason              String
+  metadata            Json?
+  createdAt           DateTime                   @default(now())
+  secretariatRecord   SecretariatRecord          @relation(fields: [secretariatRecordId], references: [id], onDelete: Cascade)
+  actor               User                       @relation(fields: [actorId], references: [id])
 
   @@index([secretariatRecordId, createdAt])
   @@index([actorId, createdAt])
 }
 
 model Attachment {
-  id               String         @id @default(cuid())
-  correspondenceId String
-  originalName     String
-  mimeType         String
-  sizeBytes        Int
-  storageKey       String
-  sha256           String
-  storageProvider  String         @default("LOCAL")
+  id                 String                   @id @default(cuid())
+  correspondenceId   String
+  originalName       String
+  mimeType           String
+  sizeBytes          Int
+  storageKey         String
+  sha256             String
+  storageProvider    String                   @default("LOCAL")
   externalDocumentId String?
-  externalVersionId String?
-  repositoryId      String?
-  renditionId       String?
-  malwareScanStatus MalwareScanStatus @default(NOT_SCANNED)
-  processingStatus  DocumentProcessingStatus @default(QUARANTINED)
-  detectedMimeType  String?
-  ocrStatus         DocumentOcrStatus @default(NOT_REQUESTED)
-  extractedText     String?
-  processingAttempts Int @default(0)
-  nextProcessingAt  DateTime @default(now())
+  externalVersionId  String?
+  repositoryId       String?
+  renditionId        String?
+  malwareScanStatus  MalwareScanStatus        @default(NOT_SCANNED)
+  processingStatus   DocumentProcessingStatus @default(QUARANTINED)
+  detectedMimeType   String?
+  ocrStatus          DocumentOcrStatus        @default(NOT_REQUESTED)
+  extractedText      String?
+  processingAttempts Int                      @default(0)
+  nextProcessingAt   DateTime                 @default(now())
   processingLockedAt DateTime?
-  processedAt       DateTime?
-  processingError   String?
-  isIncluded        Boolean @default(true)
-  createdAt        DateTime       @default(now())
-  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  documentEvents    DocumentEvent[]
+  processedAt        DateTime?
+  processingError    String?
+  isIncluded         Boolean                  @default(true)
+  createdAt          DateTime                 @default(now())
+  correspondence     Correspondence           @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  documentEvents     DocumentEvent[]
 
   @@index([correspondenceId])
   @@index([processingStatus, nextProcessingAt])
@@ -968,33 +991,33 @@ model EmailMessage {
 }
 
 model MailboxSyncRun {
-  id             String   @id @default(cuid())
-  mailbox        String
-  status         String
-  importedCount  Int      @default(0)
-  skippedCount   Int      @default(0)
-  error          String?
-  startedAt      DateTime @default(now())
-  completedAt    DateTime?
+  id            String    @id @default(cuid())
+  mailbox       String
+  status        String
+  importedCount Int       @default(0)
+  skippedCount  Int       @default(0)
+  error         String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
 
   @@index([startedAt])
   @@index([status])
 }
 
 model WorkItem {
-  id               String         @id @default(cuid())
+  id               String           @id @default(cuid())
   correspondenceId String
   assigneeId       String
   kind             RecipientKind
-  status           WorkItemStatus @default(OPEN)
-  purpose          WorkPurpose    @default(ACTION)
+  status           WorkItemStatus   @default(OPEN)
+  purpose          WorkPurpose      @default(ACTION)
   instruction      String?
   dueAt            DateTime?
-  assignedAt       DateTime       @default(now())
+  assignedAt       DateTime         @default(now())
   acknowledgedAt   DateTime?
   completedAt      DateTime?
-  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  assignee         User           @relation(fields: [assigneeId], references: [id])
+  correspondence   Correspondence   @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  assignee         User             @relation(fields: [assigneeId], references: [id])
   decisionRequest  DecisionRequest?
 
   @@index([assigneeId, status])
@@ -1002,23 +1025,23 @@ model WorkItem {
 }
 
 model DecisionRequest {
-  id               String           @id @default(cuid())
-  correspondenceId String
-  workItemId       String           @unique
-  requestedById    String
-  purpose          WorkPurpose
-  outcome          DecisionOutcome?
-  decisionNote     String?
-  decidedById      String?
-  requestedAt      DateTime         @default(now())
-  decidedAt        DateTime?
-  supersededAt     DateTime?
+  id                  String             @id @default(cuid())
+  correspondenceId    String
+  workItemId          String             @unique
+  requestedById       String
+  purpose             WorkPurpose
+  outcome             DecisionOutcome?
+  decisionNote        String?
+  decidedById         String?
+  requestedAt         DateTime           @default(now())
+  decidedAt           DateTime?
+  supersededAt        DateTime?
   supersededByVersion Int?
-  correspondence   Correspondence   @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  workItem         WorkItem         @relation(fields: [workItemId], references: [id], onDelete: Cascade)
-  requestedBy      User             @relation("DecisionRequester", fields: [requestedById], references: [id])
-  decidedBy        User?            @relation("DecisionMaker", fields: [decidedById], references: [id])
-  signature        ApprovalSignature?
+  correspondence      Correspondence     @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  workItem            WorkItem           @relation(fields: [workItemId], references: [id], onDelete: Cascade)
+  requestedBy         User               @relation("DecisionRequester", fields: [requestedById], references: [id])
+  decidedBy           User?              @relation("DecisionMaker", fields: [decidedById], references: [id])
+  signature           ApprovalSignature?
 
   @@index([correspondenceId, requestedAt])
   @@index([requestedById, requestedAt])
@@ -1026,16 +1049,16 @@ model DecisionRequest {
 }
 
 model ApprovalSignature {
-  id                     String   @id @default(cuid())
-  decisionRequestId      String   @unique
+  id                     String                 @id @default(cuid())
+  decisionRequestId      String                 @unique
   correspondenceId       String
   revisionId             String
   revisionVersion        Int
   documentDigest         String
   canonicalPayload       Json
   signatureValue         String
-  algorithm              String   @default("HMAC-SHA256")
-  keyId                   String
+  algorithm              String                 @default("HMAC-SHA256")
+  keyId                  String
   authenticationMethod   String
   signerId               String
   signerName             String
@@ -1045,11 +1068,11 @@ model ApprovalSignature {
   authorityPrincipalName String?
   delegationId           String?
   signedAt               DateTime
-  createdAt              DateTime @default(now())
-  decisionRequest        DecisionRequest @relation(fields: [decisionRequestId], references: [id], onDelete: Cascade)
-  correspondence         Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  createdAt              DateTime               @default(now())
+  decisionRequest        DecisionRequest        @relation(fields: [decisionRequestId], references: [id], onDelete: Cascade)
+  correspondence         Correspondence         @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   revision               CorrespondenceRevision @relation(fields: [revisionId], references: [id])
-  signer                 User @relation(fields: [signerId], references: [id])
+  signer                 User                   @relation(fields: [signerId], references: [id])
 
   @@index([correspondenceId, signedAt])
   @@index([signerId, signedAt])
@@ -1057,22 +1080,22 @@ model ApprovalSignature {
 }
 
 model CorrespondenceRevision {
-  id               String         @id @default(cuid())
-  correspondenceId String
-  version          Int
-  subject          String
-  summary          String
-  body             String?
-  classification   Classification
-  priority         Priority
-  senderReference  String?
-  dueAt            DateTime?
-  attachments      Json
-  changeNote       String
-  createdById      String?
-  createdAt        DateTime       @default(now())
-  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  createdBy        User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  id                 String              @id @default(cuid())
+  correspondenceId   String
+  version            Int
+  subject            String
+  summary            String
+  body               String?
+  classification     Classification
+  priority           Priority
+  senderReference    String?
+  dueAt              DateTime?
+  attachments        Json
+  changeNote         String
+  createdById        String?
+  createdAt          DateTime            @default(now())
+  correspondence     Correspondence      @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  createdBy          User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   approvalSignatures ApprovalSignature[]
 
   @@unique([correspondenceId, version])
@@ -1106,42 +1129,42 @@ model DispatchRecord {
 }
 
 model Notification {
-  id          String           @id @default(cuid())
-  userId      String
-  actorId     String?
-  type        NotificationType
-  title       String
-  message     String
-  href        String
-  sourceType  String
-  sourceId    String
-  readAt      DateTime?
-  createdAt   DateTime         @default(now())
-  user        User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
-  actor       User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  id         String           @id @default(cuid())
+  userId     String
+  actorId    String?
+  type       NotificationType
+  title      String
+  message    String
+  href       String
+  sourceType String
+  sourceId   String
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+  user       User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor      User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@unique([userId, sourceType, sourceId, type])
   @@index([userId, readAt, createdAt])
 }
 
 model EmailOutbox {
-  id             String            @id @default(cuid())
-  idempotencyKey String            @unique
+  id             String                 @id @default(cuid())
+  idempotencyKey String                 @unique
   userId         String?
   toAddress      String
   subject        String
   textBody       String
-  status         EmailOutboxStatus @default(QUEUED)
-  attemptCount   Int               @default(0)
-  maxAttempts    Int               @default(5)
-  nextAttemptAt  DateTime          @default(now())
+  status         EmailOutboxStatus      @default(QUEUED)
+  attemptCount   Int                    @default(0)
+  maxAttempts    Int                    @default(5)
+  nextAttemptAt  DateTime               @default(now())
   lockedAt       DateTime?
   sentAt         DateTime?
   lastErrorCode  String?
   sourceType     String
   sourceId       String
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
   attempts       EmailDeliveryAttempt[]
 
   @@index([status, nextAttemptAt])
@@ -1162,7 +1185,7 @@ model EmailDeliveryAttempt {
 }
 
 model CorrespondenceEvent {
-  id               String         @id @default(cuid())
+  id               String                @id @default(cuid())
   correspondenceId String
   actorId          String?
   actorType        ActorType
@@ -1173,9 +1196,9 @@ model CorrespondenceEvent {
   metadata         Json?
   ipAddress        String?
   userAgent        String?
-  createdAt        DateTime       @default(now())
-  correspondence   Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
-  actor            User?          @relation(fields: [actorId], references: [id])
+  createdAt        DateTime              @default(now())
+  correspondence   Correspondence        @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  actor            User?                 @relation(fields: [actorId], references: [id])
 
   @@index([correspondenceId, createdAt])
   @@index([actorId, createdAt])
@@ -1195,17 +1218,53 @@ model LaunchTokenRedemption {
 }
 
 model ProvisioningRun {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   source        String
   status        String
   receivedCount Int
-  createdCount  Int      @default(0)
-  updatedCount  Int      @default(0)
-  inactiveCount Int      @default(0)
+  createdCount  Int       @default(0)
+  updatedCount  Int       @default(0)
+  inactiveCount Int       @default(0)
   error         String?
-  createdAt     DateTime @default(now())
+  createdAt     DateTime  @default(now())
   completedAt   DateTime?
 
   @@index([createdAt])
   @@index([status])
+}
+
+model AssuranceCheck {
+  id          String            @id @default(cuid())
+  key         String            @unique
+  category    AssuranceCategory
+  title       String
+  description String
+  required    Boolean           @default(true)
+  status      AssuranceStatus   @default(PENDING)
+  evidence    String?
+  owner       String?
+  reviewedAt  DateTime?
+  expiresAt   DateTime?
+  updatedById String?
+  updatedBy   User?             @relation("AssuranceCheckUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([category, status])
+  @@index([required, status])
+}
+
+model OperationalEvent {
+  id            String   @id @default(cuid())
+  severity      String
+  component     String
+  eventType     String
+  message       String
+  correlationId String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@index([severity, createdAt])
+  @@index([component, createdAt])
+  @@index([correlationId])
 }
