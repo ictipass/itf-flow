@@ -41,7 +41,7 @@ another developer without depending on unfinished work from a later slice.
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented | `ed5e171`; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
-| S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented locally | Validation pending final commit; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
+| S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
