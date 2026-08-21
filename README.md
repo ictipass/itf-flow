@@ -94,6 +94,11 @@ as a certificate-backed or qualified digital signature; PKI and legal signature 
 Every new slice should follow the reusable [`implementation checklist`](docs/slice-implementation-checklist.md);
 the authoritative register identifies the next planned slice and its dependencies.
 
+Verified external stakeholders can use `/portal` to submit Public correspondence, retain organization-scoped
+tracking and respond to staff clarification securely. The portal intentionally exposes only a coarse status and
+never exposes internal minutes, recipients, decisions, classifications, attachments or audit history. See the
+[`S22 delivery note`](docs/slices/S22-authenticated-stakeholder-portal.md) for the demo path and boundaries.
+
 ## Current demo boundaries
 
 - Local disk attachment storage is suitable only for the local demo. `lib/document-storage.ts`
@@ -101,7 +106,8 @@ the authoritative register identifies the next planned slice and its dependencie
 - File validation currently checks declared MIME type, size and SHA-256 digest. Attachments are
   explicitly marked `NOT_SCANNED`. Production rollout is blocked until magic-byte inspection,
   malware scanning (for example ClamAV or a managed scanner), and quarantine are operational.
-- External submission issues a reference but does not yet authenticate the sender or send email.
+- The legacy `/submit` route remains a separate one-time submission path. Authenticated tracking is available only
+  for correspondence created inside `/portal`; external attachments remain blocked pending S24's EDMS controls.
 - Workflow definitions are code-controlled for the demo. A later phase should version configurable
   workflow templates while keeping server-side transition policies.
 - The Workspace handoff is one-time and audited locally, but enterprise OIDC, MFA and central logout

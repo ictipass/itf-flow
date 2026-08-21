@@ -120,6 +120,8 @@ Acting appointments and time-bound delegation are implemented through S19's inte
 - Submission tracking, clarification requests and secure responses.
 - Email verification, anti-abuse controls and submission rate limiting.
 - Stakeholder dashboards spanning future ITF applications.
+- Verified accounts, organization-scoped submissions, privacy-reduced tracking, anti-abuse controls and secure
+  clarification responses are implemented. Cross-application identity remains S23; safe document upload remains S24.
 
 ## Slice 11 — Workspace and interoperability contract
 

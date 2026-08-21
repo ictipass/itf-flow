@@ -179,3 +179,13 @@ not claimed here; that belongs to the EDMS/object-storage, malware-scanning and 
 - Demonstrate one denied action to make authorization tangible.
 - Keep the browser zoom readable and pre-open the two accounts needed for each handoff.
 - Capture policy questions separately; do not improvise organization-wide permissions during the demo.
+# External stakeholder portal (S22)
+
+External stakeholders register at `/portal/register`, verify the queued email, then sign in at `/portal/login`.
+An organization member can create Public correspondence and see authenticated submissions belonging to that
+organization. The lifecycle is simplified to **Received by Secretariat**, **Under review**,
+**Clarification / correction required**, or **Completed**.
+
+When the current staff action holder asks a question, verified members receive an email prompt. Open the submission,
+enter the secure response, and submit it. The staff action holder reviews and closes the response. Do not paste
+classified material: the portal accepts Public correspondence only and has no attachment upload until S24.

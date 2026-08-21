@@ -14,6 +14,7 @@ import {
   updateDispatchStatusAction,
 } from "@/app/actions";
 import { recordScanningMetadataAction, reassignSecretariatLocationAction, reviewDuplicateAction } from "@/app/secretariat-actions";
+import { closeStakeholderClarificationAction, requestStakeholderClarificationAction } from "@/app/stakeholder-actions";
 import { RecipientSelector } from "@/components/recipient-selector";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
@@ -43,6 +44,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       decisionRequests: true,
       secretariatRecord: { include: { duplicateOf: true, updatedBy: true, events: { include: { actor: true }, orderBy: { createdAt: "desc" } } } },
       accessGroups: { include: { group: { include: { members: true } } } },
+      clarificationRequests: { include: { requestedBy: true, respondedByExternalAccount: true }, orderBy: { requestedAt: "desc" } },
     },
   });
   if (!record) notFound();
@@ -152,6 +154,12 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}
           {activeActionItem?.status === WorkItemStatus.OPEN ? <section className="card"><form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary" type="submit">Acknowledge receipt</button></form></section> : null}
+          {record.submittedByExternalAccountId && activeActionItem ? <section className="card">
+            <span className="eyebrow">Stakeholder portal</span><h2>Secure clarification</h2>
+            <p className="muted">The question is visible only to verified members of the submitting organization. Internal minutes and case details remain private.</p>
+            <form action={requestStakeholderClarificationAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Question for stakeholder</label><textarea name="question" required minLength={10} maxLength={4000} /></div><button className="btn">Request clarification</button></form>
+            {record.clarificationRequests.map((clarification) => <div key={clarification.id} className="handler-strip"><div><strong>{clarification.status} · {clarification.question}</strong><small>Requested by {clarification.requestedBy.name} · {clarification.requestedAt.toLocaleString("en-NG")}{clarification.response ? ` · Response: ${clarification.response}` : " · Awaiting response"}</small></div>{clarification.status === "RESPONDED" ? <form action={closeStakeholderClarificationAction}><input type="hidden" name="clarificationId" value={clarification.id} /><button className="btn secondary compact">Close</button></form> : null}</div>)}
+          </section> : null}
           {pendingDecision && mayDecide ? (
             <section className="card">
               <span className="eyebrow">Decision required</span><h2>{label(pendingDecision.purpose)}</h2>

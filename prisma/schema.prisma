@@ -135,6 +135,26 @@ enum SensitiveAccessType {
   EXPORT
 }
 
+enum ExternalMembershipRole {
+  OWNER
+  MEMBER
+}
+
+enum ClarificationStatus {
+  OPEN
+  RESPONDED
+  CLOSED
+}
+
+enum PortalSecurityEventType {
+  REGISTERED
+  EMAIL_VERIFIED
+  LOGIN_SUCCEEDED
+  LOGIN_FAILED
+  SUBMISSION_CREATED
+  CLARIFICATION_RESPONDED
+}
+
 enum ScheduledAutomationStatus {
   RUNNING
   COMPLETED
@@ -306,6 +326,7 @@ model User {
   createdAccessGroups AccessGroup[] @relation("AccessGroupCreator")
   sensitiveAccessEvents SensitiveAccessEvent[]
   approvalSignatures ApprovalSignature[]
+  requestedClarifications ClarificationRequest[]
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -560,6 +581,7 @@ model ExternalOrganization {
   address      String?
   createdAt    DateTime @default(now())
   submissions  Correspondence[]
+  memberships ExternalOrganizationMember[]
 
   @@index([email])
 }
@@ -590,12 +612,14 @@ model Correspondence {
   requiresApproval        Boolean              @default(false)
   createdById            String?
   externalOrganizationId String?
+  submittedByExternalAccountId String?
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
 
   createdBy            User?                 @relation("CorrespondenceCreator", fields: [createdById], references: [id])
   claimedBy            User?                 @relation("CorrespondenceClaim", fields: [claimedById], references: [id], onDelete: SetNull)
   externalOrganization ExternalOrganization? @relation(fields: [externalOrganizationId], references: [id])
+  submittedByExternalAccount ExternalAccount? @relation(fields: [submittedByExternalAccountId], references: [id], onDelete: SetNull)
   attachments          Attachment[]
   workItems            WorkItem[]
   events               CorrespondenceEvent[]
@@ -608,12 +632,80 @@ model Correspondence {
   accessGroups          CorrespondenceAccessGroup[]
   sensitiveAccessEvents SensitiveAccessEvent[]
   approvalSignatures    ApprovalSignature[]
+  clarificationRequests ClarificationRequest[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
   @@index([claimedById, status])
   @@index([currentOwnerId, status])
   @@index([classification])
+}
+
+model ExternalAccount {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  verifiedAt    DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  memberships   ExternalOrganizationMember[]
+  submissions   Correspondence[]
+  verificationTokens ExternalEmailVerificationToken[]
+  clarificationResponses ClarificationRequest[]
+  @@index([isActive, verifiedAt])
+}
+
+model ExternalOrganizationMember {
+  organizationId String
+  accountId      String
+  role           ExternalMembershipRole @default(MEMBER)
+  joinedAt       DateTime @default(now())
+  organization   ExternalOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  account        ExternalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  @@id([organizationId, accountId])
+  @@index([accountId, organizationId])
+}
+
+model ExternalEmailVerificationToken {
+  id String @id @default(cuid())
+  accountId String
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  account ExternalAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  @@index([accountId, expiresAt])
+}
+
+model PortalSecurityEvent {
+  id String @id @default(cuid())
+  emailHash String
+  ipAddress String
+  type PortalSecurityEventType
+  createdAt DateTime @default(now())
+  @@index([emailHash, type, createdAt])
+  @@index([ipAddress, type, createdAt])
+}
+
+model ClarificationRequest {
+  id String @id @default(cuid())
+  correspondenceId String
+  requestedById String
+  question String
+  status ClarificationStatus @default(OPEN)
+  response String?
+  respondedByExternalAccountId String?
+  requestedAt DateTime @default(now())
+  respondedAt DateTime?
+  closedAt DateTime?
+  correspondence Correspondence @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  requestedBy User @relation(fields: [requestedById], references: [id])
+  respondedByExternalAccount ExternalAccount? @relation(fields: [respondedByExternalAccountId], references: [id], onDelete: SetNull)
+  @@index([correspondenceId, requestedAt])
+  @@index([status, requestedAt])
 }
 
 model SecretariatRecord {

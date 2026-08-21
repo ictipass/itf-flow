@@ -482,6 +482,9 @@ button, input, select, textarea { font: inherit; }
 .sensitive-watermark { position: fixed; inset: 45% auto auto 18%; z-index: 50; transform: rotate(-24deg); color: rgb(113 0 29 / .1); font-size: clamp(2rem, 5vw, 5.5rem); font-weight: 950; letter-spacing: .08em; pointer-events: none; white-space: nowrap; }
 .access-member-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 320px; overflow: auto; }
 .access-member-grid small { display: block; color: var(--muted); }
+.portal-page { min-height: 100vh; padding: 48px 20px; background: #f5f2ed; }
+.portal-card { max-width: 620px; margin: auto; padding: 32px; border: 1px solid #ded8ce; border-radius: 20px; background: white; box-shadow: 0 20px 60px rgb(35 20 15 / .08); }
+.portal-card.wide { max-width: 1000px; }
 .label-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
 .tracking-label { display: grid; grid-template-columns: 1fr 260px; gap: 28px; align-items: center; padding: 34px; border: 3px solid #171717; border-radius: 16px; background: white; color: #171717; }
 .tracking-label h1 { margin: 8px 0 18px; font-size: 1.7rem; }

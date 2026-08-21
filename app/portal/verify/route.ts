@@ -1,0 +1,5 @@
+import { createHash } from "crypto";
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+
+export async function GET(request: Request) { const url = new URL(request.url); const raw = url.searchParams.get("token") ?? ""; const tokenHash = createHash("sha256").update(raw).digest("hex"); const token = await db.externalEmailVerificationToken.findFirst({ where: { tokenHash, usedAt: null, expiresAt: { gt: new Date() } }, include: { account: true } }); if (!token) return NextResponse.redirect(new URL("/portal/login?error=verification", request.url)); await db.$transaction([db.externalEmailVerificationToken.update({ where: { id: token.id }, data: { usedAt: new Date() } }), db.externalAccount.update({ where: { id: token.accountId }, data: { verifiedAt: new Date() } }), db.portalSecurityEvent.create({ data: { emailHash: createHash("sha256").update(token.account.email).digest("hex"), ipAddress: (request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "local").slice(0, 120), type: "EMAIL_VERIFIED" } })]); return NextResponse.redirect(new URL("/portal/login?verified=1", request.url)); }

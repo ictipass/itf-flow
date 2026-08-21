@@ -21,7 +21,8 @@ export default function HomePage() {
           correspondence through the ITF Workspace.
         </p>
         <div className="actions">
-          <Link className="btn" href="/submit">Submit correspondence</Link>
+          <Link className="btn" href="/portal/login">Stakeholder portal</Link>
+          <Link className="btn secondary" href="/submit">One-time submission</Link>
           <Link className="btn secondary" href="/login">Staff sign in</Link>
         </div>
       </section>
