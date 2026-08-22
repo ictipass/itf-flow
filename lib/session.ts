@@ -45,6 +45,10 @@ async function currentSession() {
 
 export async function elevateSession(userId: string) { const session = await currentSession(); if (!session || session.userId !== userId) throw new Error("Active session required."); await db.staffSession.update({ where: { id: session.id }, data: { stepUpUntil: new Date(Date.now() + 15 * 60_000) } }); }
 export async function hasActiveStepUp() { const session = await currentSession(); return Boolean(session?.stepUpUntil && session.stepUpUntil > new Date()); }
+export async function hasActiveEnterpriseMfa() {
+  const session = await currentSession();
+  return Boolean(session?.stepUpUntil && session.stepUpUntil > new Date() && session.mfaAuthenticatedAt && session.authenticationMethod !== StaffAuthenticationMethod.LOCAL_PASSWORD);
+}
 export async function destroySession(reason = "User signed out") { const session = await currentSession(); if (session) await db.$transaction([db.staffSession.update({ where: { id: session.id }, data: { revokedAt: new Date(), revocationReason: reason } }), db.integrationEvent.create({ data: { eventId: randomUUID(), correlationId: randomUUID(), source: "itf-flow", type: IntegrationEventType.SESSION_REVOKED, userId: session.userId, sessionId: session.id, metadata: { reason } } })]); (await cookies()).delete(COOKIE_NAME); }
 export async function getCurrentUser() { return (await currentSession())?.user ?? null; }
 export async function requireUser() { const user = await getCurrentUser(); if (!user) redirect("/login"); return user; }

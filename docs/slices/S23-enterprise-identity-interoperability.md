@@ -70,6 +70,6 @@ migration, idle expiry and central sign-out behavior.
 
 ITF Flow consumes identity and MFA assertions from Workspace but does not operate an OIDC provider. Production still
 requires IdP registration, managed keys/secrets, TLS, rotation, logout delivery, MFA policy and security testing.
-Local password login remains a controlled development/rollout fallback.
+Local password login remains a development/demo facility only. It defaults off in production; Workspace synchronization removes prior local passwords from matched production identities.
 
 Validation: migration deploy/status, Prisma validation/client generation, TypeScript, ESLint and production build.

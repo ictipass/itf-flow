@@ -24,7 +24,7 @@ Confidential/Secret views, downloads and exports create a sensitive-access trail
 
 - Download marking identifies controlled copies at delivery; it does not rewrite binary PDF/image content.
   Embedded per-page watermarking belongs in the future EDMS rendering contract.
-- Local password step-up remains a fallback. S23 now accepts recent Workspace enterprise-MFA evidence for the same
+- Local password step-up remains a demo path. S23 accepts recent Workspace enterprise-MFA evidence for the same
   15-minute Secret window and provides central session revocation.
 - Redacted document variants require document rendering and approved content-governance rules.
 - Access-group changes are locally administered pending authoritative identity/governance integration.

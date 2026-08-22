@@ -19,7 +19,7 @@ is the accountable owner and the others receive action-visible copies.
 1. Copy `.env.example` to `.env` and configure PostgreSQL.
 2. Run `npm install`.
 3. Run `npm run db:migrate`.
-4. Run `npm run db:seed`.
+4. Confirm `ALLOW_DEMO_SEED=true`, then run `npm run db:seed` for a disposable local/demo database only.
 5. Run `npm run dev` (port 3001 if Workspace uses port 3000).
 
 Run `npm run env:check` to validate Node.js, required configuration, database access, migration presence,
@@ -29,6 +29,10 @@ documented in [`docs/cross-machine-handover.md`](docs/cross-machine-handover.md)
 
 Every seeded staff account uses `SEED_PASSWORD` (`Demo123!` by default). Seed credentials are for
 local demonstrations only and must never be enabled in production.
+
+Production staff are provisioned through ITF Workspace without a local Flow password. Workspace synchronization
+clears any prior local password for a matched email. `STAFF_LOCAL_LOGIN_ENABLED` defaults off in production and
+demo seeding refuses to run under `NODE_ENV=production`.
 
 The seeded system administrator account is `admin@itf.gov.ng`. It uses `SEED_PASSWORD` and exists
 only to expose configuration and connection-testing controls during development.
@@ -82,6 +86,10 @@ print authenticated QR tracking labels and review likely duplicate intake withou
 scanning or EDMS storage.
 
 Development slices are tracked in the [`implementation slice register`](docs/implementation-slice-register.md).
+New-machine assistant handoff and environment launches are documented in
+[`coding-assistant-handoff.md`](docs/coding-assistant-handoff.md) and
+[`environment-launch-checklist.md`](docs/environment-launch-checklist.md). The complete capability/use-case catalogue
+is [`app-feature-list.md`](docs/app-feature-list.md).
 
 System administrators manage constrained, immutable workflow versions and category SLAs from **Workflow policies**.
 New correspondence snapshots its category and active template version; simulation previews due date, approval and

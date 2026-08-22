@@ -22,12 +22,13 @@ import { db } from "@/lib/db";
 import { activeDelegationsFor } from "@/lib/delegations";
 import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
-import { requireUser } from "@/lib/session";
+import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
 import { verifyApprovalSignature } from "@/lib/approval-signatures";
 
 export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
+  const enterpriseMfaActive = await hasActiveEnterpriseMfa();
   const { id } = await params;
   const record = await db.correspondence.findUnique({
     where: { id },
@@ -170,7 +171,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <form action={recordDecisionAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
                 <input type="hidden" name="decisionRequestId" value={pendingDecision.id} />
-                {pendingDecision.purpose === "APPROVAL" ? <div className="field"><label>Re-confirm password to approve</label><input name="approvalPassword" type="password" autoComplete="current-password" required /><small className="muted">Approval creates an immutable signature assertion for the current document revision.</small></div> : null}
+                {pendingDecision.purpose === "APPROVAL" ? enterpriseMfaActive ? <p className="notice">Your recent Workspace MFA will authenticate this approval.</p> : <div className="field"><label>Re-confirm password to approve</label><input name="approvalPassword" type="password" autoComplete="current-password" required /><small className="muted">Approval creates an immutable signature assertion for the current document revision.</small></div> : null}
                 <div className="field"><label>Decision note</label><textarea name="note" minLength={5} required placeholder="State the basis, conditions, correction required, or reason for this decision…" /></div>
                 <div className="actions">
                   {pendingDecision.purpose === "REVIEW" ? <button className="btn" name="outcome" value="RECOMMENDED" type="submit">Recommend</button> : null}

@@ -46,6 +46,12 @@ another developer without depending on unfinished work from a later slice.
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
+Machine-independent continuation instructions are maintained in [`coding-assistant-handoff.md`](coding-assistant-handoff.md), environment launch gates in [`environment-launch-checklist.md`](environment-launch-checklist.md), and explicit feature/use cases in [`app-feature-list.md`](app-feature-list.md).
+
+## Post-slice operational hardening
+
+The machine handoff package and production-account separation were completed after S26. Demo seeding is now explicitly local-only, production local login defaults off, Workspace synchronization removes matching demo passwords, and recent Workspace MFA authenticates formal approval. Commit evidence will be recorded after the handoff commit is created.
+
 ## Planned next slice
 
 **S24B - Real EDMS, malware-scanner and OCR adapters** is pending the external technical contract and test services.

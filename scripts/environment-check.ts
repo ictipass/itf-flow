@@ -29,6 +29,8 @@ async function main() {
   if ((process.env.DOCUMENT_WORKER_SECRET?.length ?? 0) < 32) warnings.push("DOCUMENT_WORKER_SECRET is missing or shorter than 32 characters; quarantined documents cannot be processed.");
   if ((process.env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED") === "DISABLED") warnings.push("Document malware scanning is disabled; new documents remain unavailable in quarantine.");
   if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER === "MOCK") errors.push("The mock document scanner is forbidden in production.");
+  if (process.env.NODE_ENV === "production" && process.env.STAFF_LOCAL_LOGIN_ENABLED === "true") errors.push("STAFF_LOCAL_LOGIN_ENABLED must not be true for an approved production deployment.");
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED === "true") errors.push("ALLOW_DEMO_SEED must not be true in production.");
   if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith("postgresql://")) errors.push("DATABASE_URL must be a PostgreSQL connection URL.");
 
   if (process.env.MAIL_ENABLED === "true") {

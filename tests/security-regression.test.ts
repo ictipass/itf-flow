@@ -3,6 +3,7 @@ import test from "node:test";
 import { Classification, UserRole } from "../lib/generated/prisma/client";
 import { productionConfigurationIssues } from "../lib/assurance";
 import { canDispatch, canReadClassification, canRegister } from "../lib/permissions";
+import { localStaffLoginEnabled } from "../lib/authentication-policy";
 
 test("SECRET correspondence is restricted to privileged roles", () => {
   assert.equal(canReadClassification(UserRole.OFFICER, Classification.SECRET), false);
@@ -23,4 +24,10 @@ test("production configuration detects unsafe document adapters", () => {
   const issues = productionConfigurationIssues(env);
   assert.equal(issues.length, 3);
   assert.ok(issues.some((issue) => issue.includes("malware")));
+});
+
+test("local staff-password login defaults off in production", () => {
+  assert.equal(localStaffLoginEnabled({ NODE_ENV: "production" } as NodeJS.ProcessEnv), false);
+  assert.equal(localStaffLoginEnabled({ NODE_ENV: "development" } as NodeJS.ProcessEnv), true);
+  assert.equal(localStaffLoginEnabled({ NODE_ENV: "production", STAFF_LOCAL_LOGIN_ENABLED: "true" } as NodeJS.ProcessEnv), true);
 });

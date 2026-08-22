@@ -36,6 +36,8 @@ const reportingLines: Record<string, string> = {
 };
 
 async function main() {
+  if (process.env.NODE_ENV === "production") throw new Error("Demo seeding is forbidden when NODE_ENV=production.");
+  if (process.env.ALLOW_DEMO_SEED !== "true") throw new Error("Set ALLOW_DEMO_SEED=true only in a disposable local/demo environment.");
   const passwordHash = await bcrypt.hash(process.env.SEED_PASSWORD ?? "Demo123!", 12);
   const userIds = new Map<string, string>();
 

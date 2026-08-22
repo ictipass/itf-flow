@@ -4,7 +4,7 @@
 
 - [ ] Confirm presentation objective, audience, allotted time, and requested decisions.
 - [ ] Pull the intended commits and keep all repositories clean.
-- [ ] Run `npm run setup:verify` and `npm run build` in ITF Flow.
+- [ ] Run `npm run setup:verify`, `npm run test:assurance` and `npm run build` in ITF Flow.
 - [ ] Verify Workspace separately and confirm the launch secret matches.
 - [ ] Confirm all seeded accounts can sign in using the configured demo password.
 - [ ] Rehearse the exact scenario and prepare fallback records at every major stage.
@@ -12,6 +12,7 @@
 - [ ] Disable live mailbox synchronization unless credentials were independently verified.
 - [ ] Confirm browser zoom, projector resolution, and network requirements.
 - [ ] Export or locally cache these Markdown documents for offline access.
+- [ ] Confirm `/admin/assurance` still identifies outstanding production evidence; do not mark demonstration checks as production evidence.
 
 ## Thirty minutes before
 
@@ -40,8 +41,10 @@
 
 - Do not describe current approval as a cryptographic digital signature.
 - Do not claim attachments are malware-scanned.
-- Do not claim full Secret-classification need-to-know enforcement.
+- Do not claim application Secret/need-to-know controls replace enterprise MFA, independent authorization testing, EDMS watermarking/redaction or governance approval.
 - Do not claim SMTP acceptance proves recipient delivery; delivery confirmation remains a separate step.
 - Do not claim automated dispatch emails include attachments while files remain unscanned.
 - Do not describe local disk storage as production-ready or Vercel-safe.
 - Do not promise EDMS behavior until its API and governance rules are confirmed.
+- Do not describe seeded accounts, `Demo123!` or local staff login as production authentication.
+- Do not claim S26 tooling means production sign-off has occurred.

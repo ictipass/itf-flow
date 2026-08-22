@@ -32,11 +32,12 @@ import { captureRevision } from "@/lib/revisions";
 import { canDispatch, canMinute, canOriginate, canReadClassification, canRegister } from "@/lib/permissions";
 import { evaluateActionRouting } from "@/lib/reporting-lines";
 import { enqueueNotifications } from "@/lib/notifications";
-import { createSession, destroySession, requireUser } from "@/lib/session";
+import { createSession, destroySession, hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { syncMailbox, verifyMailConnections } from "@/lib/mail-sync";
 import { approvalRequired, authorityMetadata, workAuthority } from "@/lib/delegations";
 import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, revisionDigest, signApprovalPayload, verifyApprovalSignature } from "@/lib/approval-signatures";
 import { ensurePurposeAllowed, resolveWorkflowPolicy } from "@/lib/workflow-templates";
+import { localStaffLoginEnabled } from "@/lib/authentication-policy";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -133,6 +134,7 @@ async function nextReference(tx: Parameters<Parameters<typeof db.$transaction>[0
 }
 
 export async function loginAction(formData: FormData) {
+  if (!localStaffLoginEnabled()) redirect("/login?error=local-disabled");
   const email = String(formData.get("email") ?? "").toLowerCase();
   const password = String(formData.get("password") ?? "");
   const user = await db.user.findFirst({ where: { email, isActive: true } });
@@ -1142,9 +1144,14 @@ export async function recordDecisionAction(formData: FormData) {
 
   const createsSignature = request.purpose === WorkPurpose.APPROVAL && outcome === DecisionOutcome.APPROVED;
   const latestRevision = createsSignature ? await db.correspondenceRevision.findFirst({ where: { correspondenceId }, orderBy: { version: "desc" } }) : null;
+  let approvalAuthenticationMethod = "PASSWORD_RECONFIRMATION";
   if (createsSignature) {
-    const password = String(formData.get("approvalPassword") ?? "");
-    if (!user.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw new Error("Password re-confirmation failed; approval was not recorded.");
+    const enterpriseMfa = await hasActiveEnterpriseMfa();
+    if (enterpriseMfa) approvalAuthenticationMethod = "RECENT_ENTERPRISE_MFA";
+    else {
+      const password = String(formData.get("approvalPassword") ?? "");
+      if (!user.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw new Error("Strong re-authentication failed; approval was not recorded.");
+    }
     if (!latestRevision) throw new Error("The document has no immutable revision to sign.");
     const unsafeAttachments = await db.attachment.count({ where: { correspondenceId, isIncluded: true, OR: [{ processingStatus: { not: DocumentProcessingStatus.AVAILABLE } }, { malwareScanStatus: { not: MalwareScanStatus.CLEAN } }] } });
     if (unsafeAttachments) throw new Error("Approval is blocked until every attachment passes document security processing.");
@@ -1167,14 +1174,14 @@ export async function recordDecisionAction(formData: FormData) {
         outcome, decisionNote: note, signerId: user.id, signerName: user.name, signerRole: user.role,
         authorityPrincipalId: authority.delegation ? authority.principal.id : null,
         authorityPrincipalName: authority.delegation ? authority.principal.name : null,
-        delegationId: authority.delegation?.id ?? null, authenticationMethod: "PASSWORD_RECONFIRMATION",
+        delegationId: authority.delegation?.id ?? null, authenticationMethod: approvalAuthenticationMethod,
         signedAt: signedAt.toISOString(), algorithm: APPROVAL_SIGNATURE_ALGORITHM, keyId: APPROVAL_SIGNATURE_KEY_ID,
       };
       await tx.approvalSignature.create({ data: {
         decisionRequestId: request.id, correspondenceId, revisionId: latestRevision.id,
         revisionVersion: latestRevision.version, documentDigest, canonicalPayload: payload,
         signatureValue: signApprovalPayload(payload), algorithm: APPROVAL_SIGNATURE_ALGORITHM,
-        keyId: APPROVAL_SIGNATURE_KEY_ID, authenticationMethod: "PASSWORD_RECONFIRMATION",
+        keyId: APPROVAL_SIGNATURE_KEY_ID, authenticationMethod: approvalAuthenticationMethod,
         signerId: user.id, signerName: user.name, signerRole: user.role, signerPosition: user.position,
         authorityPrincipalId: authority.delegation ? authority.principal.id : null,
         authorityPrincipalName: authority.delegation ? authority.principal.name : null,

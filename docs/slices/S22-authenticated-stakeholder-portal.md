@@ -27,7 +27,7 @@ authorized delegation.
 
 ## Boundaries and production dependencies
 
-- Attachments remain unavailable until S24 supplies private EDMS/object storage, magic-byte validation, malware
+- Attachments remain unavailable until S24B supplies real EDMS/object storage, malware
   scanning, quarantine and controlled release.
 - S23 remains responsible for OIDC, MFA, central logout/revocation and cross-application identity contracts.
 - The email worker and correct public `NEXT_PUBLIC_APP_URL` must operate for verification and alerts.

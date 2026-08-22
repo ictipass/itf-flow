@@ -12,8 +12,8 @@ not claiming final production readiness.” Keep the presentation package open o
 3. Launch ITF Flow.
 
 Expected: ITF Flow opens without another password prompt when handoff is configured, and the staff role
-and office appear. Explain that direct application login remains possible for permitted users and external
-users do not require Workspace for public submission.
+and office appear. Explain that direct staff-password login is a local demonstration facility and is disabled
+by default in production; external users retain their separate Public stakeholder portal identity.
 
 ## Scene 2 — External intake and Secretary coordination (3 minutes)
 
@@ -107,4 +107,6 @@ delivery remains separately confirmable. Attachments remain omitted until the pr
 
 Return to a detailed correspondence page. Show current owners, time at stage, complete passage, decisions,
 versions, attachments, and dispatch. Then state the production gates and request the stakeholder decisions
-listed in the presentation package.
+listed in the presentation package. If time permits, open **Production assurance** as the administrator and show
+that technical health is separate from evidence-based production approval. State clearly that S24B and the external
+S26 test, recovery, governance, pilot and sign-off evidence remain outstanding.

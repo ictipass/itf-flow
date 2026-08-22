@@ -28,7 +28,7 @@ For a fresh seeded demo, no database or upload backup is required.
 ## 2. Install prerequisites on the new machine
 
 - Git
-- Node.js 20.9 or newer (current LTS recommended)
+- Node.js 22 LTS recommended (application minimum 20.9)
 - PostgreSQL with command-line tools available
 - The same Codex account if conversation continuity is required
 
@@ -63,10 +63,14 @@ Create an empty `itf_flow` database, then ensure `DATABASE_URL` points to it.
 
 ```cmd
 npm run db:migrate
+npm run db:status
 npm run db:seed
 npm run env:check
 npm run dev
 ```
+
+Run the seed only for a disposable local/demo database with `ALLOW_DEMO_SEED=true`. It refuses to run under
+`NODE_ENV=production`; staging and production users must come from Workspace provisioning.
 
 Use `prisma migrate deploy` through `npm run db:migrate`. Do not use `migrate dev` merely to install
 already committed migrations; it is intended for authoring new schema changes.
@@ -123,9 +127,8 @@ http://localhost:3001/workspace/launch
 
 ## 7. Conversation continuity
 
-Git transfers implementation state, not a local chat transcript. Sign in to Codex with the same account
-and open the saved conversation when available. Also provide the latest commit hash, current branch,
-`docs/next-slices.md`, and this runbook. Those repository artifacts remain the authoritative handover if
-conversation history is unavailable.
+Git transfers implementation state, not a local chat transcript. Give the new coding assistant the instruction:
+“Read `docs/coding-assistant-handoff.md`, verify the repository, then follow `docs/environment-launch-checklist.md`.”
+Those repository artifacts remain authoritative if conversation history is unavailable.
 
 Never depend on chat history as the only record of architecture, configuration, migrations, or pending work.

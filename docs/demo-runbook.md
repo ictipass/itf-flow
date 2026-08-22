@@ -19,7 +19,7 @@ always be verified after running it.
 
 ## Demonstration accounts
 
-All seeded accounts use `SEED_PASSWORD` (`Demo123!` by default).
+All seeded accounts use `SEED_PASSWORD` (`Demo123!` by default) only in a disposable local demonstration database with `ALLOW_DEMO_SEED=true`. They are not production identities.
 
 | Role | Account | Demonstration purpose |
 |---|---|---|

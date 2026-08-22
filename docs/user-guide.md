@@ -15,8 +15,9 @@ the facilitator script for a stakeholder demonstration.
 5. Explain that access is determined server-side by active user, role, reporting line, assignment and
    classification—not merely by which links are visible.
 
-The seeded accounts and their purpose are listed below. Passwords are not used by the local demo login;
-local passwords remain a rollout fallback; production staff normally launch from Workspace with enterprise MFA.
+The seeded accounts and their purpose are listed below. They use `SEED_PASSWORD` (`Demo123!` by default) only in
+an explicitly enabled disposable local/demo environment. Production staff are provisioned from Workspace without
+a Flow password and launch with enterprise MFA evidence; local staff login is disabled by default in production.
 
 | Category | Seeded account | Best demonstration |
 |---|---|---|
@@ -74,7 +75,7 @@ Expected control: prior decisions remain in the decision register when a later c
 ### Formally approving a document
 
 1. Confirm the document version, attachments, passage and decision request before selecting **Approve**.
-2. Enter a decision note and re-confirm your current password. A failed password leaves the request pending.
+2. Enter a decision note. A local demo user re-confirms the current password; a production Workspace user relies on recent enterprise MFA evidence. Failed strong authentication leaves the request pending.
 3. ITF Flow signs the exact latest immutable revision and shows its revision number and digest in the register.
 4. Confirm that the decision register displays **Signature assertion verified** before relying on the approval.
 5. A corrected later revision supersedes the approval; it must be approved independently where policy requires.
@@ -114,6 +115,7 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 3. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
 4. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
 5. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
+6. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
 
 Expected control: operational administration does not grant blanket access to restricted business records;
 classification rules continue to apply to registry queries and exports.
@@ -168,15 +170,15 @@ is not connected until S24B.
 
 ## Current boundaries to state honestly
 
-- Workspace v2 sessions consume enterprise MFA evidence and can be centrally revoked. Local/demo authentication is a
-  controlled fallback; production IdP registration, key management and central logout delivery must still be operated.
+- Workspace v2 sessions consume enterprise MFA evidence and can be centrally revoked. Local/demo authentication is
+  not a production fallback; production IdP registration, key management and central logout delivery must be operated.
 - Attachments use quarantine, hash/magic-byte validation and clean-only release. Local storage and the mock scanner
   remain demonstration facilities; real EDMS, malware scanning and OCR are still production requirements.
 - Search is database-backed multi-field text search, not OCR or a dedicated enterprise search engine.
-- Digital signatures, acting appointments, need-to-know groups, legal hold, retention/disposal and the external
-  stakeholder portal remain future slices.
-- Production rollout still requires authorization regression, accessibility, load, security, backup/restore and
-  disaster-recovery verification.
+- Digital-signature assertions, acting appointments, need-to-know groups and the external stakeholder portal are
+  implemented; PKI/legal-signature policy, legal hold and governed retention/disposal remain external policy/integration work.
+- S26 assurance tooling is implemented, but authorization, accessibility, load, security, backup/restore,
+  disaster-recovery, governance, pilot and production sign-off evidence must still be executed and approved.
 
 ## Facilitation tips
 
@@ -194,4 +196,5 @@ organization. The lifecycle is simplified to **Received by Secretariat**, **Unde
 
 When the current staff action holder asks a question, verified members receive an email prompt. Open the submission,
 enter the secure response, and submit it. The staff action holder reviews and closes the response. Do not paste
-classified material: the portal accepts Public correspondence only and has no attachment upload until S24.
+classified material: the portal accepts Public correspondence only and attachment upload remains blocked pending
+the real S24B EDMS/scanner/OCR integration.

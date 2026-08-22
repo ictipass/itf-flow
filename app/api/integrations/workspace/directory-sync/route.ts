@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         await tx.user.upsert({
           where: { email: item.email.toLowerCase() },
           update: {
+            passwordHash: null,
             workspaceUserId: item.workspaceUserId,
             staffNumber: item.staffNumber,
             name: item.name,

@@ -59,7 +59,15 @@ technical request context. Copied recipients receive visibility but do not becom
 - Passage timeline and current ownership.
 - Scoped organizational broadcasts with mandatory acknowledgement.
 - Outgoing dispatch reference and delivery/failure tracking.
-- Workspace launch handoff and directory synchronization contract.
+- Durable email outbox, reminders, escalations and executive digests.
+- Search, filtered correspondence/movement registers and CSV exports.
+- Delegation/acting-office inboxes with dual attribution.
+- Need-to-know groups, Secret step-up, controlled-copy display and sensitive-access logging.
+- Signed approval assertions bound to immutable revisions.
+- Authenticated external stakeholder tracking and clarification.
+- Workspace MFA launch, central logout/revocation and directory synchronization contracts.
+- Configurable workflow templates, category SLAs and simulation.
+- Production health checks and evidence-based assurance register.
 
 ### 6. Security and governance talking points
 
@@ -69,10 +77,10 @@ technical request context. Copied recipients receive visibility but do not becom
 - Positive decisions remain visible when later content changes but are marked superseded.
 - Secrets stay in environment configuration and are excluded from Git.
 - Email HTML is not rendered and remote content is not loaded.
-- Classification labels exist, but full need-to-know enforcement and step-up authentication remain a
-  production slice and must not be overstated.
-- Attachments are not yet malware-scanned. Production use is blocked until validation, scanning, and
-  quarantine are operational.
+- Application need-to-know and step-up controls exist, but enterprise MFA operation, independent authorization
+  testing, EDMS-rendered watermark/redaction and governance approval remain production gates.
+- Attachments are quarantined, hashed and signature-validated, but production use remains blocked until real
+  S24B EDMS, malware-scanner and OCR adapters are integrated and tested.
 
 ### 7. Architecture overview
 
@@ -83,7 +91,7 @@ ITF staff ────────────┘          │                  
                                 ├─→ Local demo files  └─→ Audit / workflow records
 Private mail server ─ IMAP/SMTP ┘
 
-Future: ITF EDMS/object storage · malware scanner · enterprise OIDC/MFA · scheduled workers
+Outstanding: real ITF EDMS/object storage · malware scanner · OCR · production IdP and worker operations
 ```
 
 The current implementation uses typed server actions, Prisma migrations, PostgreSQL, and a replaceable
@@ -97,8 +105,8 @@ JavaScript ecosystem through versioned HTTP APIs and signed events.
 - Database migrations are versioned and reproducible across machines.
 - Workflow decisions, dispatch, broadcasts, and revisions have separate models rather than ambiguous
   free-text flags.
-- Production scale still requires managed storage, background workers, monitoring, load testing, backup
-  restoration tests, and database capacity planning.
+- Protected background-worker endpoints and assurance tooling exist; production scale still requires managed
+  services, configured monitoring, production-like load/capacity testing and executed recovery evidence.
 
 ### 9. Honest MVP boundaries
 
@@ -106,12 +114,13 @@ JavaScript ecosystem through versioned HTTP APIs and signed events.
   recipient delivery remains separately confirmed and unscanned attachments are omitted.
 - IMAP synchronization is manual in the demo; production needs an authenticated scheduled worker.
 - Local uploads are unsuitable for Vercel production and multi-instance hosting.
-- Digital signatures and cryptographic certificates are not implemented; current approval is auditable,
-  account-bound workflow approval.
-- OCR, EDMS integration, malware scanning, retention, legal hold, and disposal are planned.
-- Enterprise identity, MFA, central logout, delegation, acting appointments, and detailed information
-  barriers remain planned.
-- The stakeholder portal does not yet provide authenticated tracking accounts.
+- Current approval assertions are cryptographically integrity-protected but are not PKI-qualified signatures.
+- OCR, real EDMS/malware-scanner integration, legal hold and governed retention/disposal remain outstanding.
+- Workspace identity/MFA/logout contracts, delegation and information barriers are implemented; production tenant
+  registration, key operations, authoritative HR dates and external assurance evidence remain outstanding.
+- Authenticated stakeholder tracking is implemented for Public correspondence; attachment upload remains blocked
+  pending S24B and approved external-user security/privacy operations.
+- S26 health and assurance controls are implemented, but testing, recovery, pilot and sign-off evidence is not yet complete.
 
 ### 10. Proposed pilot and success measures
 
@@ -156,7 +165,7 @@ completion rates. Review authorization and audit reports weekly during the pilot
 | Can we see who has a file now? | Yes. Current action owners, copies, status, location, time at stage, and complete passage are shown. |
 | Can three Secretaries process the same letter? | They share one queue; atomic claim/release identifies who is handling an item and prevents silent duplicate registration. |
 | Does it replace email? | It consolidates the official workflow record. Intake can import email, and Official Email dispatch uses durable SMTP processing while preserving separate delivery confirmation. |
-| Is it ready for sensitive production documents? | Not yet. Malware scanning, quarantine, managed/EDMS storage, stronger classification enforcement, MFA, and assurance testing are production gates. |
+| Is it ready for sensitive production documents? | Not yet. Real EDMS/scanning/OCR, enterprise MFA operation, independent authorization testing, governance and assurance sign-off remain production gates. |
 | Will it scale to all staff? | The directory is searched server-side and core queues are indexed, but production load and capacity testing remain required. |
 | Can non-ITF users use it? | External submission exists now. Authenticated stakeholder accounts and tracking are planned. |
 | What happens when content changes after approval? | A new immutable version is created and earlier positive decisions are marked superseded, requiring fresh approval where applicable. |

@@ -7,6 +7,7 @@ export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.e
   if ((env.DOCUMENT_STORAGE_PROVIDER ?? "LOCAL") === "LOCAL") issues.push("managed document storage is not configured");
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED")) issues.push("a production malware scanner is not configured");
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_OCR_PROVIDER ?? "DISABLED")) issues.push("a production OCR provider is not configured");
+  if (env.STAFF_LOCAL_LOGIN_ENABLED === "true") issues.push("local staff-password login is enabled");
   return issues;
 }
 
