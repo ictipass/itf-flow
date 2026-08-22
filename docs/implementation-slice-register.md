@@ -50,7 +50,7 @@ Machine-independent continuation instructions are maintained in [`coding-assista
 
 ## Post-slice operational hardening
 
-The machine handoff package and production-account separation were completed after S26. Demo seeding is now explicitly local-only, production local login defaults off, Workspace synchronization removes matching demo passwords, and recent Workspace MFA authenticates formal approval. Commit evidence will be recorded after the handoff commit is created.
+The machine handoff package and production-account separation were completed after S26 in `b5af0cb`. Demo seeding is now explicitly local-only, production local login defaults off, Workspace synchronization removes matching demo passwords, and recent Workspace MFA authenticates formal approval.
 
 ## Planned next slice
 

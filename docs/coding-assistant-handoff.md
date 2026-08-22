@@ -18,7 +18,7 @@ git log -5 --oneline
 npm ci
 ```
 
-At creation, the last delivered slice was S26 at implementation commit `41f274f`, recorded by `2102582`. A later commit is expected after this handoff document is committed. Confirm that `docs/implementation-slice-register.md` records the current state.
+At creation, the last delivered slice was S26 at implementation commit `41f274f`, recorded by `2102582`; the portable handoff and production-account hardening are in `b5af0cb`. Confirm that `docs/implementation-slice-register.md` records the current state and accept a later intentional commit.
 
 Use Node.js 22 LTS on the replacement machine. The previous Windows host used Node 24.18.1 and `tsx` sometimes failed before loading tests with `uv_os_get_passwd returned ENOMEM`; that was a host/runtime failure, not a passed or failed assertion.
 
