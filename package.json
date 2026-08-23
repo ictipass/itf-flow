@@ -16,7 +16,7 @@
     "db:status": "prisma migrate status",
     "env:check": "tsx scripts/environment-check.ts",
     "setup:verify": "npm run env:check && npm run db:status && npm run lint",
-    "test:security": "tsx --test tests/security-regression.test.ts tests/workspace-launch-v2.test.ts",
+    "test:security": "tsx --test tests/security-regression.test.ts tests/workspace-launch-v2.test.ts tests/workspace-session-events.test.ts",
     "test:assurance": "tsx --test tests/*.test.ts",
     "load:smoke": "tsx scripts/load-smoke.ts",
     "backup:verify": "powershell -ExecutionPolicy Bypass -File scripts/backup-restore-check.ps1",
