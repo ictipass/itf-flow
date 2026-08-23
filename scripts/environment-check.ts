@@ -6,7 +6,9 @@ import { db } from "../lib/db";
 const required = [
   "DATABASE_URL",
   "SESSION_SECRET",
-  "WORKSPACE_LAUNCH_TOKEN_SECRET",
+  "WORKSPACE_LAUNCH_ISSUER",
+  "WORKSPACE_LAUNCH_AUDIENCE",
+  "WORKSPACE_LAUNCH_JWKS_URL",
   "WORKSPACE_DIRECTORY_SYNC_SECRET",
   "WORKSPACE_INTEROP_SECRET",
   "NEXT_PUBLIC_WORKSPACE_URL",
@@ -21,7 +23,7 @@ async function main() {
 
   for (const name of required) if (!process.env[name]?.trim()) errors.push(`${name} is missing.`);
   if ((process.env.SESSION_SECRET?.length ?? 0) < 32) errors.push("SESSION_SECRET must contain at least 32 characters.");
-  for (const name of ["WORKSPACE_LAUNCH_TOKEN_SECRET", "WORKSPACE_DIRECTORY_SYNC_SECRET", "WORKSPACE_INTEROP_SECRET"] as const) if ((process.env[name]?.length ?? 0) < 32) errors.push(`${name} must contain at least 32 characters.`);
+  for (const name of ["WORKSPACE_DIRECTORY_SYNC_SECRET", "WORKSPACE_INTEROP_SECRET"] as const) if ((process.env[name]?.length ?? 0) < 32) errors.push(`${name} must contain at least 32 characters.`);
   const idleMinutes = Number(process.env.STAFF_SESSION_IDLE_MINUTES ?? "30");
   if (!Number.isFinite(idleMinutes) || idleMinutes < 5 || idleMinutes > 480) errors.push("STAFF_SESSION_IDLE_MINUTES must be between 5 and 480.");
   if ((process.env.APPROVAL_SIGNING_SECRET?.length ?? 0) < 32) warnings.push("APPROVAL_SIGNING_SECRET is missing or shorter than 32 characters; production approval signing will fail.");

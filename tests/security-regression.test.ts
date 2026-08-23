@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Classification, UserRole } from "../lib/generated/prisma/client";
-import { productionConfigurationIssues } from "../lib/assurance";
+import { productionConfigurationIssues } from "../lib/production-configuration";
 import { canDispatch, canReadClassification, canRegister } from "../lib/permissions";
 import { localStaffLoginEnabled } from "../lib/authentication-policy";
 
@@ -20,7 +20,7 @@ test("registration and dispatch remain restricted", () => {
 
 test("production configuration detects unsafe document adapters", () => {
   const secret = "x".repeat(40);
-  const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_TOKEN_SECRET: secret, WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "LOCAL", DOCUMENT_SCANNER_PROVIDER: "MOCK", DOCUMENT_OCR_PROVIDER: "DISABLED" } as unknown as NodeJS.ProcessEnv;
+  const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_ISSUER: "https://workspace.example.test", WORKSPACE_LAUNCH_AUDIENCE: "itf-flow", WORKSPACE_LAUNCH_JWKS_URL: "https://workspace.example.test/api/integrations/workspace/v2/jwks", WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "LOCAL", DOCUMENT_SCANNER_PROVIDER: "MOCK", DOCUMENT_OCR_PROVIDER: "DISABLED" } as unknown as NodeJS.ProcessEnv;
   const issues = productionConfigurationIssues(env);
   assert.equal(issues.length, 3);
   assert.ok(issues.some((issue) => issue.includes("malware")));

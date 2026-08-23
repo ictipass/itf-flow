@@ -23,8 +23,10 @@ export async function createSession(userId: string, options: { authenticationMet
   const expiresAt = new Date(Date.now() + MAX_AGE_SECONDS * 1000);
   const correlationId = options.correlationId ?? randomUUID();
   const session = await db.$transaction(async (tx) => {
-    const recentMfa = options.mfaAuthenticatedAt && options.mfaAuthenticatedAt.getTime() > Date.now() - 15 * 60_000;
-    const created = await tx.staffSession.create({ data: { userId, authenticationMethod: options.authenticationMethod ?? StaffAuthenticationMethod.LOCAL_PASSWORD, identityProvider: options.identityProvider, workspaceSessionId: options.workspaceSessionId, mfaAuthenticatedAt: options.mfaAuthenticatedAt, stepUpUntil: recentMfa ? new Date(options.mfaAuthenticatedAt!.getTime() + 15 * 60_000) : undefined, expiresAt } });
+    const configuredStepUpSeconds = Number(process.env.WORKSPACE_MFA_STEP_UP_SECONDS ?? "600");
+    const stepUpSeconds = Number.isInteger(configuredStepUpSeconds) && configuredStepUpSeconds >= 60 && configuredStepUpSeconds <= 3600 ? configuredStepUpSeconds : 600;
+    const recentMfa = options.mfaAuthenticatedAt && options.mfaAuthenticatedAt.getTime() > Date.now() - stepUpSeconds * 1000;
+    const created = await tx.staffSession.create({ data: { userId, authenticationMethod: options.authenticationMethod ?? StaffAuthenticationMethod.LOCAL_PASSWORD, identityProvider: options.identityProvider, workspaceSessionId: options.workspaceSessionId, mfaAuthenticatedAt: options.mfaAuthenticatedAt, stepUpUntil: recentMfa ? new Date(options.mfaAuthenticatedAt!.getTime() + stepUpSeconds * 1000) : undefined, expiresAt } });
     await tx.integrationEvent.create({ data: { eventId: randomUUID(), correlationId, source: "itf-flow", type: IntegrationEventType.SESSION_CREATED, userId, sessionId: created.id, metadata: { authenticationMethod: created.authenticationMethod, identityProvider: created.identityProvider, mfa: Boolean(created.mfaAuthenticatedAt) } } });
     return created;
   });
