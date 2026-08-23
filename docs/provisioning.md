@@ -5,7 +5,7 @@ application entitlement, status, and ITF Flow role.
 
 ## Production account rule
 
-Production staff accounts are created in ITF Workspace, assigned an explicit ITF Flow entitlement/role and synchronized into Flow. A synchronized Flow user has no local password and enters through the Workspace launch with enterprise MFA/session evidence. Synchronizing a matching email clears any prior demo/local password hash, so `Demo123!` cannot coexist with that production identity.
+Production staff accounts are created in ITF Workspace, assigned an explicit ITF Flow entitlement/role and synchronized into Flow. A synchronized Flow user has no local password and enters through the Workspace launch with enterprise MFA/session evidence. The immutable Workspace user ID is authoritative. Email is only an initial linking attribute for a Flow user that has no Workspace ID; split or conflicting ID/email matches fail the whole batch. A successful match clears any prior demo/local password hash, so `Demo123!` cannot coexist with that production identity.
 
 `npm run db:seed` is local-demo tooling only: it requires `ALLOW_DEMO_SEED=true` and refuses to run with `NODE_ENV=production`. Staging and production must not contain seeded users. Local staff-password login defaults off in production and an approved production configuration keeps `STAFF_LOCAL_LOGIN_ENABLED=false`.
 
@@ -36,8 +36,12 @@ DG_SECRETARY, DG, DIRECTOR, DIVISION_HEAD, UNIT_HEAD, OFFICER, RECORDS_ADMIN, SY
 8. From the Workspace import page, select **Synchronize entitled staff to ITF Flow**.
 9. In ITF Flow, open **Provisioning admin** to inspect run history and reporting-line gaps.
 
-Synchronization is paginated in batches of 200, authenticated separately from browser SSO, and
-records a run ledger in ITF Flow. Suspended or inactive Workspace users are disabled in Flow on
-the next synchronization. Synchronization also removes a prior local password from each matched identity.
+Synchronization uses the versioned `itf-workspace-directory-v1` contract, configurable batches (200 by default), a
+separate service credential, request UUIDs and payload-bound idempotency. Each accepted batch records a run ledger in
+ITF Flow. Repeating the same request safely returns its recorded result; reusing its UUID for different content is
+rejected. Role changes and deactivation revoke existing Flow sessions transactionally. Workspace will not send a
+reactivating directory update while a relevant revocation event remains undelivered.
 
-The Workspace import described here may be create-only, but the Flow synchronization endpoint reconciles existing matched users, placements, roles, reporting lines and active status. Changes must originate through controlled Workspace lifecycle administration.
+The Workspace import described here may be create-only, but the Flow synchronization endpoint reconciles existing
+unambiguously matched users, placements, roles, reporting lines and active status. Changes must originate through
+controlled Workspace lifecycle administration.

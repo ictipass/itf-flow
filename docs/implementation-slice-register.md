@@ -52,6 +52,11 @@ Machine-independent continuation instructions are maintained in [`coding-assista
 
 The machine handoff package and production-account separation were completed after S26 in `b5af0cb`. Demo seeding is now explicitly local-only, production local login defaults off, Workspace synchronization removes matching demo passwords, and recent Workspace MFA authenticates formal approval.
 
+The joint Workspace A01 integration reassessment is implemented in Flow commit `02b433d` and Workspace commit
+`1a08a5b`. It adds upstream session-bound enforcement, immutable identity reconciliation, versioned payload-bound
+directory idempotency and session invalidation on role/status/assurance changes. Joint staging acceptance remains an
+external gate. See [`slices/A01-workspace-integration-reassessment.md`](slices/A01-workspace-integration-reassessment.md).
+
 ## Planned next slice
 
 **S24B - Real EDMS, malware-scanner and OCR adapters** is pending the external technical contract and test services.

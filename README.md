@@ -30,9 +30,10 @@ documented in [`docs/cross-machine-handover.md`](docs/cross-machine-handover.md)
 Every seeded staff account uses `SEED_PASSWORD` (`Demo123!` by default). Seed credentials are for
 local demonstrations only and must never be enabled in production.
 
-Production staff are provisioned through ITF Workspace without a local Flow password. Workspace synchronization
-clears any prior local password for a matched email. `STAFF_LOCAL_LOGIN_ENABLED` defaults off in production and
-demo seeding refuses to run under `NODE_ENV=production`.
+Production staff are provisioned through ITF Workspace without a local Flow password. The immutable Workspace user
+ID is the primary cross-system identity; email is used only once to link an existing, previously unmapped Flow user.
+Synchronization clears any prior local password after an unambiguous match. `STAFF_LOCAL_LOGIN_ENABLED` defaults off
+in production and demo seeding refuses to run under `NODE_ENV=production`.
 
 The seeded system administrator account is `admin@itf.gov.ng`. It uses `SEED_PASSWORD` and exists
 only to expose configuration and connection-testing controls during development.

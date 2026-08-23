@@ -8,29 +8,32 @@ upstream MFA evidence and its central session identifier. Workspace can also ret
 
 ## Delivered
 
-- Database-backed staff sessions with configurable idle expiry, eight-hour absolute expiry, authentication method,
-  identity provider, Workspace session ID, MFA time, step-up time and revocation evidence.
-- Workspace launch v2 validates issuer, audience, two-minute lifetime, single use, active entitlement, MFA within
-  12 hours, stable identity mapping and agreement with the directory-provisioned role.
+- Database-backed staff sessions with configurable local idle expiry, upstream Workspace idle/absolute bounds,
+  authentication method, identity provider, Workspace session ID, MFA time, step-up time and revocation evidence.
+- Workspace launch v2 validates issuer, audience, two-minute lifetime, single use, active entitlement, MFA freshness,
+  immutable identity mapping, upstream session bounds and agreement with the directory-provisioned role.
 - Unknown, inactive or role-mismatched users are rejected; launch cannot create users or grant roles.
-- Recent enterprise MFA satisfies the existing 15-minute Secret step-up window.
-- Bridge v1 remains for migration and is disabled by default in production.
+- Recent enterprise TOTP satisfies the approved ten-minute Workspace step-up window.
+- Legacy shared-secret launch is rejected.
 - Idempotent central logout and entitlement revocation, including optional central-session targeting.
-- Directory deactivation immediately revokes active sessions.
+- Directory role changes and deactivation immediately revoke active sessions.
 - Versioned attention-count API, correlation IDs and a durable integration-event ledger.
 
 ## Workspace launch v2
 
-The HMAC envelope uses payload version `itf-workspace-launch-v2` and adds:
+The RS256-signed assertion uses payload version `itf-workspace-launch-v2` and includes:
 
 ```json
 {
-  "issuer": "itf-workspace",
-  "app": { "slug": "itf-flow", "role": "OFFICER", "entitled": true },
+  "iss": "https://workspace.example.test",
+  "aud": "itf-flow",
+  "entitlement": { "appSlug": "itf-flow", "role": "OFFICER" },
   "authentication": {
-    "sessionId": "stable-central-session-id",
-    "methods": ["password", "mfa"],
-    "authenticatedAt": 1787443200
+    "workspaceSessionId": "stable-central-session-id",
+    "methods": ["password", "totp"],
+    "authenticatedAt": 1787443200,
+    "idleExpiresAt": 1787444400,
+    "absoluteExpiresAt": 1787454000
   }
 }
 ```
@@ -48,12 +51,13 @@ authentication and entitlement evidence; it is not role provisioning.
   "eventId": "globally-unique-event-id",
   "type": "CENTRAL_LOGOUT",
   "workspaceUserId": "workspace-user-id",
-  "workspaceSessionId": "optional-specific-session-id",
+  "workspaceSessionId": "required-central-session-id",
   "reason": "User signed out centrally"
 }
 ```
 
-`ENTITLEMENT_REVOKED` also deactivates the local user. Repeated event IDs are idempotent. Calls should include
+`CENTRAL_LOGOUT` requires an exact Workspace session identifier. `ENTITLEMENT_REVOKED` has no session identifier,
+applies to all sessions and also deactivates the local user. Repeated event IDs are idempotent. Calls should include
 `X-Correlation-Id`.
 
 ## Attention contract
@@ -64,12 +68,12 @@ subject, classification, sender, minute or document metadata.
 
 ## Configuration and boundary
 
-The launch, directory and interoperability APIs use three separate secrets. `WORKSPACE_TOKEN_ISSUER`,
-`WORKSPACE_ALLOW_LEGACY_LAUNCH`, `STAFF_SESSION_IDLE_MINUTES` and `NEXT_PUBLIC_WORKSPACE_LOGOUT_URL` control issuer,
-migration, idle expiry and central sign-out behavior.
+Launch trust uses Workspace's asymmetric JWKS. Directory synchronization and session events use two separate bearer
+credentials. `WORKSPACE_LAUNCH_ISSUER`, `WORKSPACE_LAUNCH_AUDIENCE`, `WORKSPACE_LAUNCH_JWKS_URL`,
+`STAFF_SESSION_IDLE_MINUTES` and `NEXT_PUBLIC_WORKSPACE_LOGOUT_URL` control trust, local idle expiry and central sign-out.
 
 ITF Flow consumes identity and MFA assertions from Workspace but does not operate an OIDC provider. Production still
-requires IdP registration, managed keys/secrets, TLS, rotation, logout delivery, MFA policy and security testing.
+requires managed keys/secrets, TLS, rotation, logout delivery, MFA policy and security testing.
 Local password login remains a development/demo facility only. It defaults off in production; Workspace synchronization removes prior local passwords from matched production identities.
 
 Validation: migration deploy/status, Prisma validation/client generation, TypeScript, ESLint and production build.
