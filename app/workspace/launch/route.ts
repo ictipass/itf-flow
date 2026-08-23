@@ -3,6 +3,7 @@ import { StaffAuthenticationMethod, UserRole } from "@/lib/generated/prisma/clie
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/session";
 import { verifyWorkspaceToken } from "@/lib/workspace-token";
+import { resolveProvisioningIdentity } from "@/lib/workspace-directory-contract";
 
 function roleFromWorkspace(value?: string | null) {
   return Object.values(UserRole).includes(value as UserRole)
@@ -19,16 +20,22 @@ export async function GET(request: Request) {
     const payload = await verifyWorkspaceToken(token);
     const role = roleFromWorkspace(payload.entitlement.role);
     if (!role) throw new Error("No valid ITF Flow role entitlement was supplied.");
-    const existingRedemption = await db.launchTokenRedemption.findUnique({
-      where: { tokenId: payload.jti },
-    });
-    if (existingRedemption) throw new Error("Launch token was already used.");
-
-    const provisionedUser = await db.user.findFirst({ where: { OR: [{ workspaceUserId: payload.sub }, { email: payload.identity.email.toLowerCase() }] } });
-    if (!provisionedUser?.isActive || (provisionedUser.workspaceUserId && provisionedUser.workspaceUserId !== payload.sub) || provisionedUser.role !== role) throw new Error("Workspace user is not actively provisioned for this role.");
     const user = await db.$transaction(async (tx) => {
+      const email = payload.identity.email.toLowerCase();
+      const [byWorkspaceId, byEmail] = await Promise.all([
+        tx.user.findUnique({ where: { workspaceUserId: payload.sub } }),
+        tx.user.findUnique({ where: { email } }),
+      ]);
+      const resolution = resolveProvisioningIdentity(payload.sub, byWorkspaceId, byEmail);
+      if (resolution.operation === "create") {
+        throw new Error("Workspace user has not been provisioned in ITF Flow.");
+      }
+      const provisionedUser = byWorkspaceId ?? byEmail;
+      if (!provisionedUser?.isActive || provisionedUser.role !== role) {
+        throw new Error("Workspace user is not actively provisioned for this role.");
+      }
       const mappedUser = await tx.user.update({
-        where: { id: provisionedUser.id },
+        where: { id: resolution.userId },
         data: {
           workspaceUserId: payload.sub,
           staffNumber: payload.identity.staffNumber ?? undefined,
@@ -58,6 +65,12 @@ export async function GET(request: Request) {
       authenticationMethod: StaffAuthenticationMethod.WORKSPACE_LAUNCH,
       identityProvider: payload.iss,
       workspaceSessionId: payload.authentication.workspaceSessionId,
+      upstreamExpiresAt: new Date(
+        Math.min(
+          payload.authentication.idleExpiresAt,
+          payload.authentication.absoluteExpiresAt
+        ) * 1000
+      ),
       mfaAuthenticatedAt,
       correlationId: request.headers.get("x-correlation-id") ?? payload.jti,
     });

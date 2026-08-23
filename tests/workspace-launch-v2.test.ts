@@ -54,6 +54,8 @@ function payload(requiredAssurance: "STANDARD" | "SENSITIVE" = "STANDARD"): Work
       workspaceSessionId: "workspace-session-1",
       methods: requiredAssurance === "SENSITIVE" ? ["pwd", "totp"] : ["pwd"],
       authenticatedAt: nowSeconds - 60,
+      idleExpiresAt: nowSeconds + 1200,
+      absoluteExpiresAt: nowSeconds + 10800,
       mfaAuthenticatedAt: requiredAssurance === "SENSITIVE" ? nowSeconds - 30 : undefined,
     },
   };
@@ -105,6 +107,21 @@ test("ITF Flow applies fresh TOTP only to sensitive assertions", () => {
 test("ITF Flow rejects assertions after the approved skew window", () => {
   assert.throws(
     () => verifyWorkspaceTokenWithJwks(tokenFor(payload()), { keys: [publicJwk] }, configuration, new Date(now.getTime() + 151_000)),
+    /timing/
+  );
+});
+
+test("ITF Flow rejects expired or inverted upstream session bounds", () => {
+  const expiredIdle = payload();
+  expiredIdle.authentication.idleExpiresAt = nowSeconds;
+  assert.throws(
+    () => verifyWorkspaceTokenWithJwks(tokenFor(expiredIdle), { keys: [publicJwk] }, configuration, now),
+    /timing/
+  );
+  const inverted = payload();
+  inverted.authentication.idleExpiresAt = inverted.authentication.absoluteExpiresAt + 1;
+  assert.throws(
+    () => verifyWorkspaceTokenWithJwks(tokenFor(inverted), { keys: [publicJwk] }, configuration, now),
     /timing/
   );
 });

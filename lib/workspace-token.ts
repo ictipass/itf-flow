@@ -37,6 +37,8 @@ export type WorkspacePayload = {
     workspaceSessionId: string;
     methods: string[];
     authenticatedAt: number;
+    idleExpiresAt: number;
+    absoluteExpiresAt: number;
     mfaAuthenticatedAt?: number;
   };
 };
@@ -157,13 +159,19 @@ export function verifyWorkspaceTokenWithJwks(
     !payload.entitlement?.role || !payload.authentication?.workspaceSessionId ||
     !Array.isArray(payload.authentication.methods) || !payload.authentication.methods.includes("pwd") ||
     !Number.isInteger(payload.authentication.authenticatedAt) ||
+    !Number.isInteger(payload.authentication.idleExpiresAt) ||
+    !Number.isInteger(payload.authentication.absoluteExpiresAt) ||
     !["STANDARD", "SENSITIVE"].includes(payload.entitlement.requiredAssurance)
   ) throw new Error("Workspace launch claims are invalid.");
   if (
     !Number.isInteger(payload.iat) || !Number.isInteger(payload.nbf) || !Number.isInteger(payload.exp) ||
     payload.iat > nowSeconds + skew || payload.nbf > nowSeconds + skew || payload.exp + skew < nowSeconds ||
     payload.exp <= payload.iat || payload.exp - payload.iat > configuration.ttlSeconds ||
-    payload.authentication.authenticatedAt > payload.iat + skew
+    payload.authentication.authenticatedAt > payload.iat + skew ||
+    payload.authentication.idleExpiresAt <= nowSeconds ||
+    payload.authentication.absoluteExpiresAt <= nowSeconds ||
+    payload.authentication.idleExpiresAt > payload.authentication.absoluteExpiresAt ||
+    payload.authentication.absoluteExpiresAt < payload.authentication.authenticatedAt
   ) throw new Error("Workspace launch timing is invalid.");
   if (payload.entitlement.requiredAssurance === "SENSITIVE") {
     const mfaAt = payload.authentication.mfaAuthenticatedAt;

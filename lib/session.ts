@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { IntegrationEventType, StaffAuthenticationMethod } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
+import { effectiveSessionExpiry } from "@/lib/session-policy";
 
 const COOKIE_NAME = "itf_flow_session";
 const MAX_AGE_SECONDS = 8 * 60 * 60;
@@ -19,18 +20,20 @@ const sign = (value: string) => createHmac("sha256", getSecret()).update(value).
 function makeToken(payload: SessionPayload) { const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url"); return `${encoded}.${sign(encoded)}`; }
 function readToken(value: string): SessionPayload | null { const [encoded, signature] = value.split("."); if (!encoded || !signature) return null; const expected = sign(encoded); const a = Buffer.from(signature); const b = Buffer.from(expected); if (a.length !== b.length || !timingSafeEqual(a, b)) return null; try { const payload = JSON.parse(Buffer.from(encoded, "base64url").toString()) as SessionPayload; return payload.expiresAt > Date.now() && Boolean(payload.sessionId && payload.userId) ? payload : null; } catch { return null; } }
 
-export async function createSession(userId: string, options: { authenticationMethod?: StaffAuthenticationMethod; identityProvider?: string; workspaceSessionId?: string; mfaAuthenticatedAt?: Date; correlationId?: string } = {}) {
-  const expiresAt = new Date(Date.now() + MAX_AGE_SECONDS * 1000);
+export async function createSession(userId: string, options: { authenticationMethod?: StaffAuthenticationMethod; identityProvider?: string; workspaceSessionId?: string; upstreamExpiresAt?: Date; mfaAuthenticatedAt?: Date; correlationId?: string } = {}) {
+  const now = new Date();
+  const expiresAt = effectiveSessionExpiry(now, MAX_AGE_SECONDS, options.upstreamExpiresAt);
   const correlationId = options.correlationId ?? randomUUID();
   const session = await db.$transaction(async (tx) => {
     const configuredStepUpSeconds = Number(process.env.WORKSPACE_MFA_STEP_UP_SECONDS ?? "600");
     const stepUpSeconds = Number.isInteger(configuredStepUpSeconds) && configuredStepUpSeconds >= 60 && configuredStepUpSeconds <= 3600 ? configuredStepUpSeconds : 600;
     const recentMfa = options.mfaAuthenticatedAt && options.mfaAuthenticatedAt.getTime() > Date.now() - stepUpSeconds * 1000;
     const created = await tx.staffSession.create({ data: { userId, authenticationMethod: options.authenticationMethod ?? StaffAuthenticationMethod.LOCAL_PASSWORD, identityProvider: options.identityProvider, workspaceSessionId: options.workspaceSessionId, mfaAuthenticatedAt: options.mfaAuthenticatedAt, stepUpUntil: recentMfa ? new Date(options.mfaAuthenticatedAt!.getTime() + stepUpSeconds * 1000) : undefined, expiresAt } });
-    await tx.integrationEvent.create({ data: { eventId: randomUUID(), correlationId, source: "itf-flow", type: IntegrationEventType.SESSION_CREATED, userId, sessionId: created.id, metadata: { authenticationMethod: created.authenticationMethod, identityProvider: created.identityProvider, mfa: Boolean(created.mfaAuthenticatedAt) } } });
+    await tx.integrationEvent.create({ data: { eventId: randomUUID(), correlationId, source: "itf-flow", type: IntegrationEventType.SESSION_CREATED, userId, sessionId: created.id, metadata: { authenticationMethod: created.authenticationMethod, identityProvider: created.identityProvider, mfa: Boolean(created.mfaAuthenticatedAt), expiresAt: created.expiresAt.toISOString(), upstreamExpiresAt: options.upstreamExpiresAt?.toISOString() } } });
     return created;
   });
-  (await cookies()).set(COOKIE_NAME, makeToken({ userId, sessionId: session.id, expiresAt: expiresAt.getTime() }), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: MAX_AGE_SECONDS });
+  const maxAge = Math.max(1, Math.ceil((expiresAt.getTime() - now.getTime()) / 1000));
+  (await cookies()).set(COOKIE_NAME, makeToken({ userId, sessionId: session.id, expiresAt: expiresAt.getTime() }), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge });
   return session;
 }
 

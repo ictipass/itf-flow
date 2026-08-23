@@ -1,29 +1,15 @@
-import { randomUUID, timingSafeEqual } from "crypto";
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { IntegrationEventType, UserRole } from "@/lib/generated/prisma/client";
+import { IntegrationEventType } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { correlationId } from "@/lib/integration-auth";
-
-const userSchema = z.object({
-  workspaceUserId: z.string().min(1),
-  staffNumber: z.string().nullable(),
-  email: z.email(),
-  name: z.string().min(1),
-  role: z.enum(UserRole),
-  isActive: z.boolean(),
-  office: z.object({ id: z.string(), name: z.string() }).nullable(),
-  department: z.object({ id: z.string(), name: z.string() }).nullable(),
-  division: z.object({ id: z.string(), name: z.string() }).nullable(),
-  unit: z.object({ id: z.string(), name: z.string() }).nullable(),
-  position: z.object({ id: z.string(), name: z.string() }).nullable(),
-  supervisorWorkspaceUserId: z.string().nullable(),
-});
-
-const payloadSchema = z.object({
-  source: z.literal("itf-workspace"),
-  users: z.array(userSchema).min(1).max(500),
-});
+import {
+  directoryBatchDigest,
+  resolveProvisioningIdentity,
+  provisioningChangeRequiresSessionRevocation,
+  WORKSPACE_DIRECTORY_VERSION,
+  workspaceDirectoryBatchSchema,
+} from "@/lib/workspace-directory-contract";
 
 function authorized(request: Request) {
   const configured = process.env.WORKSPACE_DIRECTORY_SYNC_SECRET;
@@ -34,130 +20,251 @@ function authorized(request: Request) {
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
+type CompletedMetadata = {
+  requestDigest?: string;
+  runId?: string;
+  createdCount?: number;
+  updatedCount?: number;
+  inactiveCount?: number;
+};
+
 export async function POST(request: Request) {
   const requestCorrelationId = correlationId(request);
-  if (!authorized(request)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const parsed = payloadSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: "Invalid directory payload.", details: parsed.error.flatten() },
-      { status: 400 },
-    );
-  }
-
-  const run = await db.provisioningRun.create({
-    data: {
-      source: parsed.data.source,
-      status: "RUNNING",
-      receivedCount: parsed.data.users.length,
-    },
+  const respond = (body: unknown, status = 200) => NextResponse.json(body, {
+    status,
+    headers: { "X-Correlation-Id": requestCorrelationId, "Cache-Control": "no-store" },
   });
+  if (!authorized(request)) return respond({ error: "Unauthorized" }, 401);
+
+  const parsed = workspaceDirectoryBatchSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return respond({ error: "Invalid directory payload.", details: parsed.error.flatten() }, 400);
+  }
+  const expectedAppSlug = process.env.WORKSPACE_APP_SLUG?.trim() || "itf-flow";
+  if (parsed.data.targetAppSlug !== expectedAppSlug) {
+    return respond({ error: "Directory batch is not addressed to this application." }, 400);
+  }
+  const requestDigest = directoryBatchDigest(parsed.data);
 
   try {
-    const existing = await db.user.findMany({
-      where: {
-        OR: [
-          { workspaceUserId: { in: parsed.data.users.map((user) => user.workspaceUserId) } },
-          { email: { in: parsed.data.users.map((user) => user.email.toLowerCase()) } },
-        ],
-      },
-      select: { id: true, workspaceUserId: true, email: true },
-    });
-    const existingWorkspaceIds = new Set(existing.map((user) => user.workspaceUserId).filter(Boolean));
-    let createdCount = 0;
-    let updatedCount = 0;
-    let inactiveCount = 0;
-
-    await db.$transaction(async (tx) => {
-      for (const item of parsed.data.users) {
-        const wasExisting =
-          existingWorkspaceIds.has(item.workspaceUserId) ||
-          existing.some((user) => user.email === item.email.toLowerCase());
-        await tx.user.upsert({
-          where: { email: item.email.toLowerCase() },
-          update: {
-            passwordHash: null,
-            workspaceUserId: item.workspaceUserId,
-            staffNumber: item.staffNumber,
-            name: item.name,
-            role: item.role,
-            isActive: item.isActive,
-            office: item.office?.name ?? "ITF",
-            department: item.department?.name,
-            division: item.division?.name,
-            unit: item.unit?.name,
-            position: item.position?.name,
-            workspaceOfficeId: item.office?.id,
-            workspaceDepartmentId: item.department?.id,
-            workspaceDivisionId: item.division?.id,
-            workspaceUnitId: item.unit?.id,
-            workspacePositionId: item.position?.id,
+    const result = await db.$transaction(async (tx) => {
+      const inserted = await tx.integrationEvent.createMany({
+        data: [{
+          eventId: parsed.data.requestId,
+          correlationId: requestCorrelationId,
+          source: parsed.data.source,
+          type: IntegrationEventType.DIRECTORY_SYNCHRONIZED,
+          metadata: {
+            version: parsed.data.version,
+            requestDigest,
+            targetAppSlug: parsed.data.targetAppSlug,
+            batch: parsed.data.batch,
           },
-          create: {
-            workspaceUserId: item.workspaceUserId,
-            staffNumber: item.staffNumber,
-            email: item.email.toLowerCase(),
-            name: item.name,
-            role: item.role,
-            isActive: item.isActive,
-            office: item.office?.name ?? "ITF",
-            department: item.department?.name,
-            division: item.division?.name,
-            unit: item.unit?.name,
-            position: item.position?.name,
-            workspaceOfficeId: item.office?.id,
-            workspaceDepartmentId: item.department?.id,
-            workspaceDivisionId: item.division?.id,
-            workspaceUnitId: item.unit?.id,
-            workspacePositionId: item.position?.id,
-            hierarchyLevel: 1,
-          },
+        }],
+        skipDuplicates: true,
+      });
+      if (inserted.count === 0) {
+        const existing = await tx.integrationEvent.findUnique({
+          where: { eventId: parsed.data.requestId },
+          select: { source: true, type: true, metadata: true },
         });
-        if (wasExisting) updatedCount += 1;
-        else createdCount += 1;
+        const metadata = (existing?.metadata ?? {}) as CompletedMetadata;
+        if (
+          existing?.source !== parsed.data.source ||
+          existing.type !== IntegrationEventType.DIRECTORY_SYNCHRONIZED ||
+          metadata.requestDigest !== requestDigest
+        ) {
+          return { conflict: true as const };
+        }
+        return {
+          conflict: false as const,
+          duplicate: true,
+          runId: metadata.runId,
+          createdCount: metadata.createdCount ?? 0,
+          updatedCount: metadata.updatedCount ?? 0,
+          inactiveCount: metadata.inactiveCount ?? 0,
+        };
+      }
+
+      const run = await tx.provisioningRun.create({
+        data: {
+          source: `${parsed.data.source}:${parsed.data.version}`,
+          status: "RUNNING",
+          receivedCount: parsed.data.users.length,
+        },
+      });
+      let createdCount = 0;
+      let updatedCount = 0;
+      let inactiveCount = 0;
+      const mappedUserIds = new Map<string, string>();
+      const securityChangedUserIds = new Set<string>();
+      const knownUsers = await tx.user.findMany({
+        where: {
+          OR: [
+            {
+              workspaceUserId: {
+                in: parsed.data.users.flatMap((user) =>
+                  user.supervisorWorkspaceUserId
+                    ? [user.workspaceUserId, user.supervisorWorkspaceUserId]
+                    : [user.workspaceUserId]
+                ),
+              },
+            },
+            { email: { in: parsed.data.users.map((user) => user.email) } },
+          ],
+        },
+        select: {
+          id: true,
+          workspaceUserId: true,
+          email: true,
+          role: true,
+          isActive: true,
+        },
+      });
+      const knownByWorkspaceId = new Map(
+        knownUsers
+          .filter((user) => user.workspaceUserId)
+          .map((user) => [user.workspaceUserId!, user])
+      );
+      const knownByEmail = new Map(knownUsers.map((user) => [user.email, user]));
+
+      for (const item of parsed.data.users) {
+        const byWorkspaceId = knownByWorkspaceId.get(item.workspaceUserId) ?? null;
+        const byEmail = knownByEmail.get(item.email) ?? null;
+        const resolution = resolveProvisioningIdentity(item.workspaceUserId, byWorkspaceId, byEmail);
+        const commonData = {
+          passwordHash: null,
+          workspaceUserId: item.workspaceUserId,
+          staffNumber: item.staffNumber,
+          email: item.email,
+          name: item.name,
+          role: item.role,
+          isActive: item.isActive,
+          office: item.office?.name ?? "ITF",
+          department: item.department?.name,
+          division: item.division?.name,
+          unit: item.unit?.name,
+          position: item.position?.name,
+          workspaceOfficeId: item.office?.id,
+          workspaceDepartmentId: item.department?.id,
+          workspaceDivisionId: item.division?.id,
+          workspaceUnitId: item.unit?.id,
+          workspacePositionId: item.position?.id,
+        };
+
+        if (resolution.operation === "update") {
+          const previous = byWorkspaceId ?? byEmail!;
+          const updated = await tx.user.update({
+            where: { id: resolution.userId },
+            data: commonData,
+          });
+          if (provisioningChangeRequiresSessionRevocation({
+            previousRole: previous.role,
+            nextRole: item.role,
+            previouslyActive: previous.isActive,
+            nextActive: item.isActive,
+          })) {
+            securityChangedUserIds.add(updated.id);
+          }
+          mappedUserIds.set(item.workspaceUserId, updated.id);
+          knownByWorkspaceId.set(item.workspaceUserId, updated);
+          knownByEmail.set(item.email, updated);
+          updatedCount += 1;
+        } else {
+          const created = await tx.user.create({
+            data: { ...commonData, hierarchyLevel: 1 },
+          });
+          mappedUserIds.set(item.workspaceUserId, created.id);
+          knownByWorkspaceId.set(item.workspaceUserId, created);
+          knownByEmail.set(item.email, created);
+          createdCount += 1;
+        }
         if (!item.isActive) inactiveCount += 1;
       }
 
       for (const item of parsed.data.users) {
-        const supervisor = item.supervisorWorkspaceUserId
-          ? await tx.user.findUnique({
-              where: { workspaceUserId: item.supervisorWorkspaceUserId },
-              select: { id: true },
-            })
+        const userId = mappedUserIds.get(item.workspaceUserId)!;
+        const supervisorId = item.supervisorWorkspaceUserId
+          ? mappedUserIds.get(item.supervisorWorkspaceUserId) ??
+            knownByWorkspaceId.get(item.supervisorWorkspaceUserId)?.id
           : null;
-        await tx.user.update({
-          where: { email: item.email.toLowerCase() },
-          data: { supervisorId: supervisor?.id ?? null },
+        await tx.user.update({ where: { id: userId }, data: { supervisorId: supervisorId ?? null } });
+      }
+
+      const changedUserIds = [...securityChangedUserIds];
+      if (changedUserIds.length) {
+        await tx.staffSession.updateMany({
+          where: { userId: { in: changedUserIds }, revokedAt: null },
+          data: {
+            revokedAt: new Date(),
+            revocationReason: "Workspace directory synchronization changed this identity or role.",
+          },
         });
       }
-      const inactiveWorkspaceIds = parsed.data.users.filter((item) => !item.isActive).map((item) => item.workspaceUserId);
-      if (inactiveWorkspaceIds.length) await tx.staffSession.updateMany({ where: { revokedAt: null, user: { workspaceUserId: { in: inactiveWorkspaceIds } } }, data: { revokedAt: new Date(), revocationReason: "Workspace directory synchronization deactivated this identity." } });
-      await tx.integrationEvent.create({ data: { eventId: randomUUID(), correlationId: requestCorrelationId, source: "itf-workspace", type: IntegrationEventType.DIRECTORY_SYNCHRONIZED, metadata: { runId: run.id, receivedCount: parsed.data.users.length } } });
+
+      await tx.provisioningRun.update({
+        where: { id: run.id },
+        data: {
+          status: "COMPLETED",
+          createdCount,
+          updatedCount,
+          inactiveCount,
+          completedAt: new Date(),
+        },
+      });
+      await tx.integrationEvent.update({
+        where: { eventId: parsed.data.requestId },
+        data: {
+          metadata: {
+            version: parsed.data.version,
+            requestDigest,
+            targetAppSlug: parsed.data.targetAppSlug,
+            batch: parsed.data.batch,
+            runId: run.id,
+            createdCount,
+            updatedCount,
+            inactiveCount,
+            sessionsRevokedForChangedIdentityCount: changedUserIds.length,
+          },
+        },
+      });
+      return { conflict: false as const, duplicate: false, runId: run.id, createdCount, updatedCount, inactiveCount };
     });
 
-    await db.provisioningRun.update({
-      where: { id: run.id },
-      data: {
-        status: "COMPLETED",
-        createdCount,
-        updatedCount,
-        inactiveCount,
-        completedAt: new Date(),
-      },
+    if (result.conflict) {
+      return respond({
+        version: WORKSPACE_DIRECTORY_VERSION,
+        requestId: parsed.data.requestId,
+        error: "Directory request ID was already used for a different payload.",
+      }, 409);
+    }
+
+    return respond({
+      version: WORKSPACE_DIRECTORY_VERSION,
+      requestId: parsed.data.requestId,
+      ...result,
     });
-    return NextResponse.json({ runId: run.id, createdCount, updatedCount, inactiveCount }, { headers: { "X-Correlation-Id": requestCorrelationId } });
   } catch (error) {
-    await db.provisioningRun.update({
-      where: { id: run.id },
-      data: {
-        status: "FAILED",
-        error: error instanceof Error ? error.message.slice(0, 1000) : "Unknown error",
-        completedAt: new Date(),
-      },
-    });
-    return NextResponse.json({ error: "Directory synchronization failed.", runId: run.id }, { status: 500 });
+    let runId: string | undefined;
+    try {
+      const failed = await db.provisioningRun.create({
+        data: {
+          source: `${parsed.data.source}:${parsed.data.version}`,
+          status: "FAILED",
+          receivedCount: parsed.data.users.length,
+          error: error instanceof Error ? error.message.slice(0, 1000) : "Unknown error",
+          completedAt: new Date(),
+        },
+      });
+      runId = failed.id;
+    } catch {
+      // The response remains fail-closed if even the failure ledger is unavailable.
+    }
+    return respond({
+      version: WORKSPACE_DIRECTORY_VERSION,
+      requestId: parsed.data.requestId,
+      error: "Directory synchronization failed.",
+      runId,
+    }, 500);
   }
 }
