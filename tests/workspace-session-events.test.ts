@@ -41,4 +41,6 @@ test("rejects malformed, unversioned and non-UUID events", () => {
   assert.equal(workspaceSessionEventSchema.safeParse({ ...baseEvent, version: "v0" }).success, false);
   assert.equal(workspaceSessionEventSchema.safeParse({ ...baseEvent, eventId: "repeatable-id" }).success, false);
   assert.equal(workspaceSessionEventSchema.safeParse({ ...baseEvent, targetAppSlug: "ITF Flow" }).success, false);
+  assert.equal(workspaceSessionEventSchema.safeParse({ ...baseEvent, workspaceSessionId: undefined }).success, false);
+  assert.equal(workspaceSessionEventSchema.safeParse({ ...baseEvent, type: "ENTITLEMENT_REVOKED" }).success, false);
 });
