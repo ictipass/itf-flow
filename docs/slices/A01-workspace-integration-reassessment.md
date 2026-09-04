@@ -90,6 +90,13 @@ recovery, but it is acceptance evidence only and does not satisfy the controlled
 - Flow environment validation reaches PostgreSQL but correctly fails readiness because launch issuer, audience and
   JWKS URL are not configured. Workspace validation passes development rules and reports Flow directory sync as not
   configured.
+- On 2026-09-05, the deployed Flow staging `/api/health/ready` endpoint returned `status: ready` and
+  `database: reachable`, with an observed latency of 732 ms. This proves reachability for that request only; it is not
+  load, sustained-latency or failover evidence.
+
+The staging database credential must be rotated after its disclosure before further acceptance evidence is collected.
+The replacement must be stored only in the staging-scoped Vercel Sensitive variable and ignored local environment
+file; it must not be copied into documentation or chat.
 
 The next acceptance exercise must prove provisioning, launch, replay rejection, role change, assurance increase,
 central logout, entitlement revocation, duplicate delivery and outage/retry recovery in a production-like staging
