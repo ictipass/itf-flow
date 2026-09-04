@@ -43,6 +43,45 @@ Required Flow values for staging are `WORKSPACE_LAUNCH_ISSUER`, `WORKSPACE_LAUNC
 matching directory and interoperability credentials plus `WORKSPACE_OUTBOX_WORKER_SECRET`; the approved scheduler must
 invoke the outbox worker.
 
+## Approved staging profile
+
+Recorded 2026-09-04:
+
+- ITF Flow staging origin: `https://itf-flow-staging.vercel.app`;
+- ITF Workspace staging origin: `https://itf-workspace-staging.vercel.app`;
+- application assurance: `STANDARD`;
+- initial `SYSTEM_ADMIN` child-app role assurance: `SENSITIVE`; and
+- the Flow staging database exists with migrations applied.
+
+The application-level `STANDARD` classification permits password-only launch for standard Flow roles. The
+`SYSTEM_ADMIN` role remains `SENSITIVE`, so the more restrictive role classification requires a fresh TOTP step-up.
+
+Configure the Flow Preview environment for the staging branch with:
+
+```dotenv
+WORKSPACE_LAUNCH_ISSUER="https://itf-workspace-staging.vercel.app"
+WORKSPACE_LAUNCH_AUDIENCE="itf-flow"
+WORKSPACE_LAUNCH_JWKS_URL="https://itf-workspace-staging.vercel.app/api/integrations/workspace/v2/jwks"
+WORKSPACE_APP_SLUG="itf-flow"
+WORKSPACE_LAUNCH_TTL_SECONDS="120"
+WORKSPACE_LAUNCH_CLOCK_SKEW_SECONDS="30"
+WORKSPACE_MFA_STEP_UP_SECONDS="600"
+NEXT_PUBLIC_WORKSPACE_URL="https://itf-workspace-staging.vercel.app"
+NEXT_PUBLIC_WORKSPACE_LOGOUT_URL="https://itf-workspace-staging.vercel.app/logout"
+NEXT_PUBLIC_APP_URL="https://itf-flow-staging.vercel.app"
+STAFF_LOCAL_LOGIN_ENABLED="false"
+ALLOW_DEMO_SEED="false"
+```
+
+`WORKSPACE_DIRECTORY_SYNC_SECRET` and `WORKSPACE_INTEROP_SECRET` are separate staging-only credentials and must match
+the corresponding Workspace values. They are not interchangeable and must not be reused in another environment.
+
+Vercel Hobby cron is not an acceptable continuous revocation-retry scheduler: it runs at most daily with hourly
+imprecision, invokes only Production deployments, and therefore cannot serve the staging Preview deployment. Keep the
+default 30-second retry base for an external scheduler capable of invoking the protected Workspace worker at least
+every 30 seconds. For the finite A01 staging exercise, an authorized manual worker invocation may prove outage/retry
+recovery, but it is acceptance evidence only and does not satisfy the controlled-pilot operational gate.
+
 ## Verification
 
 - ITF Flow: TypeScript and ESLint pass; production build passes; 21/21 security and contract tests pass.
