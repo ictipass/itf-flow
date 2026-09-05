@@ -110,6 +110,12 @@ Vercel session. A01 provisioning and launch acceptance are therefore blocked unt
 public application boundary or an approved protection design that supports both browser navigation and
 machine-to-machine calls without putting a bypass secret in launch URLs.
 
+ITF confirmed on 2026-09-05 that `itf-flow-staging` is a dedicated staging-only Vercel project and production will
+use the separate `itf-flow.vercel.app` deployment. The recommended staging correction is therefore to disable Vercel
+Authentication for the dedicated staging project, while retaining Flow's application authentication, signed
+single-use launch assertion and service-credential enforcement. This does not approve the same protection setting for
+the separate production project.
+
 The next acceptance exercise must prove provisioning, launch, replay rejection, role change, assurance increase,
 central logout, entitlement revocation, duplicate delivery and outage/retry recovery in a production-like staging
 environment.
