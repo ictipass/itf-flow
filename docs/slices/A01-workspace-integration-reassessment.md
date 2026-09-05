@@ -99,9 +99,9 @@ recovery, but it is acceptance evidence only and does not satisfy the controlled
   `database: reachable`, with an observed latency of 732 ms. This proves reachability for that request only; it is not
   load, sustained-latency or failover evidence.
 
-The staging database credential must be rotated after its disclosure before further acceptance evidence is collected.
-The replacement must be stored only in the staging-scoped Vercel Sensitive variable and ignored local environment
-file; it must not be copied into documentation or chat.
+ITF confirmed rotation of the disclosed staging database credential on 2026-09-05. The replacement remains confined
+to the staging-scoped Vercel Sensitive variable and ignored local environment file; no replacement value is retained
+as evidence.
 
 An unauthenticated external probe on 2026-09-05 found that Workspace's JWKS endpoint is publicly reachable, while
 Flow's staging readiness and `/workspace/launch` routes redirect to Vercel Authentication. A browser already signed
@@ -115,6 +115,13 @@ use the separate `itf-flow.vercel.app` deployment. The recommended staging corre
 Authentication for the dedicated staging project, while retaining Flow's application authentication, signed
 single-use launch assertion and service-credential enforcement. This does not approve the same protection setting for
 the separate production project.
+
+After ITF applied that correction, an independent unauthenticated probe returned HTTP 200 JSON from
+`/api/health/ready`; an unsigned `/workspace/launch` request reached Flow and resolved to its own
+`/login?error=missing-token` response instead of Vercel login. Authenticated probes using the locally held staging
+directory and interoperability credentials reached both protected receivers and returned HTTP 400 for deliberately
+invalid empty payloads, rather than HTTP 401. No provisioning or session-event record was created. This confirms the
+Flow-side credentials are installed and the application boundary is ready for Workspace configuration.
 
 The next acceptance exercise must prove provisioning, launch, replay rejection, role change, assurance increase,
 central logout, entitlement revocation, duplicate delivery and outage/retry recovery in a production-like staging
