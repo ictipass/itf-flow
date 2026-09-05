@@ -6,7 +6,7 @@
 - [ ] Clone `https://github.com/ictipass/itf-flow.git`, check out `main`, pull fast-forward only and confirm a clean tree.
 - [ ] Run `npm ci`.
 - [ ] Copy `.env.example` to `.env`; never commit it.
-- [ ] Create an empty local PostgreSQL database and set `DATABASE_URL`.
+- [ ] Create an empty local PostgreSQL database and set `DATABASE_URL`; `DIRECT_URL` may use the same local URL.
 - [ ] Keep `NODE_ENV` non-production, `STAFF_LOCAL_LOGIN_ENABLED=true` and `ALLOW_DEMO_SEED=true` only for the local demo.
 - [ ] Use distinct secrets of at least 32 characters; match Workspace shared secrets only with the local Workspace instance.
 - [ ] Run `npm run db:migrate`, `npm run db:seed`, `npm run db:status` and `npm run env:check`.
@@ -19,6 +19,7 @@
 
 - [ ] Provision isolated staging app hosting, PostgreSQL, HTTPS hostname, secret store, Workspace registration, mailbox, document services, logs and alerts.
 - [ ] Use unique staging credentials; never reuse production data or secrets.
+- [ ] Set runtime `DATABASE_URL` to the pooled Prisma Postgres URL and migration-only `DIRECT_URL` to its direct URL; store both as staging-scoped sensitive values.
 - [ ] Set `NODE_ENV=production`, `STAFF_LOCAL_LOGIN_ENABLED=false` and omit/set `ALLOW_DEMO_SEED=false`.
 - [ ] Do not run `npm run db:seed`.
 - [ ] Deploy an immutable commit with `npm ci`, `npm run verify`, `npm run db:migrate`, `npm run db:status` and `npm run env:check`.
@@ -51,7 +52,7 @@
 2. Confirm consistent database and document-store backups and rollback ownership.
 3. Pause affected workers when the release procedure requires it.
 4. Deploy the already-tested immutable artifact.
-5. Run `npm run db:migrate`, `npm run db:status` and `npm run env:check`; never seed production.
+5. Run `npm run db:migrate`, `npm run db:status` and `npm run env:check` with `DIRECT_URL` scoped to migration/admin tooling; never seed production.
 6. Start the application and verify liveness, then readiness.
 7. Smoke-test Workspace login, a least-privilege denial and one representative correspondence journey.
 8. Resume workers and verify email, reminder and document-processing telemetry.

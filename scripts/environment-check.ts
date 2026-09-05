@@ -2,6 +2,10 @@ import "dotenv/config";
 import { access } from "fs/promises";
 import path from "path";
 import { db } from "../lib/db";
+import {
+  isPostgresConnectionUrl,
+  prismaPostgresConnectionKind,
+} from "../lib/database-url";
 
 const required = [
   "DATABASE_URL",
@@ -33,7 +37,24 @@ async function main() {
   if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER === "MOCK") errors.push("The mock document scanner is forbidden in production.");
   if (process.env.NODE_ENV === "production" && process.env.STAFF_LOCAL_LOGIN_ENABLED === "true") errors.push("STAFF_LOCAL_LOGIN_ENABLED must not be true for an approved production deployment.");
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED === "true") errors.push("ALLOW_DEMO_SEED must not be true in production.");
-  if (process.env.DATABASE_URL && !process.env.DATABASE_URL.startsWith("postgresql://")) errors.push("DATABASE_URL must be a PostgreSQL connection URL.");
+  if (process.env.DATABASE_URL && !isPostgresConnectionUrl(process.env.DATABASE_URL)) {
+    errors.push("DATABASE_URL must use a valid postgres:// or postgresql:// connection URL.");
+  }
+  if (process.env.DIRECT_URL && !isPostgresConnectionUrl(process.env.DIRECT_URL)) {
+    errors.push("DIRECT_URL must use a valid postgres:// or postgresql:// connection URL.");
+  }
+
+  const runtimeConnectionKind = prismaPostgresConnectionKind(process.env.DATABASE_URL);
+  const migrationConnectionKind = prismaPostgresConnectionKind(process.env.DIRECT_URL);
+  if (runtimeConnectionKind === "direct") {
+    warnings.push("DATABASE_URL uses Prisma Postgres's direct endpoint; use its pooled endpoint for deployed application traffic.");
+  }
+  if (migrationConnectionKind === "pooled") {
+    warnings.push("DIRECT_URL uses Prisma Postgres's pooled endpoint; use its direct endpoint for migrations and administrative tooling.");
+  }
+  if (!process.env.DIRECT_URL?.trim() && runtimeConnectionKind === "pooled") {
+    warnings.push("DIRECT_URL is absent; migration commands will fall back to the pooled DATABASE_URL.");
+  }
 
   if (process.env.MAIL_ENABLED === "true") {
     for (const name of ["MAIL_USERNAME", "MAIL_PASSWORD", "MAIL_IMAP_HOST", "MAIL_SMTP_HOST"] as const) {

@@ -76,6 +76,10 @@ ALLOW_DEMO_SEED="false"
 `WORKSPACE_DIRECTORY_SYNC_SECRET` and `WORKSPACE_INTEROP_SECRET` are separate staging-only credentials and must match
 the corresponding Workspace values. They are not interchangeable and must not be reused in another environment.
 
+Flow uses `DATABASE_URL` only for application traffic and prefers Prisma Postgres's pooled endpoint in deployed
+environments. `DIRECT_URL` is selected by Prisma migration/admin commands and should use the provider's direct
+endpoint. Both `postgres://` and `postgresql://` are accepted; neither URL may be logged or retained as evidence.
+
 Vercel Hobby cron is not an acceptable continuous revocation-retry scheduler: it runs at most daily with hourly
 imprecision, invokes only Production deployments, and therefore cannot serve the staging Preview deployment. Keep the
 default 30-second retry base for an external scheduler capable of invoking the protected Workspace worker at least
@@ -84,7 +88,8 @@ recovery, but it is acceptance evidence only and does not satisfy the controlled
 
 ## Verification
 
-- ITF Flow: TypeScript and ESLint pass; production build passes; 21/21 security and contract tests pass.
+- ITF Flow: TypeScript and ESLint pass; production build passes; 24/24 security, database-configuration and contract
+  tests pass.
 - ITF Workspace: TypeScript and ESLint pass; production build passes; 40/40 security and contract tests pass.
 - Local PostgreSQL: all 28 Flow migrations and all 8 Workspace migrations are applied.
 - Flow environment validation reaches PostgreSQL but correctly fails readiness because launch issuer, audience and
