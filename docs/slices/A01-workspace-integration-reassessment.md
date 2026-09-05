@@ -103,6 +103,13 @@ The staging database credential must be rotated after its disclosure before furt
 The replacement must be stored only in the staging-scoped Vercel Sensitive variable and ignored local environment
 file; it must not be copied into documentation or chat.
 
+An unauthenticated external probe on 2026-09-05 found that Workspace's JWKS endpoint is publicly reachable, while
+Flow's staging readiness and `/workspace/launch` routes redirect to Vercel Authentication. A browser already signed
+into Vercel can mask this condition, but ordinary staff and Workspace's server-to-server requests do not possess that
+Vercel session. A01 provisioning and launch acceptance are therefore blocked until Flow staging has a controlled
+public application boundary or an approved protection design that supports both browser navigation and
+machine-to-machine calls without putting a bypass secret in launch URLs.
+
 The next acceptance exercise must prove provisioning, launch, replay rejection, role change, assurance increase,
 central logout, entitlement revocation, duplicate delivery and outage/retry recovery in a production-like staging
 environment.
