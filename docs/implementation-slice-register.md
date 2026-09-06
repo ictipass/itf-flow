@@ -54,8 +54,10 @@ The machine handoff package and production-account separation were completed aft
 
 The joint Workspace A01 integration reassessment is implemented in Flow commit `02b433d` and Workspace commit
 `1a08a5b`. It adds upstream session-bound enforcement, immutable identity reconciliation, versioned payload-bound
-directory idempotency and session invalidation on role/status/assurance changes. Joint staging acceptance remains an
-external gate. See [`slices/A01-workspace-integration-reassessment.md`](slices/A01-workspace-integration-reassessment.md).
+directory idempotency and session invalidation on role/status/assurance changes. Environment-separated staging
+configuration, provisioning and the first genuine launch were accepted on 2026-09-06. Replay, role/assurance change,
+central logout, entitlement revocation, duplicate delivery, outage/retry and continuous scheduling remain. See
+[`slices/A01-workspace-integration-reassessment.md`](slices/A01-workspace-integration-reassessment.md).
 
 ## Planned next slice
 

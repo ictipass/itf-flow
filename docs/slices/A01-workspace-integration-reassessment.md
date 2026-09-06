@@ -127,6 +127,12 @@ The next acceptance exercise must prove provisioning, launch, replay rejection, 
 central logout, entitlement revocation, duplicate delivery and outage/retry recovery in a production-like staging
 environment.
 
+On 2026-09-06, ITF confirmed that the matching Workspace staging integration configuration was installed and
+Workspace was redeployed. ITF Flow was registered, the administrator was granted its `SYSTEM_ADMIN` entitlement, the
+entitled user synchronized successfully, and a genuine Workspace-to-Flow launch completed. Provisioning and the first
+launch happy path are therefore accepted. Replay rejection, role and assurance changes, central logout, entitlement
+revocation, duplicate delivery and outage/retry recovery remain.
+
 ## UI effect
 
 No Flow page layout changed. Users whose role, status or required assurance changes will have their old Flow session
@@ -135,5 +141,6 @@ after changing an entitlement role.
 
 ## Readiness
 
-A01 code implementation is complete. Environment-separated staging configuration and the joint acceptance exercise
-remain external gates. Until those pass, ITF Flow is not approved for a controlled pilot.
+A01 code implementation, environment-separated staging configuration, provisioning and first launch are accepted.
+The remaining lifecycle exercise and a continuous retry scheduler remain gates. Until those pass, ITF Flow is not
+approved for a controlled pilot.
