@@ -40,6 +40,7 @@ another developer without depending on unfinished work from a later slice.
 | S21 | Digital signatures and stronger approval authentication | Implemented | `6505d7c`; see [`slices/S21-signed-approval-assertions.md`](slices/S21-signed-approval-assertions.md) |
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented | `ed5e171`; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
+| S23A | Workspace-entitled app switcher and responsive Glass header | Implemented | `4747f67`, Workspace `bc03856`; see [`slices/S23A-workspace-entitled-app-switcher.md`](slices/S23A-workspace-entitled-app-switcher.md) |
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
@@ -58,6 +59,11 @@ directory idempotency and session invalidation on role/status/assurance changes.
 configuration, provisioning and the first genuine launch were accepted on 2026-09-06. Replay, role/assurance change,
 central logout, entitlement revocation, duplicate delivery, outage/retry and continuous scheduling remain. See
 [`slices/A01-workspace-integration-reassessment.md`](slices/A01-workspace-integration-reassessment.md).
+
+The Workspace-entitled child-app switcher is implemented in Flow commit `4747f67` and Workspace commit `bc03856`.
+It uses a protected, versioned, live-session navigation manifest and routes every target selection back through
+Workspace authorization. It also corrects the Glass header's long-navigation collision. Matching staging credentials
+and joint UI/entitlement acceptance remain. See [`slices/S23A-workspace-entitled-app-switcher.md`](slices/S23A-workspace-entitled-app-switcher.md).
 
 ## Planned next slice
 

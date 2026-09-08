@@ -39,9 +39,9 @@ credentials, then run directory synchronization before allowing staff launch. Ke
 credentials separate.
 
 Required Flow values for staging are `WORKSPACE_LAUNCH_ISSUER`, `WORKSPACE_LAUNCH_AUDIENCE`,
-`WORKSPACE_LAUNCH_JWKS_URL`, `WORKSPACE_DIRECTORY_SYNC_SECRET` and `WORKSPACE_INTEROP_SECRET`. Workspace requires the
-matching directory and interoperability credentials plus `WORKSPACE_OUTBOX_WORKER_SECRET`; the approved scheduler must
-invoke the outbox worker.
+`WORKSPACE_LAUNCH_JWKS_URL`, `WORKSPACE_DIRECTORY_SYNC_SECRET`, `WORKSPACE_INTEROP_SECRET` and
+`WORKSPACE_APP_NAVIGATION_SECRET`. Workspace requires the matching directory, interoperability and app-navigation
+credentials plus `WORKSPACE_OUTBOX_WORKER_SECRET`; the approved scheduler must invoke the outbox worker.
 
 ## Approved staging profile
 
@@ -63,6 +63,7 @@ WORKSPACE_LAUNCH_ISSUER="https://itf-workspace-staging.vercel.app"
 WORKSPACE_LAUNCH_AUDIENCE="itf-flow"
 WORKSPACE_LAUNCH_JWKS_URL="https://itf-workspace-staging.vercel.app/api/integrations/workspace/v2/jwks"
 WORKSPACE_APP_SLUG="itf-flow"
+WORKSPACE_APP_NAVIGATION_TIMEOUT_MS="3000"
 WORKSPACE_LAUNCH_TTL_SECONDS="120"
 WORKSPACE_LAUNCH_CLOCK_SKEW_SECONDS="30"
 WORKSPACE_MFA_STEP_UP_SECONDS="600"
@@ -73,8 +74,9 @@ STAFF_LOCAL_LOGIN_ENABLED="false"
 ALLOW_DEMO_SEED="false"
 ```
 
-`WORKSPACE_DIRECTORY_SYNC_SECRET` and `WORKSPACE_INTEROP_SECRET` are separate staging-only credentials and must match
-the corresponding Workspace values. They are not interchangeable and must not be reused in another environment.
+`WORKSPACE_DIRECTORY_SYNC_SECRET`, `WORKSPACE_INTEROP_SECRET` and `WORKSPACE_APP_NAVIGATION_SECRET` are separate
+staging-only credentials and must match their corresponding Workspace values. They are not interchangeable and must
+not be reused in another environment.
 
 Flow uses `DATABASE_URL` only for application traffic and prefers Prisma Postgres's pooled endpoint in deployed
 environments. `DIRECT_URL` is selected by Prisma migration/admin commands and should use the provider's direct
@@ -88,9 +90,10 @@ recovery, but it is acceptance evidence only and does not satisfy the controlled
 
 ## Verification
 
-- ITF Flow: TypeScript and ESLint pass; production build passes; 24/24 security, database-configuration and contract
+- ITF Flow: TypeScript and ESLint pass; production build passes; 27/27 security, database-configuration and contract
   tests pass.
-- ITF Workspace: TypeScript and ESLint pass; production build passes; 40/40 security and contract tests pass.
+- ITF Workspace: TypeScript and ESLint pass; production build passes; 68/68 security and contract tests pass across
+  13 suites.
 - Local PostgreSQL: all 28 Flow migrations and all 8 Workspace migrations are applied.
 - Flow environment validation reaches PostgreSQL but correctly fails readiness because launch issuer, audience and
   JWKS URL are not configured. Workspace validation passes development rules and reports Flow directory sync as not
@@ -135,9 +138,10 @@ revocation, duplicate delivery and outage/retry recovery remain.
 
 ## UI effect
 
-No Flow page layout changed. Users whose role, status or required assurance changes will have their old Flow session
-ended and must return through Workspace. Workspace administrators now receive explicit guidance to synchronize Flow
-after changing an entitlement role.
+Flow commit `4747f67` adds the entitled-app switcher to all four staff shells and corrects Glass-header navigation
+collisions. Users whose role, status or required assurance changes will have their old Flow session ended and must
+return through Workspace. Workspace administrators receive explicit guidance to synchronize Flow after changing an
+entitlement role.
 
 ## Readiness
 
