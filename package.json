@@ -17,8 +17,8 @@
     "env:check": "tsx scripts/environment-check.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "setup:verify": "npm run env:check && npm run db:status && npm run lint",
-    "test:security": "tsx --test tests/security-regression.test.ts tests/database-url.test.ts tests/workspace-launch-v2.test.ts tests/workspace-session-events.test.ts tests/session-policy.test.ts tests/workspace-directory-contract.test.ts",
-    "test:assurance": "tsx --test tests/*.test.ts",
+    "test:security": "node --require ./scripts/windows-test-preload.cjs --import tsx --test tests/security-regression.test.ts tests/database-url.test.ts tests/workspace-launch-v2.test.ts tests/workspace-session-events.test.ts tests/session-policy.test.ts tests/workspace-directory-contract.test.ts tests/workspace-app-navigation.test.ts",
+    "test:assurance": "node --require ./scripts/windows-test-preload.cjs --import tsx --test tests/*.test.ts",
     "load:smoke": "tsx scripts/load-smoke.ts",
     "backup:verify": "powershell -ExecutionPolicy Bypass -File scripts/backup-restore-check.ps1",
     "verify": "prisma validate && npm run typecheck && eslint && next build --webpack"

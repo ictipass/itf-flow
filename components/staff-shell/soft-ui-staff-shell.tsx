@@ -5,6 +5,7 @@ import { logoutAction } from "@/app/actions";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
+import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
 
 function SoftNavigation({ navigation }: { navigation: StaffNavigationItem[] }) {
   return navigation.map((item) => <Link key={item.href} href={item.href}>
@@ -23,6 +24,7 @@ export function SoftUiStaffShell({ user, navigation, children }: {
       <Link href="/dashboard" className="soft-brand"><span><Image src="/itf-logo.png" alt="Industrial Training Fund logo" width={42} height={42} priority /></span><div><strong>ITF Flow</strong><small>Correspondence workspace</small></div></Link>
       <nav className="soft-nav" aria-label="Staff navigation"><SoftNavigation navigation={navigation} /></nav>
       <div className="soft-header-actions">
+        <WorkspaceAppSwitcher />
         <Link className="soft-icon-button" href="/notifications" aria-label="Notifications"><Bell size={19} />{navigation.find((item) => item.href === "/notifications")?.notificationCount ? <i /> : null}</Link>
         <div className="soft-profile"><span>{initials}</span><div><strong>{user.name}</strong><small>{label(user.role)}</small></div></div>
         <form action={logoutAction}><button className="soft-icon-button" title="Sign out"><LogOut size={18} /><span className="sr-only">Sign out</span></button></form>

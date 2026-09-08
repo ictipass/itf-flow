@@ -20,7 +20,7 @@ test("registration and dispatch remain restricted", () => {
 
 test("production configuration detects unsafe document adapters", () => {
   const secret = "x".repeat(40);
-  const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_ISSUER: "https://workspace.example.test", WORKSPACE_LAUNCH_AUDIENCE: "itf-flow", WORKSPACE_LAUNCH_JWKS_URL: "https://workspace.example.test/api/integrations/workspace/v2/jwks", WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "LOCAL", DOCUMENT_SCANNER_PROVIDER: "MOCK", DOCUMENT_OCR_PROVIDER: "DISABLED" } as unknown as NodeJS.ProcessEnv;
+  const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_ISSUER: "https://workspace.example.test", WORKSPACE_LAUNCH_AUDIENCE: "itf-flow", WORKSPACE_LAUNCH_JWKS_URL: "https://workspace.example.test/api/integrations/workspace/v2/jwks", WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, WORKSPACE_APP_NAVIGATION_SECRET: secret, APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "LOCAL", DOCUMENT_SCANNER_PROVIDER: "MOCK", DOCUMENT_OCR_PROVIDER: "DISABLED" } as unknown as NodeJS.ProcessEnv;
   const issues = productionConfigurationIssues(env);
   assert.equal(issues.length, 3);
   assert.ok(issues.some((issue) => issue.includes("malware")));

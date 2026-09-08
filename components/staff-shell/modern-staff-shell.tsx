@@ -8,6 +8,7 @@ import { logoutAction } from "@/app/actions";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
+import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
 
 const navigationIcons: Record<string, typeof Home> = {
   "/dashboard": Home,
@@ -54,6 +55,7 @@ export function ModernStaffShell({ user, navigation, children }: {
         </details>
         <div className="modern-product"><strong>ITF Flow</strong><span>Correspondence workspace</span></div>
         <div className="modern-header-actions">
+          <WorkspaceAppSwitcher />
           <Link className="modern-create" href="/correspondence/new"><PenLine size={17} /> <span>Raise correspondence</span></Link>
           <Link className="modern-alert-button" href="/notifications" aria-label="Open notifications"><Bell size={20} />{navigation.find((item) => item.href === "/notifications")?.notificationCount ? <i /> : null}</Link>
           <div className="modern-user"><span>{initials}</span><div><strong>{user.name}</strong><small>{label(user.role)} · {user.office}</small></div></div>

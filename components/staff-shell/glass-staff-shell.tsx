@@ -5,6 +5,7 @@ import { logoutAction } from "@/app/actions";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
+import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
 
 function GlassNavigation({ navigation }: { navigation: StaffNavigationItem[] }) {
   return navigation.map((item) => <Link href={item.href} key={item.href}><span>{item.shortLabel}</span>{item.notificationCount ? <b>{item.notificationCount}</b> : null}</Link>);
@@ -14,10 +15,11 @@ export function GlassStaffShell({ user, navigation, children }: { user: User; na
   const initials = user.name.split(" ").slice(0, 2).map((part) => part[0]).join("");
   return <div className="glass-shell">
     <div className="glass-orb glass-orb-one" /><div className="glass-orb glass-orb-two" />
-    <header className="glass-header">
+    <header className={`glass-header${navigation.length >= 10 ? " glass-header-overflow" : ""}`}>
       <Link href="/dashboard" className="glass-brand"><span><Image src="/itf-logo.png" alt="Industrial Training Fund logo" width={40} height={40} priority /></span><div><strong>ITF Flow</strong><small>Digital correspondence</small></div></Link>
       <nav className="glass-nav" aria-label="Staff navigation"><GlassNavigation navigation={navigation} /></nav>
       <div className="glass-header-actions">
+        <WorkspaceAppSwitcher />
         <Link href="/correspondence" className="glass-search" aria-label="Search correspondence"><Search size={18} /><span>Search</span></Link>
         <Link href="/notifications" className="glass-circle" aria-label="Notifications"><Bell size={18} />{navigation.find((item) => item.href === "/notifications")?.notificationCount ? <i /> : null}</Link>
         <div className="glass-profile"><span>{initials}</span><div><strong>{user.name}</strong><small>{label(user.role)}</small></div></div>

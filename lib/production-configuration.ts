@@ -2,7 +2,7 @@ import { resolveWorkspaceLaunchReceiverConfiguration } from "@/lib/workspace-tok
 
 export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.env) {
   const issues: string[] = [];
-  const required = ["SESSION_SECRET", "WORKSPACE_DIRECTORY_SYNC_SECRET", "WORKSPACE_INTEROP_SECRET", "APPROVAL_SIGNING_SECRET", "EMAIL_WORKER_SECRET", "WORKFLOW_WORKER_SECRET", "DOCUMENT_WORKER_SECRET"];
+  const required = ["SESSION_SECRET", "WORKSPACE_DIRECTORY_SYNC_SECRET", "WORKSPACE_INTEROP_SECRET", "WORKSPACE_APP_NAVIGATION_SECRET", "APPROVAL_SIGNING_SECRET", "EMAIL_WORKER_SECRET", "WORKFLOW_WORKER_SECRET", "DOCUMENT_WORKER_SECRET"];
   for (const name of required) if ((env[name]?.length ?? 0) < 32) issues.push(`${name} is missing or too short`);
   try {
     resolveWorkspaceLaunchReceiverConfiguration({ ...env, NODE_ENV: "production" } as NodeJS.ProcessEnv);

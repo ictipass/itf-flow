@@ -48,6 +48,8 @@ async function currentSession() {
   return session;
 }
 
+export async function getCurrentStaffSession() { return currentSession(); }
+
 export async function elevateSession(userId: string) { const session = await currentSession(); if (!session || session.userId !== userId) throw new Error("Active session required."); await db.staffSession.update({ where: { id: session.id }, data: { stepUpUntil: new Date(Date.now() + 15 * 60_000) } }); }
 export async function hasActiveStepUp() { const session = await currentSession(); return Boolean(session?.stepUpUntil && session.stepUpUntil > new Date()); }
 export async function hasActiveEnterpriseMfa() {

@@ -4,6 +4,7 @@ import { logoutAction } from "@/app/actions";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
+import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
 
 export function ClassicStaffShell({ user, navigation, children }: {
   user: User;
@@ -27,7 +28,7 @@ export function ClassicStaffShell({ user, navigation, children }: {
       </div>
     </aside>
     <div className="main">
-      <header className="topbar"><div><strong>Industrial Training Fund</strong><br /><small className="muted">{user.office}</small></div><span className="badge">{label(user.role)}</span></header>
+      <header className="topbar"><div><strong>Industrial Training Fund</strong><br /><small className="muted">{user.office}</small></div><div className="classic-topbar-actions"><WorkspaceAppSwitcher /><span className="badge">{label(user.role)}</span></div></header>
       <main className="content">{children}</main>
     </div>
   </div>;
