@@ -37,6 +37,8 @@
   other entitled apps, uses same-tab navigation by default and preserves Ctrl/Cmd-click new-tab behavior.
 - [ ] Test the primary Flow sign-out returns to the Workspace catalogue without ending Workspace; test chevron cancel;
   then confirm global sign-out ends the current Workspace/Flow sessions while another device session remains active.
+- [ ] In a private browser, open Flow `/` and `/login`; confirm both staff calls to action reach the configured Workspace
+  login and the stakeholder portal remains separate.
 - [ ] Test mail intake/outbox, reminders/escalations, quarantine/release and provider failure behavior.
 - [ ] Run authorization, accessibility, security and production-like performance testing.
 - [ ] Run `npm run load:smoke` against the approved URL; separately test authenticated journeys, uploads and largest records.
