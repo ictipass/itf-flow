@@ -49,9 +49,9 @@ notifications, profile and logout controls.
 - `npm run typecheck`: passed.
 - `npm run build`: passed and includes `/api/workspace/apps`.
 
-Staging acceptance remains until both credentials are configured and the entitled/empty/error states, same/new-tab
-behavior and Glass responsive layouts are exercised. Flow logout remains child-app-only; this slice does not introduce
-a global logout action.
+ITF confirmed on 2026-09-08 that both credentials and commits were deployed and staging steps 1-9 completed
+successfully, including entitlement display, same/new-tab behavior and the responsive Glass layout. W28/S23B now adds
+the separately approved global logout action.
 
 ## Rollback
 
@@ -61,5 +61,5 @@ authorization.
 
 ## Next action
 
-Complete joint W27/S23A staging acceptance, then continue the A01 lifecycle exercise with replay rejection, role and
-assurance changes, central logout, entitlement revocation, duplicate delivery and outage/retry recovery.
+Deploy and accept W28/S23B, then continue the A01 lifecycle exercise with replay rejection, role and assurance changes,
+entitlement revocation, duplicate delivery and outage/retry recovery.

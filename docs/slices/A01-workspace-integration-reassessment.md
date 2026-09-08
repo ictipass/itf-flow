@@ -68,7 +68,7 @@ WORKSPACE_LAUNCH_TTL_SECONDS="120"
 WORKSPACE_LAUNCH_CLOCK_SKEW_SECONDS="30"
 WORKSPACE_MFA_STEP_UP_SECONDS="600"
 NEXT_PUBLIC_WORKSPACE_URL="https://itf-workspace-staging.vercel.app"
-NEXT_PUBLIC_WORKSPACE_LOGOUT_URL="https://itf-workspace-staging.vercel.app/logout"
+NEXT_PUBLIC_WORKSPACE_LOGOUT_URL="https://itf-workspace-staging.vercel.app/dashboard/apps"
 NEXT_PUBLIC_APP_URL="https://itf-flow-staging.vercel.app"
 STAFF_LOCAL_LOGIN_ENABLED="false"
 ALLOW_DEMO_SEED="false"
@@ -90,7 +90,7 @@ recovery, but it is acceptance evidence only and does not satisfy the controlled
 
 ## Verification
 
-- ITF Flow: TypeScript and ESLint pass; production build passes; 27/27 security, database-configuration and contract
+- ITF Flow: TypeScript and ESLint pass; production build passes; 30/30 security, database-configuration and contract
   tests pass.
 - ITF Workspace: TypeScript and ESLint pass; production build passes; 68/68 security and contract tests pass across
   13 suites.
@@ -134,7 +134,8 @@ On 2026-09-06, ITF confirmed that the matching Workspace staging integration con
 Workspace was redeployed. ITF Flow was registered, the administrator was granted its `SYSTEM_ADMIN` entitlement, the
 entitled user synchronized successfully, and a genuine Workspace-to-Flow launch completed. Provisioning and the first
 launch happy path are therefore accepted. Replay rejection, role and assurance changes, central logout, entitlement
-revocation, duplicate delivery and outage/retry recovery remain.
+revocation, duplicate delivery and outage/retry recovery remain. W28/S23B now provides the user-facing confirmed
+central-logout path for that acceptance exercise.
 
 ## UI effect
 

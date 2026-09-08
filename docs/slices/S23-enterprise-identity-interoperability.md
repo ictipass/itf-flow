@@ -70,7 +70,9 @@ subject, classification, sender, minute or document metadata.
 
 Launch trust uses Workspace's asymmetric JWKS. Directory synchronization and session events use two separate bearer
 credentials. `WORKSPACE_LAUNCH_ISSUER`, `WORKSPACE_LAUNCH_AUDIENCE`, `WORKSPACE_LAUNCH_JWKS_URL`,
-`STAFF_SESSION_IDLE_MINUTES` and `NEXT_PUBLIC_WORKSPACE_LOGOUT_URL` control trust, local idle expiry and central sign-out.
+`STAFF_SESSION_IDLE_MINUTES` controls local idle expiry. `NEXT_PUBLIC_WORKSPACE_LOGOUT_URL` is the same-origin
+Workspace catalogue destination after Flow-only sign-out; W28/S23B derives global sign-out from
+`NEXT_PUBLIC_WORKSPACE_URL` and requires Workspace confirmation.
 
 ITF Flow consumes identity and MFA assertions from Workspace but does not operate an OIDC provider. Production still
 requires managed keys/secrets, TLS, rotation, logout delivery, MFA policy and security testing.

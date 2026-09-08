@@ -23,6 +23,8 @@
   `ITF_FLOW_APP_NAVIGATION_SECRET`; do not reuse a launch, directory, session-event or worker credential.
 - [ ] Keep `NEXT_PUBLIC_WORKSPACE_URL` and `WORKSPACE_APP_SLUG` bound to the same staging Workspace and registry entry;
   optionally set the bounded `WORKSPACE_APP_NAVIGATION_TIMEOUT_MS` (3000 ms default, 500-10000 accepted).
+- [ ] Set `NEXT_PUBLIC_WORKSPACE_LOGOUT_URL` to the same-origin Workspace catalogue
+  (`https://itf-workspace-staging.vercel.app/dashboard/apps` for the approved staging environment).
 - [ ] Set runtime `DATABASE_URL` to the pooled Prisma Postgres URL and migration-only `DIRECT_URL` to its direct URL; store both as staging-scoped sensitive values.
 - [ ] Set `NODE_ENV=production`, `STAFF_LOCAL_LOGIN_ENABLED=false` and omit/set `ALLOW_DEMO_SEED=false`.
 - [ ] Do not run `npm run db:seed`.
@@ -33,6 +35,8 @@
 - [ ] Synchronize staging staff from Workspace; verify users have no local password and test MFA, entitlement revocation and central logout.
 - [ ] Relaunch Flow from Workspace, open the nine-dot app switcher in every enabled UI theme, and confirm it lists only
   other entitled apps, uses same-tab navigation by default and preserves Ctrl/Cmd-click new-tab behavior.
+- [ ] Test the primary Flow sign-out returns to the Workspace catalogue without ending Workspace; test chevron cancel;
+  then confirm global sign-out ends the current Workspace/Flow sessions while another device session remains active.
 - [ ] Test mail intake/outbox, reminders/escalations, quarantine/release and provider failure behavior.
 - [ ] Run authorization, accessibility, security and production-like performance testing.
 - [ ] Run `npm run load:smoke` against the approved URL; separately test authenticated journeys, uploads and largest records.
