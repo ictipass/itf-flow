@@ -6,6 +6,7 @@ import {
   isPostgresConnectionUrl,
   prismaPostgresConnectionKind,
 } from "../lib/database-url";
+import { resolveWorkspaceNavigationUrls } from "../lib/workspace-navigation-urls";
 
 const required = [
   "DATABASE_URL",
@@ -17,6 +18,7 @@ const required = [
   "WORKSPACE_INTEROP_SECRET",
   "WORKSPACE_APP_NAVIGATION_SECRET",
   "NEXT_PUBLIC_WORKSPACE_URL",
+  "NEXT_PUBLIC_WORKSPACE_LOGOUT_URL",
   "NEXT_PUBLIC_APP_URL",
 ] as const;
 
@@ -38,6 +40,11 @@ async function main() {
   if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER === "MOCK") errors.push("The mock document scanner is forbidden in production.");
   if (process.env.NODE_ENV === "production" && process.env.STAFF_LOCAL_LOGIN_ENABLED === "true") errors.push("STAFF_LOCAL_LOGIN_ENABLED must not be true for an approved production deployment.");
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED === "true") errors.push("ALLOW_DEMO_SEED must not be true in production.");
+  try {
+    resolveWorkspaceNavigationUrls(process.env);
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "Workspace navigation URLs are invalid.");
+  }
   if (process.env.DATABASE_URL && !isPostgresConnectionUrl(process.env.DATABASE_URL)) {
     errors.push("DATABASE_URL must use a valid postgres:// or postgresql:// connection URL.");
   }

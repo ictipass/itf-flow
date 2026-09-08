@@ -1,4 +1,5 @@
 import { resolveWorkspaceLaunchReceiverConfiguration } from "@/lib/workspace-token";
+import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 
 export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.env) {
   const issues: string[] = [];
@@ -8,6 +9,11 @@ export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.e
     resolveWorkspaceLaunchReceiverConfiguration({ ...env, NODE_ENV: "production" } as NodeJS.ProcessEnv);
   } catch (error) {
     issues.push(error instanceof Error ? error.message : "Workspace launch receiver configuration is invalid");
+  }
+  try {
+    resolveWorkspaceNavigationUrls({ ...env, NODE_ENV: "production" });
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : "Workspace navigation configuration is invalid");
   }
   if ((env.DOCUMENT_STORAGE_PROVIDER ?? "LOCAL") === "LOCAL") issues.push("managed document storage is not configured");
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED")) issues.push("a production malware scanner is not configured");

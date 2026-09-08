@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { logoutAction } from "@/app/actions";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
 import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
+import { SessionLogoutMenu } from "@/components/session-logout-menu";
 
 export function ClassicStaffShell({ user, navigation, children }: {
   user: User;
@@ -24,7 +24,7 @@ export function ClassicStaffShell({ user, navigation, children }: {
         <small style={{ opacity: .7 }}>Signed in as</small>
         <p style={{ margin: "5px 0 2px", fontWeight: 700 }}>{user.name}</p>
         <small style={{ opacity: .7 }}>{label(user.role)}</small>
-        <form action={logoutAction} style={{ marginTop: 16 }}><button className="btn secondary" type="submit" style={{ width: "100%" }}>Sign out</button></form>
+        <SessionLogoutMenu appearance="classic" />
       </div>
     </aside>
     <div className="main">

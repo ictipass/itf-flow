@@ -1,11 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, LogOut, Menu, PenLine, Search, Sparkles } from "lucide-react";
-import { logoutAction } from "@/app/actions";
+import { Bell, Menu, PenLine, Search, Sparkles } from "lucide-react";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
 import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
+import { SessionLogoutMenu } from "@/components/session-logout-menu";
 
 function GlassNavigation({ navigation }: { navigation: StaffNavigationItem[] }) {
   return navigation.map((item) => <Link href={item.href} key={item.href}><span>{item.shortLabel}</span>{item.notificationCount ? <b>{item.notificationCount}</b> : null}</Link>);
@@ -23,7 +23,7 @@ export function GlassStaffShell({ user, navigation, children }: { user: User; na
         <Link href="/correspondence" className="glass-search" aria-label="Search correspondence"><Search size={18} /><span>Search</span></Link>
         <Link href="/notifications" className="glass-circle" aria-label="Notifications"><Bell size={18} />{navigation.find((item) => item.href === "/notifications")?.notificationCount ? <i /> : null}</Link>
         <div className="glass-profile"><span>{initials}</span><div><strong>{user.name}</strong><small>{label(user.role)}</small></div></div>
-        <form action={logoutAction}><button className="glass-circle" title="Sign out"><LogOut size={18} /><span className="sr-only">Sign out</span></button></form>
+        <SessionLogoutMenu appearance="glass" />
       </div>
       <details className="glass-mobile-menu"><summary><Menu size={21} /><span className="sr-only">Open navigation</span></summary><nav><GlassNavigation navigation={navigation} /></nav></details>
     </header>

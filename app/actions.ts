@@ -38,6 +38,7 @@ import { approvalRequired, authorityMetadata, workAuthority } from "@/lib/delega
 import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, revisionDigest, signApprovalPayload, verifyApprovalSignature } from "@/lib/approval-signatures";
 import { ensurePurposeAllowed, resolveWorkflowPolicy } from "@/lib/workflow-templates";
 import { localStaffLoginEnabled } from "@/lib/authentication-policy";
+import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -147,7 +148,11 @@ export async function loginAction(formData: FormData) {
 
 export async function logoutAction() {
   await destroySession();
-  redirect(process.env.NEXT_PUBLIC_WORKSPACE_LOGOUT_URL ?? "/");
+  redirect(resolveWorkspaceNavigationUrls().flowLogoutReturnUrl);
+}
+
+export async function workspaceLogoutHandoffAction() {
+  redirect(resolveWorkspaceNavigationUrls().globalLogoutUrl);
 }
 
 export async function syncMailboxAction() {

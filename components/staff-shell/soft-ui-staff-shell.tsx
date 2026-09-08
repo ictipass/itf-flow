@@ -1,11 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Bell, LogOut, Menu, PenLine } from "lucide-react";
-import { logoutAction } from "@/app/actions";
+import { Bell, Menu, PenLine } from "lucide-react";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
 import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
+import { SessionLogoutMenu } from "@/components/session-logout-menu";
 
 function SoftNavigation({ navigation }: { navigation: StaffNavigationItem[] }) {
   return navigation.map((item) => <Link key={item.href} href={item.href}>
@@ -27,7 +27,7 @@ export function SoftUiStaffShell({ user, navigation, children }: {
         <WorkspaceAppSwitcher />
         <Link className="soft-icon-button" href="/notifications" aria-label="Notifications"><Bell size={19} />{navigation.find((item) => item.href === "/notifications")?.notificationCount ? <i /> : null}</Link>
         <div className="soft-profile"><span>{initials}</span><div><strong>{user.name}</strong><small>{label(user.role)}</small></div></div>
-        <form action={logoutAction}><button className="soft-icon-button" title="Sign out"><LogOut size={18} /><span className="sr-only">Sign out</span></button></form>
+        <SessionLogoutMenu appearance="soft" />
       </div>
       <details className="soft-mobile-menu"><summary aria-label="Open navigation"><Menu size={21} /></summary><nav><SoftNavigation navigation={navigation} /></nav></details>
     </header>

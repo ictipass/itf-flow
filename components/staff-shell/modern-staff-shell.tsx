@@ -2,13 +2,13 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   Bell, BookOpen, Boxes, Building2, FileClock, FilePlus2, Files, Home, Inbox,
-  LogOut, MailCheck, Megaphone, Menu, Palette, PenLine, Send, Settings2,
+  MailCheck, Megaphone, Menu, Palette, PenLine, Send, Settings2,
 } from "lucide-react";
-import { logoutAction } from "@/app/actions";
 import type { User } from "@/lib/generated/prisma/client";
 import { label } from "@/lib/reference";
 import type { StaffNavigationItem } from "@/lib/staff-navigation";
 import { WorkspaceAppSwitcher } from "@/components/workspace-app-switcher";
+import { SessionLogoutMenu } from "@/components/session-logout-menu";
 
 const navigationIcons: Record<string, typeof Home> = {
   "/dashboard": Home,
@@ -59,7 +59,7 @@ export function ModernStaffShell({ user, navigation, children }: {
           <Link className="modern-create" href="/correspondence/new"><PenLine size={17} /> <span>Raise correspondence</span></Link>
           <Link className="modern-alert-button" href="/notifications" aria-label="Open notifications"><Bell size={20} />{navigation.find((item) => item.href === "/notifications")?.notificationCount ? <i /> : null}</Link>
           <div className="modern-user"><span>{initials}</span><div><strong>{user.name}</strong><small>{label(user.role)} · {user.office}</small></div></div>
-          <form action={logoutAction}><button className="modern-logout" type="submit" title="Sign out"><LogOut size={19} /><span className="sr-only">Sign out</span></button></form>
+          <SessionLogoutMenu appearance="modern" />
         </div>
       </header>
       <main className="modern-content">{children}</main>
