@@ -41,8 +41,8 @@ another developer without depending on unfinished work from a later slice.
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Implemented | `ed5e171`; see [`slices/S23-enterprise-identity-interoperability.md`](slices/S23-enterprise-identity-interoperability.md) |
 | S23A | Workspace-entitled app switcher and responsive Glass header | Implemented | `4747f67`, Workspace `bc03856`; see [`slices/S23A-workspace-entitled-app-switcher.md`](slices/S23A-workspace-entitled-app-switcher.md) |
-| S23B | Split Flow-only and global Workspace sign-out | Implemented | `515e94c`, Workspace `453a0d3`; see [`slices/S23B-session-exit-scope.md`](slices/S23B-session-exit-scope.md) |
-| S23C | Public staff entry through Workspace | Implemented | `8ff3202`; see [`slices/S23C-public-workspace-staff-entry.md`](slices/S23C-public-workspace-staff-entry.md) |
+| S23B | Split Flow-only and global Workspace sign-out | Implemented and staging accepted | `515e94c`, Workspace `453a0d3`; accepted 2026-09-08; see [`slices/S23B-session-exit-scope.md`](slices/S23B-session-exit-scope.md) |
+| S23C | Public staff entry through Workspace | Implemented and staging accepted | `8ff3202`; accepted 2026-09-08; see [`slices/S23C-public-workspace-staff-entry.md`](slices/S23C-public-workspace-staff-entry.md) |
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
@@ -58,8 +58,9 @@ The machine handoff package and production-account separation were completed aft
 The joint Workspace A01 integration reassessment is implemented in Flow commit `02b433d` and Workspace commit
 `1a08a5b`. It adds upstream session-bound enforcement, immutable identity reconciliation, versioned payload-bound
 directory idempotency and session invalidation on role/status/assurance changes. Environment-separated staging
-configuration, provisioning and the first genuine launch were accepted on 2026-09-06. Replay, role/assurance change,
-central logout, entitlement revocation, duplicate delivery, outage/retry and continuous scheduling remain. See
+configuration, provisioning and the first genuine launch were accepted on 2026-09-06. Replay rejection and confirmed
+central logout were accepted on 2026-09-08. Role/assurance change, entitlement revocation, duplicate delivery,
+outage/retry and continuous scheduling remain. See
 [`slices/A01-workspace-integration-reassessment.md`](slices/A01-workspace-integration-reassessment.md).
 
 The Workspace-entitled child-app switcher is implemented in Flow commit `4747f67` and Workspace commit `bc03856`.
@@ -69,13 +70,18 @@ and joint UI/entitlement behavior were accepted on 2026-09-08. See [`slices/S23A
 
 Split session exit is implemented in Flow commit `515e94c` and Workspace commit `453a0d3`. The main Flow action ends
 Flow only and returns to the Workspace catalogue; its chevron hands confirmed global sign-out to Workspace and W04
-central revocation. Staging acceptance remains. See [`slices/S23B-session-exit-scope.md`](slices/S23B-session-exit-scope.md).
+central revocation. Staging acceptance passed on 2026-09-08. See [`slices/S23B-session-exit-scope.md`](slices/S23B-session-exit-scope.md).
 
 Direct public staff entry is implemented in `8ff3202`. Flow's landing and staff-login pages link to the validated
-environment-specific Workspace login; production local staff login remains disabled. Staging acceptance remains. See
+environment-specific Workspace login; production local staff login remains disabled. Staging acceptance passed on
+2026-09-08. See
 [`slices/S23C-public-workspace-staff-entry.md`](slices/S23C-public-workspace-staff-entry.md).
 
 ## Planned next slice
+
+**Immediate integration action — A01-02 role-change/mismatch acceptance:** use a dedicated staging identity and
+explicitly approved old/new Flow roles to prove an old session ends, a mismatched launch fails closed and only the
+reconciled approved role can launch. Do not alter the only recoverable Workspace administrator.
 
 **S24B - Real EDMS, malware-scanner and OCR adapters** is pending the external technical contract and test services.
 **S26 - Assurance, observability, load/security tests, backup recovery and pilot rollout** is implemented. External execution evidence and production sign-off remain pending.

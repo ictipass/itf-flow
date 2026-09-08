@@ -50,6 +50,10 @@ Deploy Workspace `453a0d3` first, then Flow `515e94c`. Test Flow-only exit, glob
 Flow session rejection after confirmation and preservation of a separate Workspace device session. Successful global
 delivery counts toward the open A01 central-logout staging evidence.
 
+Staging acceptance passed on 2026-09-08. Flow-only exit returned to the Workspace catalogue while retaining the
+central session; cancellation preserved active sessions; confirmed global logout revoked the current Workspace and
+matching Flow sessions; and a separate Workspace device session remained available. This accepts A01-04.
+
 ## Rollback
 
 Redeploy both preceding commits together. Retain the corrected catalogue return URL. No database rollback is required.

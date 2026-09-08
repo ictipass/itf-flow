@@ -133,9 +133,13 @@ environment.
 On 2026-09-06, ITF confirmed that the matching Workspace staging integration configuration was installed and
 Workspace was redeployed. ITF Flow was registered, the administrator was granted its `SYSTEM_ADMIN` entitlement, the
 entitled user synchronized successfully, and a genuine Workspace-to-Flow launch completed. Provisioning and the first
-launch happy path are therefore accepted. Replay rejection, role and assurance changes, central logout, entitlement
-revocation, duplicate delivery and outage/retry recovery remain. W28/S23B now provides the user-facing confirmed
-central-logout path for that acceptance exercise.
+launch happy path are therefore accepted.
+
+On 2026-09-08, ITF confirmed the replay and W28/W29 exercises behaved as expected. A consumed assertion reached only
+Flow's generic invalid-token result in a separate unauthenticated browser context and did not create a Flow session;
+no token value was retained. Confirmed global logout revoked the current Workspace session and its matching Flow
+session while a separate Workspace device session remained available. Replay rejection and central logout are
+accepted. Role and assurance changes, entitlement revocation, duplicate delivery and outage/retry recovery remain.
 
 ## UI effect
 
@@ -146,6 +150,7 @@ entitlement role.
 
 ## Readiness
 
-A01 code implementation, environment-separated staging configuration, provisioning and first launch are accepted.
-The remaining lifecycle exercise and a continuous retry scheduler remain gates. Until those pass, ITF Flow is not
-approved for a controlled pilot.
+A01 code implementation, environment-separated staging configuration, provisioning, first launch, replay rejection
+and confirmed central logout are accepted. Role/assurance change, entitlement revocation, duplicate delivery,
+outage/retry recovery and a continuous retry scheduler remain gates. Until those pass, ITF Flow is not approved for a
+controlled pilot.

@@ -34,7 +34,10 @@ Deploy `8ff3202` to Flow staging. In a private browser, verify both public links
 `https://itf-workspace-staging.vercel.app/login`; authenticate and verify Workspace still enforces the entitled app
 catalogue and signed Flow launch.
 
+Staging acceptance passed on 2026-09-08: both public entry points reached Workspace login, and the resulting catalogue
+and Flow launch retained entitlement enforcement.
+
 ## Next action
 
-Complete W28/W29 staging acceptance, then continue A01 lifecycle acceptance: replay rejection, role/assurance change,
-central logout, entitlement revocation, duplicate delivery and outage/retry recovery.
+Continue with A01-02 role-change/mismatch acceptance using a dedicated staging test identity and explicitly approved
+old/new Flow roles. Assurance increase, entitlement revocation, duplicate delivery and outage/retry recovery follow.
