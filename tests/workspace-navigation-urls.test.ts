@@ -13,6 +13,7 @@ describe("Workspace navigation URLs", () => {
       }),
       {
         workspaceOrigin: "https://workspace.example.test",
+        workspaceLoginUrl: "https://workspace.example.test/login",
         flowLogoutReturnUrl: "https://workspace.example.test/dashboard/apps",
         globalLogoutUrl: "https://workspace.example.test/logout",
       }

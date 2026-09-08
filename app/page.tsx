@@ -1,7 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
+import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 
 export default function HomePage() {
+  const { workspaceLoginUrl } = resolveWorkspaceNavigationUrls();
   return (
     <main className="hero">
       <section className="hero-copy">
@@ -23,7 +25,8 @@ export default function HomePage() {
         <div className="actions">
           <Link className="btn" href="/portal/login">Stakeholder portal</Link>
           <Link className="btn secondary" href="/submit">One-time submission</Link>
-          <Link className="btn secondary" href="/login">Staff sign in</Link>
+          <a className="btn" href={workspaceLoginUrl}>Staff sign in through Workspace</a>
+          <Link className="btn secondary" href="/login">Staff access help</Link>
         </div>
       </section>
     </main>

@@ -2,6 +2,7 @@ type WorkspaceNavigationEnvironment = Readonly<Record<string, string | undefined
 
 export type WorkspaceNavigationUrls = {
   workspaceOrigin: string;
+  workspaceLoginUrl: string;
   flowLogoutReturnUrl: string;
   globalLogoutUrl: string;
 };
@@ -44,6 +45,7 @@ export function resolveWorkspaceNavigationUrls(
 
   return {
     workspaceOrigin: workspace.origin,
+    workspaceLoginUrl: new URL("/login", workspace).toString(),
     flowLogoutReturnUrl: flowLogoutReturn.toString(),
     globalLogoutUrl: new URL("/logout", workspace).toString(),
   };

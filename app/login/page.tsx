@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { loginAction } from "@/app/actions";
 import { localStaffLoginEnabled } from "@/lib/authentication-policy";
+import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 
 export default async function LoginPage({
   searchParams,
@@ -10,6 +11,7 @@ export default async function LoginPage({
 }) {
   const { error } = await searchParams;
   const localEnabled = localStaffLoginEnabled();
+  const { workspaceLoginUrl } = resolveWorkspaceNavigationUrls();
   return (
     <main className="hero">
       <section className="hero-copy">
@@ -21,6 +23,9 @@ export default async function LoginPage({
       <section className="hero-panel">
         <h2>Sign in to ITF Flow</h2>
         {error ? <p className="notice">The sign-in or Workspace handoff could not be completed.</p> : null}
+        <a className="btn" href={workspaceLoginUrl} style={{ marginTop: 20 }}>
+          Continue to ITF Workspace
+        </a>
         {localEnabled ? <form action={loginAction} className="grid" style={{ marginTop: 20 }}>
           <div className="field">
             <label htmlFor="email">ITF email</label>
