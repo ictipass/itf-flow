@@ -1,6 +1,7 @@
 # S23E — Controlled staging acceptance
 
 Implemented 2026-09-17; joint live A01-06/A01-07 acceptance pending. Workspace dependency: W42.
+Implementation commits: Flow `c4cef48`; Workspace `b3a9ab5`.
 
 Adds an explicitly staging-only, default-off, one-identity diagnostic window of at most 24 hours. The authenticated
 session-event receiver can return one requested HTTP 503 for the pinned A01-07 revocation before database effects.
