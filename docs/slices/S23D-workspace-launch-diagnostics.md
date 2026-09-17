@@ -1,8 +1,12 @@
 # S23D — Safe Workspace launch failure diagnostics
 
-Status: **Implemented; staging diagnosis pending**
+Status: **Implemented; staging launch recovery accepted; diagnostic failure-path acceptance pending**
 
 Implementation commit: Flow `9577561`; matching Workspace preflight/runbooks `c992230`.
+
+ITF confirmed on 2026-09-17 that directory synchronization restored Workspace-to-Flow launch. This accepts operational
+launch recovery, not a code-specific rejection diagnosis or independent staging acceptance of failure logging.
+Remaining A01 entitlement-revocation, duplicate-delivery and outage/retry cases are still open.
 
 ## Use case
 
