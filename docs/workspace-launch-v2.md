@@ -35,6 +35,27 @@ HTTPS.
 6. The locally provisioned ITF Flow user must still be active and have exactly the asserted ITF Flow role. Immutable
    Workspace ID is authoritative; split ID/email matches, unknown users and role mismatches fail closed.
 
+## Handoff failure support procedure
+
+The login URL `error=invalid-token` is deliberately generic: it also covers provisioning and database/session failures.
+On S23D or later, capture the displayed UUID reference/time, then find `workspace_launch_failed` with that reference in
+Flow Vercel runtime logs. Never share the assertion URL or token. The record exposes only an allow-listed stage/code.
+
+| Code | Safe action |
+|---|---|
+| `USER_NOT_PROVISIONED`, `USER_INACTIVE`, `ROLE_MISMATCH` | Reconfirm central access is approved, examine pending revocations, then synchronize entitled staff from Workspace; never force active state in SQL |
+| `IDENTITY_CONFLICT`, `ROLE_UNSUPPORTED` | Escalate immutable identity or implemented-role reconciliation; no fallback |
+| `SIGNING_KEY_UNKNOWN`, `SIGNATURE_INVALID` | Check trusted JWKS and signer/key pairing; rotation uses a new `kid`; never disable verification |
+| `CLAIMS_INVALID`, `RECEIVER_CONFIGURATION_INVALID` | Compare exact deployed normalized issuer, audience and slug with registry/environment settings |
+| `TIMING_INVALID`, `TOKEN_REPLAYED` | Use a fresh Workspace launch with a live central session; check clocks if timing repeats |
+| `ASSURANCE_REQUIRED` | Complete fresh approved TOTP |
+| `JWKS_UNAVAILABLE`, `JWKS_RESPONSE_INVALID`, `TOKEN_VERIFICATION_FAILED` | Check Flow-to-Workspace HTTPS/key fetch and parser/configuration failures using the reference |
+| `DATABASE_UNAVAILABLE`, `SESSION_CREATION_FAILED`, `PROVISIONING_FAILED` | Check database pooling, migration/transaction behavior and Flow `SESSION_SECRET`; public readiness is not a launch transaction test |
+| `TOKEN_MALFORMED`, `HEADER_INVALID` | Start at Workspace and verify current v2 deployment |
+
+Synchronization affects all active Flow entitlements. A pending old revocation may disable a restored identity later;
+ordered/versioned lifecycle delivery remains a separate gate. Local env-file checks do not prove Vercel env scopes.
+
 ## Deployment gates
 
 - Workspace must use the same issuer and ITF Flow audience configured here.

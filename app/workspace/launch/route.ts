@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { StaffAuthenticationMethod, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { createSession } from "@/lib/session";
 import { verifyWorkspaceToken } from "@/lib/workspace-token";
 import { resolveProvisioningIdentity } from "@/lib/workspace-directory-contract";
+import { classifyWorkspaceLaunchFailure, WorkspaceLaunchFailure, type WorkspaceLaunchFailureStage } from "@/lib/workspace-launch-diagnostics";
 
 function roleFromWorkspace(value?: string | null) {
   return Object.values(UserRole).includes(value as UserRole)
@@ -16,24 +18,31 @@ export async function GET(request: Request) {
   const token = url.searchParams.get("workspace_launch_token");
   if (!token) return NextResponse.redirect(new URL("/login?error=missing-token", url));
 
+  const reference = randomUUID();
+  let stage: WorkspaceLaunchFailureStage = "VERIFY_TOKEN";
   try {
     const payload = await verifyWorkspaceToken(token);
+    stage = "PROVISIONING";
     const role = roleFromWorkspace(payload.entitlement.role);
-    if (!role) throw new Error("No valid ITF Flow role entitlement was supplied.");
+    if (!role) throw new WorkspaceLaunchFailure("ROLE_UNSUPPORTED");
     const user = await db.$transaction(async (tx) => {
       const email = payload.identity.email.toLowerCase();
       const [byWorkspaceId, byEmail] = await Promise.all([
         tx.user.findUnique({ where: { workspaceUserId: payload.sub } }),
         tx.user.findUnique({ where: { email } }),
       ]);
-      const resolution = resolveProvisioningIdentity(payload.sub, byWorkspaceId, byEmail);
+      let resolution: ReturnType<typeof resolveProvisioningIdentity>;
+      try {
+        resolution = resolveProvisioningIdentity(payload.sub, byWorkspaceId, byEmail);
+      } catch {
+        throw new WorkspaceLaunchFailure("IDENTITY_CONFLICT");
+      }
       if (resolution.operation === "create") {
-        throw new Error("Workspace user has not been provisioned in ITF Flow.");
+        throw new WorkspaceLaunchFailure("USER_NOT_PROVISIONED");
       }
       const provisionedUser = byWorkspaceId ?? byEmail;
-      if (!provisionedUser?.isActive || provisionedUser.role !== role) {
-        throw new Error("Workspace user is not actively provisioned for this role.");
-      }
+      if (!provisionedUser?.isActive) throw new WorkspaceLaunchFailure("USER_INACTIVE");
+      if (provisionedUser.role !== role) throw new WorkspaceLaunchFailure("ROLE_MISMATCH");
       const mappedUser = await tx.user.update({
         where: { id: resolution.userId },
         data: {
@@ -47,6 +56,7 @@ export async function GET(request: Request) {
           name: payload.identity.name ?? payload.identity.email,
         },
       });
+      stage = "REDEMPTION";
       await tx.launchTokenRedemption.create({
         data: {
           tokenId: payload.jti,
@@ -61,6 +71,7 @@ export async function GET(request: Request) {
     const mfaAuthenticatedAt = payload.authentication.methods.includes("totp") && payload.authentication.mfaAuthenticatedAt
       ? new Date(payload.authentication.mfaAuthenticatedAt * 1000)
       : undefined;
+    stage = "CREATE_SESSION";
     await createSession(user.id, {
       authenticationMethod: StaffAuthenticationMethod.WORKSPACE_LAUNCH,
       identityProvider: payload.iss,
@@ -72,10 +83,17 @@ export async function GET(request: Request) {
         ) * 1000
       ),
       mfaAuthenticatedAt,
-      correlationId: request.headers.get("x-correlation-id") ?? payload.jti,
+      correlationId: reference,
     });
     return NextResponse.redirect(new URL("/dashboard", url));
-  } catch {
-    return NextResponse.redirect(new URL("/login?error=invalid-token", url));
+  } catch (error) {
+    console.error(JSON.stringify({ event: "workspace_launch_failed", reference, stage, code: classifyWorkspaceLaunchFailure(error, stage) }));
+    const destination = new URL("/login", url);
+    destination.searchParams.set("error", "invalid-token");
+    destination.searchParams.set("reference", reference);
+    const response = NextResponse.redirect(destination);
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    return response;
   }
 }

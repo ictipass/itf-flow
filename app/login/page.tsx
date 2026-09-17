@@ -3,13 +3,14 @@ import Image from "next/image";
 import { loginAction } from "@/app/actions";
 import { localStaffLoginEnabled } from "@/lib/authentication-policy";
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
+import { validWorkspaceLaunchReference } from "@/lib/workspace-launch-diagnostics";
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; reference?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, reference } = await searchParams;
   const localEnabled = localStaffLoginEnabled();
   const { workspaceLoginUrl } = resolveWorkspaceNavigationUrls();
   return (
@@ -23,6 +24,7 @@ export default async function LoginPage({
       <section className="hero-panel">
         <h2>Sign in to ITF Flow</h2>
         {error ? <p className="notice">The sign-in or Workspace handoff could not be completed.</p> : null}
+        {error === "invalid-token" && validWorkspaceLaunchReference(reference) ? <p className="muted">Start a fresh launch from Workspace. If it fails again, give support this reference: <code>{reference}</code>. Do not share the launch URL or token.</p> : null}
         <a className="btn" href={workspaceLoginUrl} style={{ marginTop: 20 }}>
           Continue to ITF Workspace
         </a>
