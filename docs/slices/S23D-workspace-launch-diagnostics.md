@@ -2,6 +2,8 @@
 
 Status: **Implemented; staging diagnosis pending**
 
+Implementation commit: Flow `9577561`; matching Workspace preflight/runbooks `c992230`.
+
 ## Use case
 
 The `invalid-token` login error formerly hid every handoff failure, including correctly signed assertions rejected
