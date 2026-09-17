@@ -48,6 +48,11 @@
 
 ## Production go/no-go
 
+Controlled A01-06/A01-07 diagnostics belong only in the dedicated staging project. See
+[S23E configuration and cleanup](slices/S23E-controlled-staging-acceptance.md); matching Workspace runbook:
+`docs/acceptance/A01-staging-diagnostic-operations.md`. Finish pending diagnostic events before disabling the short
+window. Keep `WORKSPACE_STAGING_ACCEPTANCE_ENABLED=false` in real production.
+
 - [ ] S24B is complete if production document handling is in scope.
 - [ ] Every required assurance item is PASSED, current and tied to retained evidence.
 - [ ] Penetration, authorization, accessibility, load, backup/restore and disaster-recovery tests are accepted.

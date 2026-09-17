@@ -7,6 +7,7 @@ import {
   prismaPostgresConnectionKind,
 } from "../lib/database-url";
 import { resolveWorkspaceNavigationUrls } from "../lib/workspace-navigation-urls";
+import { stagingAcceptanceConfigurationIssues } from "../lib/workspace-staging-acceptance";
 
 const required = [
   "DATABASE_URL",
@@ -24,6 +25,7 @@ const required = [
 
 async function main() {
   const errors: string[] = [];
+  errors.push(...stagingAcceptanceConfigurationIssues());
   const warnings: string[] = [];
   const nodeMajor = Number(process.versions.node.split(".")[0]);
   if (nodeMajor < 20) errors.push(`Node.js ${process.versions.node} is unsupported; install Node.js 20.9 or newer.`);

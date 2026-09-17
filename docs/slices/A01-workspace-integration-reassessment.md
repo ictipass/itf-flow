@@ -151,6 +151,8 @@ entitlement role.
 ## Readiness
 
 A01 code implementation, environment-separated staging configuration, provisioning, first launch, replay rejection
-and confirmed central logout are accepted. Role/assurance change, entitlement revocation, duplicate delivery,
-outage/retry recovery and a continuous retry scheduler remain gates. Until those pass, ITF Flow is not approved for a
+and confirmed central logout are accepted. Role/assurance change were accepted on 2026-09-14; entitlement revocation
+and controlled regrant/synchronization were confirmed on 2026-09-17. Both browser-profile sessions rejected protected
+pages after revocation. [S23E](S23E-controlled-staging-acceptance.md) and Workspace W42 provide controlled diagnostics,
+but live duplicate-delivery/outage-retry acceptance and continuous scheduling remain gates. Flow is not approved for a
 controlled pilot.

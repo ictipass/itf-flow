@@ -44,6 +44,7 @@ another developer without depending on unfinished work from a later slice.
 | S23B | Split Flow-only and global Workspace sign-out | Implemented and staging accepted | `515e94c`, Workspace `453a0d3`; accepted 2026-09-08; see [`slices/S23B-session-exit-scope.md`](slices/S23B-session-exit-scope.md) |
 | S23C | Public staff entry through Workspace | Implemented and staging accepted | `8ff3202`; accepted 2026-09-08; see [`slices/S23C-public-workspace-staff-entry.md`](slices/S23C-public-workspace-staff-entry.md) |
 | S23D | Safe Workspace handoff failure diagnostics | Implemented; staging launch recovery accepted | `9577561`; matching Workspace `c992230`; synchronization restored launch, confirmed 2026-09-17. Independent diagnostic failure-path acceptance remains; 33 security tests and full verification passed; no verification bypass. See [`slices/S23D-workspace-launch-diagnostics.md`](slices/S23D-workspace-launch-diagnostics.md) |
+| S23E | Controlled staging lifecycle acceptance profile | Implemented locally; live acceptance pending | 36 Flow regressions/full verification passed; Workspace W42; one pinned ordinary identity, staging-only expiring flags, authenticated pre-side-effect 503 and read-only bounded observations. No migration/new secret; live A01-06/A01-07 pending. See [slice](slices/S23E-controlled-staging-acceptance.md) |
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
@@ -60,8 +61,9 @@ The joint Workspace A01 integration reassessment is implemented in Flow commit `
 `1a08a5b`. It adds upstream session-bound enforcement, immutable identity reconciliation, versioned payload-bound
 directory idempotency and session invalidation on role/status/assurance changes. Environment-separated staging
 configuration, provisioning and the first genuine launch were accepted on 2026-09-06. Replay rejection and confirmed
-central logout were accepted on 2026-09-08. Role/assurance change, entitlement revocation, duplicate delivery,
-outage/retry and continuous scheduling remain. See
+central logout were accepted on 2026-09-08. Role/assurance change were accepted on 2026-09-14; entitlement revocation,
+both-browser-profile denial and controlled regrant/synchronization were confirmed on 2026-09-17. S23E/Workspace W42
+provide diagnostics, but live duplicate-delivery/outage-retry acceptance and continuous scheduling remain. See
 [`slices/A01-workspace-integration-reassessment.md`](slices/A01-workspace-integration-reassessment.md).
 
 The Workspace-entitled child-app switcher is implemented in Flow commit `4747f67` and Workspace commit `bc03856`.

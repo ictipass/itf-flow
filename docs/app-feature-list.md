@@ -25,3 +25,7 @@
 | Assurance dashboard and health endpoints | ICT separates process liveness/readiness from formal production approval and records external evidence. | System administrators, operations | Tooling does not replace penetration tests, recovery drills or sign-off. |
 
 For role-by-role operation, see `docs/user-guide.md`. For delivered commits and remaining dependencies, see `docs/implementation-slice-register.md`.
+
+S23E provides an authenticated, temporary one-test-identity staging diagnostic profile for joint duplicate-event and
+outage/retry acceptance. It is not a production feature, general replay API or continuous scheduler.
+See [configuration and remaining evidence](slices/S23E-controlled-staging-acceptance.md).

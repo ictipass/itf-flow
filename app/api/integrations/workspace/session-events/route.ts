@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { IntegrationEventType } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { correlationId, serviceAuthorized } from "@/lib/integration-auth";
+import { allowedStagingEvent } from "@/lib/workspace-staging-acceptance";
 import {
   sessionRevocationSelector,
   workspaceSessionEventSchema,
@@ -16,6 +17,18 @@ export async function POST(request: Request) {
   const expectedAppSlug = process.env.WORKSPACE_APP_SLUG?.trim() || "itf-flow";
   if (parsed.data.targetAppSlug !== expectedAppSlug) {
     return response({ error: "Session event is not addressed to this application." }, 400);
+  }
+
+  const diagnostic = parsed.data.reason.startsWith("STAGING_A01_");
+  const faultRequested = request.headers.get("x-itf-staging-receiver-failure") === "once";
+  if (diagnostic && parsed.data.type !== "ENTITLEMENT_REVOKED") return response({ error: "Invalid diagnostic event type" }, 400);
+  if (diagnostic && !allowedStagingEvent(parsed.data)) return response({ error: "Diagnostic disabled" }, 404);
+  if (faultRequested) {
+    if (!allowedStagingEvent(parsed.data) || !parsed.data.reason.startsWith("STAGING_A01_07:")) {
+      return response({ error: "Invalid diagnostic failure request" }, 400);
+    }
+    // One authenticated request fails before any durable side effect; later normal retries are unaffected.
+    return response({ error: "Bounded staging receiver failure" }, 503);
   }
 
   const result = await db.$transaction(async (tx) => {
