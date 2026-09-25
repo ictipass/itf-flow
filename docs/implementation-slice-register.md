@@ -48,7 +48,7 @@ another developer without depending on unfinished work from a later slice.
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
-| S27 | Recipient Department Secretary routing and controlled classification escalation | Implemented locally | Migration applied; 40 assurance tests and full verification passed; see [`slices/S27-department-secretariat-routing.md`](slices/S27-department-secretariat-routing.md) |
+| S27 | Recipient Department Secretary routing and controlled classification escalation | Implemented | `696eb0d`; migration applied; 40 assurance tests and full verification passed; see [`slices/S27-department-secretariat-routing.md`](slices/S27-department-secretariat-routing.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
@@ -83,7 +83,7 @@ environment-specific Workspace login; production local staff login remains disab
 
 ## Planned next slice
 
-**Priority 1 delivery sequence:** S27 recipient Department Secretary routing is implemented locally. The next
+**Priority 1 delivery sequence:** S27 recipient Department Secretary routing is implemented. The next
 bounded slice is provider-backed private document storage (Vercel Blob or S3-compatible AWS storage) while retaining
 the S24A quarantine/release boundary. It will be followed by the auditor evidence pack, approved visual-signature
 profile/output controls, document annotation, and the installable PWA baseline. Real EDMS integration remains S24B
