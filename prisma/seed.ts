@@ -13,6 +13,10 @@ const demoUsers = [
   { staffNumber: "ITF/ICT/001", email: "director.ict@itf.gov.ng", name: "Director ICT", role: UserRole.DIRECTOR, office: "Headquarters", department: "ICT", position: "Director ICT", hierarchyLevel: 4 },
   { staffNumber: "ITF/RIC/001", email: "director.ric@itf.gov.ng", name: "Director Revenue, Inspectorate and Compliance", role: UserRole.DIRECTOR, office: "Headquarters", department: "Revenue, Inspectorate and Compliance", position: "Director RIC", hierarchyLevel: 4 },
   { staffNumber: "ITF/SDO/001", email: "director.sdo@itf.gov.ng", name: "Director SDO", role: UserRole.DIRECTOR, office: "Headquarters", department: "Service Development and Operations", position: "Director SDO", hierarchyLevel: 4 },
+  { staffNumber: "ITF/HR/005", email: "secretary.hr@itf.gov.ng", name: "HR Department Secretary", role: UserRole.OFFICER, office: "Headquarters", department: "Human Resources", position: "Department Secretary", hierarchyLevel: 1 },
+  { staffNumber: "ITF/ICT/005", email: "secretary.ict@itf.gov.ng", name: "ICT Department Secretary", role: UserRole.OFFICER, office: "Headquarters", department: "ICT", position: "Department Secretary", hierarchyLevel: 1 },
+  { staffNumber: "ITF/RIC/005", email: "secretary.ric@itf.gov.ng", name: "RIC Department Secretary", role: UserRole.OFFICER, office: "Headquarters", department: "Revenue, Inspectorate and Compliance", position: "Department Secretary", hierarchyLevel: 1 },
+  { staffNumber: "ITF/SDO/005", email: "secretary.sdo@itf.gov.ng", name: "SDO Department Secretary", role: UserRole.OFFICER, office: "Headquarters", department: "Service Development and Operations", position: "Department Secretary", hierarchyLevel: 1 },
   { staffNumber: "ITF/ICT/010", email: "head.pass@itf.gov.ng", name: "Head PASS Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "PASS", position: "Division Head", hierarchyLevel: 3 },
   { staffNumber: "ITF/ICT/011", email: "head.ncs@itf.gov.ng", name: "Head NCS Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "NCS", position: "Division Head", hierarchyLevel: 3 },
   { staffNumber: "ITF/ICT/012", email: "head.hardware@itf.gov.ng", name: "Head Hardware Division", role: UserRole.DIVISION_HEAD, office: "Headquarters", department: "ICT", division: "Hardware", position: "Division Head", hierarchyLevel: 3 },
@@ -28,6 +32,10 @@ const reportingLines: Record<string, string> = {
   "director.hr@itf.gov.ng": "dg@itf.gov.ng",
   "director.ric@itf.gov.ng": "dg@itf.gov.ng",
   "director.sdo@itf.gov.ng": "dg@itf.gov.ng",
+  "secretary.hr@itf.gov.ng": "director.hr@itf.gov.ng",
+  "secretary.ict@itf.gov.ng": "director.ict@itf.gov.ng",
+  "secretary.ric@itf.gov.ng": "director.ric@itf.gov.ng",
+  "secretary.sdo@itf.gov.ng": "director.sdo@itf.gov.ng",
   "head.pass@itf.gov.ng": "director.ict@itf.gov.ng",
   "head.ncs@itf.gov.ng": "director.ict@itf.gov.ng",
   "head.hardware@itf.gov.ng": "director.ict@itf.gov.ng",
@@ -59,6 +67,23 @@ async function main() {
     });
   }
 
+  const administratorId = userIds.get("admin@itf.gov.ng")!;
+  const departmentSecretaries = [
+    { department: "Human Resources", email: "secretary.hr@itf.gov.ng" },
+    { department: "ICT", email: "secretary.ict@itf.gov.ng" },
+    { department: "Revenue, Inspectorate and Compliance", email: "secretary.ric@itf.gov.ng" },
+    { department: "Service Development and Operations", email: "secretary.sdo@itf.gov.ng" },
+  ];
+  for (const assignment of departmentSecretaries) {
+    const secretaryId = userIds.get(assignment.email)!;
+    const departmentKey = `name:${assignment.department.toLocaleLowerCase("en-NG")}`;
+    await db.departmentSecretaryAssignment.upsert({
+      where: { departmentKey },
+      update: { departmentName: assignment.department, secretaryId, assignedById: administratorId, reason: "Seeded for the disposable management demonstration.", isActive: true },
+      create: { departmentKey, departmentName: assignment.department, secretaryId, assignedById: administratorId, reason: "Seeded for the disposable management demonstration." },
+    });
+  }
+
   const allCategories = Object.values(BroadcastCategory);
   const grantSpecs = [
     { email: "dg@itf.gov.ng", scopeType: BroadcastScopeType.ORGANIZATION, scopeValue: null, allowedCategories: allCategories, canRequireAcknowledgement: true },
@@ -74,7 +99,7 @@ async function main() {
   await db.broadcastPublisherGrant.deleteMany({ where: { userId: { in: grantSpecs.flatMap((grant) => userIds.get(grant.email) ? [userIds.get(grant.email)!] : []) } } });
   await db.broadcastPublisherGrant.createMany({ data: grantSpecs.map(({ email, ...grant }) => ({ ...grant, userId: userIds.get(email)! })) });
 
-  console.log(`Seeded ${demoUsers.length} ITF Flow demo users, reporting lines, and ${grantSpecs.length} broadcast grants.`);
+  console.log(`Seeded ${demoUsers.length} ITF Flow demo users, reporting lines, ${departmentSecretaries.length} Department Secretary assignments, and ${grantSpecs.length} broadcast grants.`);
 }
 
 main().finally(() => db.$disconnect());

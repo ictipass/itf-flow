@@ -1,8 +1,8 @@
 # ITF Flow — Next Implementation Slices
 
 > Historical planning detail: this document preserves slice design context. The authoritative current status is
-> `docs/implementation-slice-register.md`; S01-S26 are implemented, S24B is the only outstanding implementation
-> slice, and external S26 assurance evidence remains pending.
+> `docs/implementation-slice-register.md`; S01-S26 are implemented, S27 is the current Priority-1 local delivery,
+> S24B still awaits real external contracts, and external S26 assurance evidence remains pending.
 
 Slices are ordered so each one produces a demonstrable, testable increment.
 

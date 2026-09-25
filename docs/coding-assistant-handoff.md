@@ -18,7 +18,7 @@ git log -5 --oneline
 npm ci
 ```
 
-At creation, the last delivered slice was S26 at implementation commit `41f274f`, recorded by `2102582`; the portable handoff and production-account hardening are in `b5af0cb`. Confirm that `docs/implementation-slice-register.md` records the current state and accept a later intentional commit.
+At creation, the last committed delivery was S26 at implementation commit `41f274f`, recorded by `2102582`; the portable handoff and production-account hardening are in `b5af0cb`. S27 recipient Department Secretary routing may be present as a later local or committed change. Confirm that `docs/implementation-slice-register.md` records the current state and accept a later intentional commit.
 
 Use Node.js 22 LTS on the replacement machine. The previous Windows host used Node 24.18.1 and `tsx` sometimes failed before loading tests with `uv_os_get_passwd returned ENOMEM`; that was a host/runtime failure, not a passed or failed assertion.
 
@@ -38,7 +38,7 @@ Use Node.js 22 LTS on the replacement machine. The previous Windows host used No
 
 ## Current state and boundaries
 
-- S01–S26 are implemented; S24B is the only unimplemented registered slice.
+- S01–S26 are implemented; S27 is the current Priority-1 delivery and S24B remains externally blocked.
 - S24B is blocked on real EDMS, malware-scanner and OCR contracts/test services.
 - S26 provides assurance tooling, not fabricated evidence. Production is a no-go until every required assurance check is PASSED and current.
 - Local disk, disabled/mock scanning, demo accounts and `Demo123!` are not production facilities.

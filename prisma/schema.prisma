@@ -221,6 +221,7 @@ enum EventType {
   REFERRED
   DECISION_REQUESTED
   DECISION_RECORDED
+  CLASSIFICATION_CHANGED
   REVISED
   DISPATCH_PREPARED
   DISPATCHED
@@ -347,12 +348,32 @@ model User {
   activatedWorkflowVersions        WorkflowTemplateVersion[]  @relation("WorkflowVersionActivator")
   managedWorkflowCategories        WorkflowCategory[]
   assuranceChecks                  AssuranceCheck[]           @relation("AssuranceCheckUpdater")
+  departmentSecretaryAssignments  DepartmentSecretaryAssignment[] @relation("DepartmentSecretary")
+  assignedDepartmentSecretaries   DepartmentSecretaryAssignment[] @relation("DepartmentSecretaryAssigner")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
   @@index([workspaceDepartmentId])
   @@index([workspaceDivisionId])
   @@index([workspaceUnitId])
+}
+
+model DepartmentSecretaryAssignment {
+  id             String   @id @default(cuid())
+  departmentKey  String   @unique
+  departmentName String
+  secretaryId    String
+  assignedById   String
+  reason         String
+  isActive       Boolean  @default(true)
+  version        Int      @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  secretary      User     @relation("DepartmentSecretary", fields: [secretaryId], references: [id], onDelete: Restrict)
+  assignedBy     User     @relation("DepartmentSecretaryAssigner", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  @@index([secretaryId, isActive])
+  @@index([isActive, departmentName])
 }
 
 enum DocumentProcessingStatus {

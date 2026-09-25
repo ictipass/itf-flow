@@ -7,6 +7,7 @@
 | Registration and stable references | A validated incoming letter receives a searchable ITF reference and enters DG workflow. | Secretariat, Records | Reference ownership and retention require governance approval. |
 | Hierarchical routing and minutes | An officer sends to the Unit Head and each subsequent manager records a reason/instruction. | Staff leadership chain | Workspace reporting lines must be authoritative. |
 | Multi-recipient action/copy | One recipient owns treatment while others receive auditable visibility. | All staff | Authorization remains server-side. |
+| Recipient Department Secretary routing | DG/Director Public/Internal routing automatically gives the recipient department's assigned Secretary a tracking copy; Confidential/Secret routing suppresses copies. | DG, Directors, Department Secretaries, system administrators | Workspace/HR should become the authoritative assignment source. |
 | Review, concurrence and approval | A Director requests a formal, separately recorded decision instead of treating ordinary routing as approval. | Directors, DG, authorized delegates | Current HMAC assertion is not a PKI-qualified signature. |
 | Immutable revisions | Returned correspondence is corrected as a new version without rewriting the earlier official record. | Originators, reviewers | Retention/legal policy must approve lifecycle. |
 | Dispatch registry | Secretariat records channel, recipient, outgoing reference and delivery state for approved correspondence. | Secretariat, Records | SMTP acceptance is not recipient delivery confirmation. |

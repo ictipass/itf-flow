@@ -99,6 +99,10 @@ routing capabilities without creating work. See the [`S25 delivery note`](docs/s
 The [`comprehensive user and stakeholder demo guide`](docs/user-guide.md) explains each role, expected controls,
 the recommended live-demo sequence, and the current production boundaries.
 
+Recipient-department Secretariat routing is documented in the
+[`S27 delivery note`](docs/slices/S27-department-secretariat-routing.md): DG/Director Public/Internal movements
+automatically copy the assigned recipient Department Secretary, while Confidential/Secret movements suppress copies.
+
 Time-bound delegations and acting appointments provide a separate acting-office inbox while retaining the
 substantive desk as owner. Approval must be explicitly delegated, every action has dual attribution, and local
 appointment administration remains interim until HR/Workspace supplies authoritative dates.

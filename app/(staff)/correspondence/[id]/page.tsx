@@ -190,6 +190,10 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <form action={routeCorrespondenceAction} className="grid">
                 <input type="hidden" name="correspondenceId" value={record.id} />
                 <div className="field"><label>Routing purpose</label><select name="workPurpose" defaultValue="ACTION"><option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option></select></div>
+                {authorityRole === UserRole.DG || authorityRole === UserRole.DIRECTOR ? <>
+                  <div className="field"><label>Distribution classification</label><select name="routeClassification" defaultValue={record.classification}><option value={record.classification}>Keep {label(record.classification)}</option>{record.classification === "PUBLIC" || record.classification === "INTERNAL" ? <option value="CONFIDENTIAL">Mark Confidential</option> : null}</select><small className="muted">Public/Internal routing automatically copies the recipient department Secretary. Confidential/Secret routing creates no copies; the DG must send it to a Director.</small></div>
+                  <div className="field"><label>Classification reason, when changing</label><textarea name="classificationReason" minLength={10} maxLength={500} placeholder="State why this correspondence must be handled as Confidential…" /></div>
+                </> : null}
                 <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
                 <div className="field">
                   <RecipientSelector

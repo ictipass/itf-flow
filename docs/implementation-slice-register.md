@@ -48,6 +48,7 @@ another developer without depending on unfinished work from a later slice.
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
+| S27 | Recipient Department Secretary routing and controlled classification escalation | Implemented locally | Migration applied; 40 assurance tests and full verification passed; see [`slices/S27-department-secretariat-routing.md`](slices/S27-department-secretariat-routing.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
@@ -82,6 +83,12 @@ environment-specific Workspace login; production local staff login remains disab
 
 ## Planned next slice
 
+**Priority 1 delivery sequence:** S27 recipient Department Secretary routing is implemented locally. The next
+bounded slice is provider-backed private document storage (Vercel Blob or S3-compatible AWS storage) while retaining
+the S24A quarantine/release boundary. It will be followed by the auditor evidence pack, approved visual-signature
+profile/output controls, document annotation, and the installable PWA baseline. Real EDMS integration remains S24B
+and must not be simulated without its approved contract and test service.
+
 **Immediate integration action — A01-02 role-change/mismatch acceptance:** use a dedicated staging identity and
 explicitly approved old/new Flow roles to prove an old session ends, a mismatched launch fails closed and only the
 reconciled approved role can launch. Do not alter the only recoverable Workspace administrator.
@@ -105,6 +112,12 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S24B | Real EDMS, malware scanning, quarantine and OCR adapters | Requires external contracts and test services |
 | S25 | Configurable workflow templates, SLAs and simulation | Requires stable business-rule ownership |
 | S26 | Assurance, observability, load/security tests, backup recovery and pilot rollout | Final production gate |
+| S27 | Recipient Department Secretary routing and controlled classification escalation | Priority 1; locally administered until authoritative Workspace/HR sync |
+| S28 | Provider-backed private document storage | Priority 1; Vercel Blob/S3 selection behind the S24A provider boundary |
+| S29 | Auditor correspondence evidence pack | Priority 1; depends on stable revisions, passage and storage |
+| S30 | Approved visual-signature profile and memo output | Priority 1; depends on signature policy and evidence-pack renderer |
+| S31 | In-document annotation and signing workflow | Priority 1; must preserve original and immutable annotated versions |
+| S32 | Installable PWA baseline and notification readiness | Priority 1; push delivery requires approved service-worker and subscription operations |
 
 ## Readiness tracks that remain active across all slices
 

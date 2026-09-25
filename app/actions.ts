@@ -39,6 +39,7 @@ import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, revisionDigest
 import { ensurePurposeAllowed, resolveWorkflowPolicy } from "@/lib/workflow-templates";
 import { localStaffLoginEnabled } from "@/lib/authentication-policy";
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
+import { resolveAutomaticDepartmentSecretaries, routingClassification, validateConfidentialRoute } from "@/lib/department-secretaries";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -278,7 +279,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
         where: { id: { in: actionRecipientIds }, isActive: true },
         orderBy: { hierarchyLevel: "desc" },
       });
-  const copyRecipients = await db.user.findMany({
+  const explicitCopyRecipients = await db.user.findMany({
     where: { id: { in: copyRecipientIds }, isActive: true },
     orderBy: { name: "asc" },
   });
@@ -287,10 +288,19 @@ export async function registerCorrespondenceAction(formData: FormData) {
     !actionRecipients.length ||
     (!isSecretariatIntake &&
       actionRecipients.length !== new Set(actionRecipientIds).size) ||
-    copyRecipients.length !== new Set(copyRecipientIds).size
+    explicitCopyRecipients.length !== new Set(copyRecipientIds).size
   ) {
     throw new Error("Select at least one valid recipient.");
   }
+
+  validateConfidentialRoute({ actorRole: user.role, classification: parsed.classification, actionRecipientRoles: actionRecipients.map((recipient) => recipient.role), explicitCopyCount: copyRecipientIds.length });
+  const automaticSecretaries = isSecretariatIntake ? [] : await resolveAutomaticDepartmentSecretaries({ actorRole: user.role, classification: parsed.classification, actionRecipients });
+  const automaticSecretaryIds = new Set(automaticSecretaries.map((item) => item.secretary.id));
+  const copyRecipients = [...new Map(
+    [...explicitCopyRecipients, ...automaticSecretaries.map((item) => item.secretary)]
+      .filter((recipient) => !actionRecipients.some((actionRecipient) => actionRecipient.id === recipient.id))
+      .map((recipient) => [recipient.id, recipient]),
+  ).values()];
 
   const instruction = String(formData.get("instruction") ?? "").trim();
   const purpose = isSecretariatIntake ? WorkPurpose.ACTION : workPurpose(formData);
@@ -363,7 +373,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
           correspondenceId: created.id,
           assigneeId: recipient.id,
           kind: RecipientKind.COPY,
-          instruction: "For your information.",
+          instruction: automaticSecretaryIds.has(recipient.id) ? "For recipient department secretariat tracking." : "For your information.",
           dueAt: created.dueAt,
       },
     })));
@@ -405,6 +415,8 @@ export async function registerCorrespondenceAction(formData: FormData) {
         metadata: {
           actionRecipientIds: actionRecipients.map((recipient) => recipient.id),
           copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
+          automaticDepartmentSecretaryIds: [...automaticSecretaryIds],
+          departmentSecretaryAssignmentIds: automaticSecretaries.map((item) => item.assignmentId),
           routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
           workPurpose: purpose,
         },
@@ -839,7 +851,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
   }
   const authority = await workAuthority({ correspondenceId, actor: user });
   if (!authority || !canMinute(authority.principal.role)) throw new Error("You do not hold current authority to route this correspondence.");
-  const [record, actionRecipients, copyRecipients] = await Promise.all([
+  const [record, actionRecipients, explicitCopyRecipients] = await Promise.all([
     db.correspondence.findUnique({ where: { id: correspondenceId } }),
     db.user.findMany({ where: { id: { in: actionRecipientIds }, isActive: true } }),
     db.user.findMany({ where: { id: { in: copyRecipientIds }, isActive: true } }),
@@ -847,10 +859,22 @@ export async function routeCorrespondenceAction(formData: FormData) {
   if (
     !record ||
     actionRecipients.length !== new Set(actionRecipientIds).size ||
-    copyRecipients.length !== new Set(copyRecipientIds).size
+    explicitCopyRecipients.length !== new Set(copyRecipientIds).size
   ) {
     throw new Error("Invalid routing request.");
   }
+  const effectiveClassification = routingClassification({ actorRole: authority.principal.role, current: record.classification, requested: String(formData.get("routeClassification") ?? "") || null });
+  const classificationChanged = effectiveClassification !== record.classification;
+  const classificationReason = String(formData.get("classificationReason") ?? "").trim();
+  if (classificationChanged && classificationReason.length < 10) throw new Error("Give a classification reason of at least 10 characters.");
+  validateConfidentialRoute({ actorRole: authority.principal.role, classification: effectiveClassification, actionRecipientRoles: actionRecipients.map((recipient) => recipient.role), explicitCopyCount: copyRecipientIds.length });
+  const automaticSecretaries = await resolveAutomaticDepartmentSecretaries({ actorRole: authority.principal.role, classification: effectiveClassification, actionRecipients });
+  const automaticSecretaryIds = new Set(automaticSecretaries.map((item) => item.secretary.id));
+  const copyRecipients = [...new Map(
+    [...explicitCopyRecipients, ...automaticSecretaries.map((item) => item.secretary)]
+      .filter((recipient) => !actionRecipients.some((actionRecipient) => actionRecipient.id === recipient.id))
+      .map((recipient) => [recipient.id, recipient]),
+  ).values()];
   const routingPolicy = await evaluateActionRouting({
       actorId: authority.principal.id,
       actorRole: authority.principal.role,
@@ -869,6 +893,27 @@ export async function routeCorrespondenceAction(formData: FormData) {
   }
   const context = await requestContext();
   await db.$transaction(async (tx) => {
+    let classificationRevisionVersion: number | null = null;
+    if (classificationChanged) {
+      await tx.correspondence.update({ where: { id: correspondenceId }, data: { classification: effectiveClassification } });
+      const revision = await captureRevision(tx, correspondenceId, user.id, classificationReason);
+      classificationRevisionVersion = revision.version;
+      await tx.decisionRequest.updateMany({
+        where: { correspondenceId, outcome: { in: [DecisionOutcome.RECOMMENDED, DecisionOutcome.CONCURRED, DecisionOutcome.APPROVED] }, supersededAt: null },
+        data: { supersededAt: new Date(), supersededByVersion: revision.version },
+      });
+      await tx.correspondenceEvent.create({ data: {
+        correspondenceId,
+        actorId: user.id,
+        actorType: ActorType.STAFF,
+        type: EventType.CLASSIFICATION_CHANGED,
+        fromStatus: record.status,
+        toStatus: record.status,
+        minute: classificationReason,
+        metadata: { fromClassification: record.classification, toClassification: effectiveClassification, version: revision.version, ...authorityMetadata(authority) },
+        ...context,
+      } });
+    }
     await tx.workItem.updateMany({
       where: { correspondenceId, assigneeId: authority.item.assigneeId, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
@@ -890,7 +935,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
           correspondenceId,
           assigneeId: recipient.id,
           kind: RecipientKind.COPY,
-          instruction: "For your information.",
+          instruction: automaticSecretaryIds.has(recipient.id) ? "For recipient department secretariat tracking." : "For your information.",
           dueAt: record.dueAt,
       },
     })));
@@ -911,6 +956,7 @@ export async function routeCorrespondenceAction(formData: FormData) {
       data: {
         status: CorrespondenceStatus.ASSIGNED,
         currentOwnerId: actionRecipients[0].id,
+        classification: effectiveClassification,
         requiresApproval: purpose === WorkPurpose.APPROVAL ? true : record.requiresApproval,
       },
     });
@@ -929,7 +975,11 @@ export async function routeCorrespondenceAction(formData: FormData) {
         minute,
         metadata: {
           actionRecipientIds,
-          copyRecipientIds,
+          copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
+          explicitCopyRecipientIds: copyRecipientIds,
+          automaticDepartmentSecretaryIds: [...automaticSecretaryIds],
+          departmentSecretaryAssignmentIds: automaticSecretaries.map((item) => item.assignmentId),
+          classificationRevisionVersion,
           routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
           workPurpose: purpose,
           ...authorityMetadata(authority),
