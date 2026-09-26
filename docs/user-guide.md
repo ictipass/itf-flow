@@ -35,7 +35,9 @@ a Flow password and launch with enterprise MFA evidence; local staff login is di
 - **Action recipient:** accountable to acknowledge and treat the matter.
 - **Copy recipient:** informed and able to read, but does not own the task.
 - **Minute:** the instruction or rationale recorded with a movement.
+- **Document type:** whether the record is an external Incoming Letter, internal memorandum or external Outgoing Letter.
 - **Workflow category:** the governed policy and priority-based response target selected for new correspondence.
+- **Concurrence:** a formal agreement, objection or return recorded before a matter proceeds; it is not final approval.
 
 System administrators use **Workflow policies** to simulate a proposed category/purpose, create immutable Draft
 versions, activate a validated version and change category SLA days with a recorded reason. Activation applies only
@@ -50,16 +52,22 @@ Announcements, Raise correspondence and How it works. Additional operational lin
 
 ## Officer and general originator
 
-1. Select **Raise correspondence** and choose the correspondence type.
-2. Enter subject, summary, body, classification, priority, reference and due date as applicable.
-3. Search for an authorized action recipient. Add copy recipients only for visibility.
-4. Enter a specific routing minute and attach permitted PDF, JPEG or PNG material if needed.
-5. Save as a private draft or raise and route. Retain the generated ITF Flow reference.
-6. Use **My inbox** to acknowledge assigned matters, then minute onward or resolve them.
-7. If correspondence is returned, create a corrected revision with a meaningful change note and resubmit.
+1. Select **Raise correspondence** and choose the correspondence type. Incoming Letters are registered by authorized
+   Secretariat/Records staff; ordinary originators use Internal Memo or Outgoing Letter.
+2. Select a compatible Workflow Category or keep **Automatic default**. The category controls business policy and SLA;
+   it does not change what kind of document is being raised.
+3. Enter subject, summary, body, classification, priority, reference and due date as applicable.
+4. Search for the next authorized action recipient. Add copy recipients only for visibility.
+5. For a sequential A → B → C → Z route, A selects only B. B later routes to C, and C routes to Z. Selecting all
+   three at once creates parallel responsibilities. A merely informed D belongs in Copy.
+6. Enter a specific routing minute and attach permitted PDF, JPEG or PNG material if needed.
+7. Save as a private draft or raise and route. Retain the generated ITF Flow reference.
+8. Use **My inbox** to acknowledge assigned matters, then minute onward or resolve them.
+9. If correspondence is returned, create a corrected revision with a meaningful change note and resubmit.
 
 Expected control: an officer cannot select an arbitrary senior or cross-department action recipient when
-that route is absent from the assigned reporting line.
+that route is absent from the synchronized reporting line. Copy search is organization-wide; if it fails rather than
+returning a legitimate empty result, the form displays a synchronization/support message.
 
 ## Unit Head, Division Head and Director
 

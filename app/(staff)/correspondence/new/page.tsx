@@ -12,7 +12,7 @@ export default async function NewCorrespondencePage() {
   return <>
     <span className="eyebrow">{isRegistrar ? "Secretariat intake or internal origination" : "Internal origination"}</span>
     <h1>Raise correspondence</h1>
-    <p className="muted">Save unfinished work privately, then submit it through your formal reporting line when ready.</p>
+    <p className="muted">Save unfinished work privately, then submit it through your synchronized formal reporting line when ready. If action-recipient search is empty, ask the Workspace administrator to verify your supervisor and Flow role, then synchronize the directory.</p>
     <CorrespondenceComposer userName={user.name} isRegistrar={isRegistrar} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} categories={categories} />
   </>;
 }

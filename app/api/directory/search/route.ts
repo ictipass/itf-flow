@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getPermittedActionRecipientIds } from "@/lib/reporting-lines";
 import { getCurrentUser } from "@/lib/session";
+import { directoryRecipientScope } from "@/lib/directory-search";
 
 export async function GET(request: Request) {
   const user = await getCurrentUser();
@@ -19,10 +20,7 @@ export async function GET(request: Request) {
   const people = await db.user.findMany({
     where: {
       isActive: true,
-      id: { not: user.id },
-      ...(mode === "action" && permittedActionIds !== null
-        ? { id: { in: permittedActionIds, not: user.id } }
-        : {}),
+      ...directoryRecipientScope({ mode, currentUserId: user.id, permittedActionIds }),
       OR: [
         { name: { contains: query, mode: "insensitive" } },
         { staffNumber: { contains: query, mode: "insensitive" } },

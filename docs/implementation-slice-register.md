@@ -49,6 +49,7 @@ another developer without depending on unfinished work from a later slice.
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
 | S27 | Recipient Department Secretary routing and controlled classification escalation | Implemented | `696eb0d`; migration applied; 40 assurance tests and full verification passed; see [`slices/S27-department-secretariat-routing.md`](slices/S27-department-secretariat-routing.md) |
+| S27A | Correspondence origination and routing readiness | Implemented locally | Category filtering, form/search guidance and paired Workspace W44 reporting-line reconciliation; 43 assurance tests and full verification passed; see [`slices/S27A-correspondence-routing-readiness.md`](slices/S27A-correspondence-routing-readiness.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
@@ -83,8 +84,9 @@ environment-specific Workspace login; production local staff login remains disab
 
 ## Planned next slice
 
-**Priority 1 delivery sequence:** S27 recipient Department Secretary routing is implemented. The next
-bounded slice is provider-backed private document storage (Vercel Blob or S3-compatible AWS storage) while retaining
+**Priority 1 delivery sequence:** S27 recipient Department Secretary routing is implemented and S27A routing-readiness
+stabilization is implemented locally. The next business slice is Department Secretariat desk/context switching,
+followed by provider-backed private document storage (Vercel Blob or S3-compatible AWS storage) while retaining
 the S24A quarantine/release boundary. It will be followed by the auditor evidence pack, approved visual-signature
 profile/output controls, document annotation, and the installable PWA baseline. Real EDMS integration remains S24B
 and must not be simulated without its approved contract and test service.
@@ -113,6 +115,8 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S25 | Configurable workflow templates, SLAs and simulation | Requires stable business-rule ownership |
 | S26 | Assurance, observability, load/security tests, backup recovery and pilot rollout | Final production gate |
 | S27 | Recipient Department Secretary routing and controlled classification escalation | Priority 1; locally administered until authoritative Workspace/HR sync |
+| S27A | Correspondence origination and routing readiness | Pre-S27B stabilization; paired with Workspace W44 |
+| S27B | Department Secretariat desk and active-context switching | Priority 1; requires stable desk ownership and Workspace assignment synchronization |
 | S28 | Provider-backed private document storage | Priority 1; Vercel Blob/S3 selection behind the S24A provider boundary |
 | S29 | Auditor correspondence evidence pack | Priority 1; depends on stable revisions, passage and storage |
 | S30 | Approved visual-signature profile and memo output | Priority 1; depends on signature policy and evidence-pack renderer |

@@ -47,6 +47,7 @@ function PersonPicker({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DirectoryPerson[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
 
   useEffect(() => {
     const normalized = query.trim();
@@ -57,6 +58,8 @@ function PersonPicker({
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);
+      setSearchError(false);
+      setResults([]);
       try {
         const response = await fetch(
           `/api/directory/search?mode=${mode}&q=${encodeURIComponent(normalized)}`,
@@ -66,7 +69,10 @@ function PersonPicker({
         const payload = (await response.json()) as { people: DirectoryPerson[] };
         setResults(payload.people.filter((person) => !blockedIds.includes(person.id)));
       } catch (error) {
-        if ((error as Error).name !== "AbortError") setResults([]);
+        if ((error as Error).name !== "AbortError") {
+          setResults([]);
+          setSearchError(true);
+        }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -119,6 +125,7 @@ function PersonPicker({
           if (value.trim().length < 2) {
             setResults([]);
             setLoading(false);
+            setSearchError(false);
           }
         }}
         placeholder={placeholder}
@@ -127,7 +134,11 @@ function PersonPicker({
 
       <div className="recipient-results">
         {loading ? <p className="recipient-empty">Searching the staff directory…</p> : null}
+        {!loading && searchError ? (
+          <p className="recipient-empty" role="alert">Directory search could not be completed. Refresh once; if it continues, ask the Workspace administrator to verify synchronization.</p>
+        ) : null}
         {!loading &&
+          !searchError &&
           results.map((person) => {
             const isSelected = selected.some((item) => item.id === person.id);
             return (
@@ -156,8 +167,8 @@ function PersonPicker({
               </button>
             );
           })}
-        {!loading && query.trim().length >= 2 && !results.length ? (
-          <p className="recipient-empty">No staff member matches “{query}”.</p>
+        {!loading && !searchError && query.trim().length >= 2 && !results.length ? (
+          <p className="recipient-empty">{mode === "action" ? "No eligible action recipient matches" : "No active copy recipient matches"} “{query}”. {mode === "action" ? "Action recipients must be in your synchronized reporting line or an authorized peer route." : "Try a name, staff number, email, or department."}</p>
         ) : null}
         {query.trim().length < 2 ? (
           <p className="recipient-empty">Type at least two characters to search.</p>
@@ -203,7 +214,7 @@ export function RecipientSelector({
           onSelectionChange?.();
         }}
         label="Copy — CC recipients"
-        hint="Copied recipients can read and track the correspondence but are not accountable owners."
+        hint="Copied recipients can read and track the correspondence but are not accountable owners. Copy search is not restricted by the reporting line."
         fieldName={copyFieldName}
         placeholder="Type a name, staff number or department to copy someone…"
       />

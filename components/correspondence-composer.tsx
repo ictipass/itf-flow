@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { autosaveDraftAction, registerCorrespondenceAction, saveDraftAction } from "@/app/actions";
 import { DirectoryPerson, RecipientSelector } from "@/components/recipient-selector";
+import { categoriesForDocumentType, routingPurposeHelp, type WorkflowCategoryOption } from "@/lib/correspondence-form";
 
 type InitialDraft = {
   id: string;
@@ -32,12 +33,16 @@ export function CorrespondenceComposer({
   isRegistrar: boolean;
   canReferToPeers: boolean;
   initial?: InitialDraft;
-  categories?: Array<{ code: string; name: string; correspondenceType: string; routineSlaDays: number; urgentSlaDays: number; immediateSlaDays: number }>;
+  categories?: WorkflowCategoryOption[];
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, startSaving] = useTransition();
+  const [documentType, setDocumentType] = useState(initial?.type ?? (isRegistrar ? "INCOMING_LETTER" : "INTERNAL_MEMO"));
+  const [categoryCode, setCategoryCode] = useState("");
+  const [routingPurpose, setRoutingPurpose] = useState(initial?.workPurpose ?? "ACTION");
+  const compatibleCategories = categoriesForDocumentType(categories, documentType);
 
   function autosave() {
     if (!initial?.id || !dirty || !formRef.current || saving) return;
@@ -60,10 +65,10 @@ export function CorrespondenceComposer({
       onBlur={autosave}
     >
       {initial ? <input type="hidden" name="draftId" value={initial.id} /> : null}
-      <div className="field"><label>Document type</label><select name="type" defaultValue={initial?.type ?? (isRegistrar ? "INCOMING_LETTER" : "INTERNAL_MEMO")}>
+      <div className="field"><label>Document type</label><select name="type" value={documentType} onChange={(event) => { setDocumentType(event.target.value); setCategoryCode(""); }}>
         {isRegistrar ? <option value="INCOMING_LETTER">Incoming letter</option> : null}<option value="INTERNAL_MEMO">Internal memo</option><option value="OUTGOING_LETTER">Outgoing letter</option>
-      </select></div>
-      <div className="field"><label>Workflow category</label><select name="categoryCode" defaultValue=""><option value="">Automatic default</option>{categories.map((category) => <option key={category.code} value={category.code}>{category.name} ({category.correspondenceType}; SLA {category.routineSlaDays}/{category.urgentSlaDays}/{category.immediateSlaDays} days)</option>)}</select></div>
+      </select><small className="muted">{documentType === "INCOMING_LETTER" ? "Received from outside ITF and registered by authorized Secretariat/Records staff." : documentType === "OUTGOING_LETTER" ? "An official letter intended for an external recipient and completed through dispatch." : "An official memorandum moving within ITF."} {!isRegistrar ? "Incoming letters are registered through the Secretariat intake process." : ""}</small></div>
+      <div className="field"><label>Workflow category</label><select name="categoryCode" value={categoryCode} onChange={(event) => setCategoryCode(event.target.value)}><option value="">Automatic default</option>{compatibleCategories.map((category) => <option key={category.code} value={category.code}>{category.name} (SLA {category.routineSlaDays}/{category.urgentSlaDays}/{category.immediateSlaDays} days)</option>)}</select><small className="muted">Selects the business policy, permitted purposes and priority-based response target. Only categories compatible with the document type are shown.</small></div>
       <div className="field"><label>Sender *</label><input name="senderName" defaultValue={initial?.senderName ?? userName} placeholder="Name of the originating officer or external sender" required /></div>
       <div className="field span-2"><label>Subject *</label><input name="subject" defaultValue={initial?.subject} placeholder="Briefly state what the correspondence is about" required minLength={5} /></div>
       <div className="field"><label>Sender reference</label><input name="senderReference" defaultValue={initial?.senderReference} placeholder="e.g. ITF/ICT/PASS/2026/014" /></div>
@@ -82,10 +87,10 @@ export function CorrespondenceComposer({
             ? "Choose your supervisor, a direct report, or an authorized peer. Peer referrals require a clear routing purpose."
             : "Select your assigned supervisor or one or more direct reports responsible for taking action."}
       /></div>
-      <div className="field"><label>Routing purpose</label><select name="workPurpose" defaultValue={initial?.workPurpose ?? "ACTION"}>
+      <div className="field"><label>Routing purpose</label><select name="workPurpose" value={routingPurpose} onChange={(event) => setRoutingPurpose(event.target.value)}>
         <option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option>
-      </select></div>
-      <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /></div>
+      </select><small className="muted">{routingPurposeHelp[routingPurpose]}</small></div>
+      <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /><small className="muted">For a sequential path A → B → C → Z, A selects only B as the action recipient. Each accountable holder minutes it to the next person. Select D as a copy recipient only when D is being informed, not asked to act.</small></div>
       <div className="field span-2"><label>Scanned document</label><input name="attachment" type="file" accept=".pdf,.jpg,.jpeg,.png" /></div>
       <div className="actions span-2">
         <button className="btn secondary" type="submit" formAction={saveDraftAction} formNoValidate>Save draft</button>
