@@ -15,7 +15,10 @@ export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.e
   } catch (error) {
     issues.push(error instanceof Error ? error.message : "Workspace navigation configuration is invalid");
   }
-  if ((env.DOCUMENT_STORAGE_PROVIDER ?? "LOCAL") === "LOCAL") issues.push("managed document storage is not configured");
+  const storageProvider = (env.DOCUMENT_STORAGE_PROVIDER ?? "LOCAL").trim().toUpperCase();
+  if (storageProvider === "LOCAL") issues.push("managed document storage is not configured");
+  else if (storageProvider === "VERCEL_BLOB" && !env.BLOB_READ_WRITE_TOKEN?.trim()) issues.push("BLOB_READ_WRITE_TOKEN is missing for private Vercel Blob storage");
+  else if (storageProvider !== "VERCEL_BLOB") issues.push(`unsupported document storage provider: ${storageProvider}`);
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED")) issues.push("a production malware scanner is not configured");
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_OCR_PROVIDER ?? "DISABLED")) issues.push("a production OCR provider is not configured");
   if (env.STAFF_LOCAL_LOGIN_ENABLED === "true") issues.push("local staff-password login is enabled");

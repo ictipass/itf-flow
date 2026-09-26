@@ -124,8 +124,8 @@ never exposes internal minutes, recipients, decisions, classifications, attachme
 
 ## Current demo boundaries
 
-- Local disk remains demo-only, but `lib/document-storage.ts` now provides separate quarantine/released storage behind
-  the provider boundary for the future ITF EDMS.
+- Local disk remains demo-only. `lib/document-storage.ts` provides separate quarantine/released storage through
+  local and private Vercel Blob providers while preserving the boundary for a future ITF EDMS.
 - S24A performs hash and magic-byte validation asynchronously and releases files only after a configured scanner
   reports clean. No production scanner or OCR/EDMS adapter is bundled; with scanning disabled, files fail closed and
   remain unavailable. Existing files are `LEGACY_UNVERIFIED` until reprocessed.

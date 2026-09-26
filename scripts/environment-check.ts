@@ -42,6 +42,12 @@ async function main() {
   if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER === "MOCK") errors.push("The mock document scanner is forbidden in production.");
   if (process.env.NODE_ENV === "production" && process.env.STAFF_LOCAL_LOGIN_ENABLED === "true") errors.push("STAFF_LOCAL_LOGIN_ENABLED must not be true for an approved production deployment.");
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED === "true") errors.push("ALLOW_DEMO_SEED must not be true in production.");
+  const documentStorageProvider = (process.env.DOCUMENT_STORAGE_PROVIDER ?? "LOCAL").trim().toUpperCase();
+  if (documentStorageProvider === "VERCEL_BLOB" && !process.env.BLOB_READ_WRITE_TOKEN?.trim()) {
+    errors.push("BLOB_READ_WRITE_TOKEN is required when DOCUMENT_STORAGE_PROVIDER=VERCEL_BLOB.");
+  } else if (documentStorageProvider !== "LOCAL" && documentStorageProvider !== "VERCEL_BLOB") {
+    errors.push(`DOCUMENT_STORAGE_PROVIDER ${documentStorageProvider} is unsupported.`);
+  }
   try {
     resolveWorkspaceNavigationUrls(process.env);
   } catch (error) {
@@ -88,11 +94,13 @@ async function main() {
     errors.push("PostgreSQL is unreachable or has not been migrated. Check DATABASE_URL and run npm run db:migrate.");
   }
 
-  try {
-    await access(path.resolve(process.cwd(), "storage", "uploads"));
-    console.log("✓ Local upload directory is present");
-  } catch {
-    warnings.push("storage/uploads is absent. It will be created on first upload; restore it separately if existing documents are required.");
+  if (documentStorageProvider === "LOCAL") {
+    try {
+      await access(path.resolve(process.cwd(), "storage", "uploads"));
+      console.log("✓ Local upload directory is present");
+    } catch {
+      warnings.push("storage/uploads is absent. It will be created on first upload; restore it separately if existing documents are required.");
+    }
   }
 
   for (const warning of warnings) console.warn(`⚠ ${warning}`);

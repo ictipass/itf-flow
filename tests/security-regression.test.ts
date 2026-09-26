@@ -26,6 +26,14 @@ test("production configuration detects unsafe document adapters", () => {
   assert.ok(issues.some((issue) => issue.includes("malware")));
 });
 
+test("production configuration requires the Vercel Blob read-write token", () => {
+  const secret = "x".repeat(40);
+  const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_ISSUER: "https://workspace.example.test", WORKSPACE_LAUNCH_AUDIENCE: "itf-flow", WORKSPACE_LAUNCH_JWKS_URL: "https://workspace.example.test/api/integrations/workspace/v2/jwks", WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, WORKSPACE_APP_NAVIGATION_SECRET: secret, NEXT_PUBLIC_WORKSPACE_URL: "https://workspace.example.test", NEXT_PUBLIC_WORKSPACE_LOGOUT_URL: "https://workspace.example.test/dashboard/apps", APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "VERCEL_BLOB", DOCUMENT_SCANNER_PROVIDER: "CLAMAV", DOCUMENT_OCR_PROVIDER: "MANAGED" } as unknown as NodeJS.ProcessEnv;
+  assert.ok(productionConfigurationIssues(env).some((issue) => issue.includes("BLOB_READ_WRITE_TOKEN")));
+  env.BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_test";
+  assert.equal(productionConfigurationIssues(env).length, 0);
+});
+
 test("local staff-password login defaults off in production", () => {
   assert.equal(localStaffLoginEnabled({ NODE_ENV: "production" } as NodeJS.ProcessEnv), false);
   assert.equal(localStaffLoginEnabled({ NODE_ENV: "development" } as NodeJS.ProcessEnv), true);
