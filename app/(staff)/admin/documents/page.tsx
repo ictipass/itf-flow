@@ -8,7 +8,7 @@ export default async function DocumentAdministrationPage() {
   const user = await requireUser();
   if (user.role !== UserRole.SYSTEM_ADMIN) redirect("/dashboard");
 
-  const [counts, documents] = await Promise.all([
+  const [counts, documents, annotationCount] = await Promise.all([
     db.attachment.groupBy({ by: ["processingStatus"], _count: true }),
     db.attachment.findMany({
       include: {
@@ -18,6 +18,7 @@ export default async function DocumentAdministrationPage() {
       orderBy: { createdAt: "desc" },
       take: 100,
     }),
+    db.documentAnnotation.count(),
   ]);
 
   return <>
@@ -26,7 +27,9 @@ export default async function DocumentAdministrationPage() {
     <p className="muted">Available and Clean documents passed malware scanning. Available and Bypassed documents are usable under the explicit MALWARE_SCANNER=DISABLED control and remain visibly unscanned.</p>
     <div className="stats-grid">
       {counts.map((item) => <div className="stat-card" key={item.processingStatus}><small>{item.processingStatus}</small><strong>{item._count}</strong></div>)}
+      <div className="stat-card"><small>Authenticated annotations</small><strong>{annotationCount}</strong></div>
     </div>
+    <p className="notice">Annotated PDFs are generated only from an Available source. The original is retained as an immutable historical source, while the generated PDF becomes the current package version and inherits Clean or Bypassed security provenance.</p>
     <section className="card" style={{ marginTop: 18 }}>
       <table className="table">
         <thead><tr><th>Document</th><th>State</th><th>Security</th><th>Processing</th><th>Control</th></tr></thead>

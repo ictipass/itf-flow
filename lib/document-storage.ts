@@ -22,7 +22,7 @@ export type StoredDocument = {
   storageKey: string;
   sha256: string;
   storageProvider: DocumentStorageProviderName;
-  malwareScanStatus: "PENDING" | "BYPASSED";
+  malwareScanStatus: "PENDING" | "CLEAN" | "BYPASSED";
   processingStatus: "QUARANTINED" | "AVAILABLE";
   detectedMimeType?: string;
   processedAt?: Date;
@@ -156,6 +156,30 @@ export async function storeDocument(input: DocumentInput): Promise<StoredDocumen
     storageProvider: provider.name,
     ...initialDocumentSecurityState(scannerMode),
     ...(detectedMimeType ? { detectedMimeType, processedAt: new Date() } : {}),
+  };
+}
+
+export async function storeGeneratedPdf(
+  input: Omit<DocumentInput, "mimeType"> & { sourceMalwareScanStatus: "CLEAN" | "BYPASSED" },
+): Promise<StoredDocument> {
+  const maximumBytes = Number(process.env.DOCUMENT_MAX_SIZE_MB ?? "50") * 1024 * 1024;
+  if (!input.bytes.length || input.bytes.length > maximumBytes || detectDocumentMime(input.bytes) !== "application/pdf") {
+    throw new Error("Generated annotation is not a valid PDF or exceeds the configured size limit.");
+  }
+  const provider = documentProvider();
+  const stored = await provider.storeQuarantined({ ...input, mimeType: "application/pdf" });
+  const releasedKey = await provider.release(stored.storageKey);
+  return {
+    originalName: input.originalName,
+    mimeType: "application/pdf",
+    sizeBytes: input.bytes.length,
+    storageKey: releasedKey,
+    sha256: createHash("sha256").update(input.bytes).digest("hex"),
+    storageProvider: provider.name,
+    malwareScanStatus: input.sourceMalwareScanStatus,
+    processingStatus: "AVAILABLE",
+    detectedMimeType: "application/pdf",
+    processedAt: new Date(),
   };
 }
 

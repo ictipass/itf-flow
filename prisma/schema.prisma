@@ -289,10 +289,10 @@ enum BroadcastEventType {
 }
 
 model User {
-  id                               String                     @id @default(cuid())
-  workspaceUserId                  String?                    @unique
-  staffNumber                      String?                    @unique
-  email                            String                     @unique
+  id                               String                          @id @default(cuid())
+  workspaceUserId                  String?                         @unique
+  staffNumber                      String?                         @unique
+  email                            String                          @unique
   name                             String
   passwordHash                     String?
   role                             UserRole
@@ -307,50 +307,51 @@ model User {
   workspaceUnitId                  String?
   workspacePositionId              String?
   supervisorId                     String?
-  supervisor                       User?                      @relation("ReportingLine", fields: [supervisorId], references: [id], onDelete: SetNull)
-  directReports                    User[]                     @relation("ReportingLine")
+  supervisor                       User?                           @relation("ReportingLine", fields: [supervisorId], references: [id], onDelete: SetNull)
+  directReports                    User[]                          @relation("ReportingLine")
   hierarchyLevel                   Int
-  isActive                         Boolean                    @default(true)
-  createdAt                        DateTime                   @default(now())
-  updatedAt                        DateTime                   @updatedAt
-  createdCorrespondence            Correspondence[]           @relation("CorrespondenceCreator")
+  isActive                         Boolean                         @default(true)
+  createdAt                        DateTime                        @default(now())
+  updatedAt                        DateTime                        @updatedAt
+  createdCorrespondence            Correspondence[]                @relation("CorrespondenceCreator")
   workItems                        WorkItem[]
   events                           CorrespondenceEvent[]
-  claimedCorrespondence            Correspondence[]           @relation("CorrespondenceClaim")
+  claimedCorrespondence            Correspondence[]                @relation("CorrespondenceClaim")
   launchRedemptions                LaunchTokenRedemption[]
   broadcastGrants                  BroadcastPublisherGrant[]
-  createdBroadcasts                Broadcast[]                @relation("BroadcastCreator")
-  publishedBroadcasts              Broadcast[]                @relation("BroadcastPublisher")
+  createdBroadcasts                Broadcast[]                     @relation("BroadcastCreator")
+  publishedBroadcasts              Broadcast[]                     @relation("BroadcastPublisher")
   broadcastRecipients              BroadcastRecipient[]
   broadcastEvents                  BroadcastEvent[]
-  requestedDecisions               DecisionRequest[]          @relation("DecisionRequester")
-  madeDecisions                    DecisionRequest[]          @relation("DecisionMaker")
+  requestedDecisions               DecisionRequest[]               @relation("DecisionRequester")
+  madeDecisions                    DecisionRequest[]               @relation("DecisionMaker")
   createdRevisions                 CorrespondenceRevision[]
   dispatchRecords                  DispatchRecord[]
-  receivedNotifications            Notification[]             @relation("NotificationRecipient")
-  createdNotifications             Notification[]             @relation("NotificationActor")
-  updatedApplicationConfigurations ApplicationConfiguration[] @relation("ConfigurationUpdater")
-  configurationChanges             ConfigurationChange[]      @relation("ConfigurationChanger")
-  updatedReminderPolicies          WorkflowReminderPolicy[]   @relation("ReminderPolicyUpdater")
-  updatedSecretariatRecords        SecretariatRecord[]        @relation("SecretariatRecordUpdater")
+  receivedNotifications            Notification[]                  @relation("NotificationRecipient")
+  createdNotifications             Notification[]                  @relation("NotificationActor")
+  updatedApplicationConfigurations ApplicationConfiguration[]      @relation("ConfigurationUpdater")
+  configurationChanges             ConfigurationChange[]           @relation("ConfigurationChanger")
+  updatedReminderPolicies          WorkflowReminderPolicy[]        @relation("ReminderPolicyUpdater")
+  updatedSecretariatRecords        SecretariatRecord[]             @relation("SecretariatRecordUpdater")
   secretariatRecordEvents          SecretariatRecordEvent[]
-  authorityDelegations             Delegation[]               @relation("DelegationPrincipal")
-  receivedDelegations              Delegation[]               @relation("DelegationDelegate")
-  createdDelegations               Delegation[]               @relation("DelegationCreator")
-  revokedDelegations               Delegation[]               @relation("DelegationRevoker")
+  authorityDelegations             Delegation[]                    @relation("DelegationPrincipal")
+  receivedDelegations              Delegation[]                    @relation("DelegationDelegate")
+  createdDelegations               Delegation[]                    @relation("DelegationCreator")
+  revokedDelegations               Delegation[]                    @relation("DelegationRevoker")
   delegationEvents                 DelegationEvent[]
   accessGroupMemberships           AccessGroupMember[]
-  createdAccessGroups              AccessGroup[]              @relation("AccessGroupCreator")
+  createdAccessGroups              AccessGroup[]                   @relation("AccessGroupCreator")
   sensitiveAccessEvents            SensitiveAccessEvent[]
   approvalSignatures               ApprovalSignature[]
   requestedClarifications          ClarificationRequest[]
+  documentAnnotations              DocumentAnnotation[]
   staffSessions                    StaffSession[]
-  createdWorkflowVersions          WorkflowTemplateVersion[]  @relation("WorkflowVersionCreator")
-  activatedWorkflowVersions        WorkflowTemplateVersion[]  @relation("WorkflowVersionActivator")
+  createdWorkflowVersions          WorkflowTemplateVersion[]       @relation("WorkflowVersionCreator")
+  activatedWorkflowVersions        WorkflowTemplateVersion[]       @relation("WorkflowVersionActivator")
   managedWorkflowCategories        WorkflowCategory[]
-  assuranceChecks                  AssuranceCheck[]           @relation("AssuranceCheckUpdater")
-  departmentSecretaryAssignments  DepartmentSecretaryAssignment[] @relation("DepartmentSecretary")
-  assignedDepartmentSecretaries   DepartmentSecretaryAssignment[] @relation("DepartmentSecretaryAssigner")
+  assuranceChecks                  AssuranceCheck[]                @relation("AssuranceCheckUpdater")
+  departmentSecretaryAssignments   DepartmentSecretaryAssignment[] @relation("DepartmentSecretary")
+  assignedDepartmentSecretaries    DepartmentSecretaryAssignment[] @relation("DepartmentSecretaryAssigner")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -407,6 +408,14 @@ enum DocumentEventType {
   PROCESSING_FAILED
   RETRY_SCHEDULED
   DOWNLOADED
+  ANNOTATED
+}
+
+enum DocumentAnnotationPlacement {
+  TOP_LEFT
+  TOP_RIGHT
+  BOTTOM_LEFT
+  BOTTOM_RIGHT
 }
 
 enum AssuranceStatus {
@@ -824,6 +833,7 @@ model Correspondence {
   sensitiveAccessEvents      SensitiveAccessEvent[]
   approvalSignatures         ApprovalSignature[]
   clarificationRequests      ClarificationRequest[]
+  documentAnnotations        DocumentAnnotation[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
@@ -975,6 +985,8 @@ model Attachment {
   createdAt          DateTime                 @default(now())
   correspondence     Correspondence           @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   documentEvents     DocumentEvent[]
+  sourceAnnotations  DocumentAnnotation[]     @relation("DocumentAnnotationSource")
+  annotationOutput   DocumentAnnotation?      @relation("DocumentAnnotationOutput")
 
   @@index([correspondenceId])
   @@index([processingStatus, nextProcessingAt])
@@ -992,6 +1004,45 @@ model DocumentEvent {
 
   @@index([attachmentId, createdAt])
   @@index([type, createdAt])
+}
+
+model DocumentAnnotation {
+  id                     String                      @id @default(cuid())
+  correspondenceId       String
+  sourceAttachmentId     String
+  outputAttachmentId     String                      @unique
+  version                Int
+  revisionId             String                      @unique
+  revisionVersion        Int
+  pageNumber             Int
+  placement              DocumentAnnotationPlacement
+  minuteText             String
+  signerId               String
+  signerName             String
+  signerRole             String
+  signerPosition         String?
+  authorityPrincipalId   String?
+  authorityPrincipalName String?
+  delegationId           String?
+  authenticationMethod   String
+  sourceSha256           String
+  outputSha256           String
+  canonicalPayload       Json
+  signatureValue         String
+  algorithm              String                      @default("HMAC-SHA256")
+  keyId                  String
+  signedAt               DateTime
+  createdAt              DateTime                    @default(now())
+  correspondence         Correspondence              @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  sourceAttachment       Attachment                  @relation("DocumentAnnotationSource", fields: [sourceAttachmentId], references: [id], onDelete: Restrict)
+  outputAttachment       Attachment                  @relation("DocumentAnnotationOutput", fields: [outputAttachmentId], references: [id], onDelete: Restrict)
+  revision               CorrespondenceRevision      @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  signer                 User                        @relation(fields: [signerId], references: [id], onDelete: Restrict)
+
+  @@unique([correspondenceId, version])
+  @@index([sourceAttachmentId, version])
+  @@index([signerId, signedAt])
+  @@index([correspondenceId, signedAt])
 }
 
 model EmailMessage {
@@ -1120,6 +1171,7 @@ model CorrespondenceRevision {
   correspondence     Correspondence      @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   createdBy          User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   approvalSignatures ApprovalSignature[]
+  documentAnnotation DocumentAnnotation?
 
   @@unique([correspondenceId, version])
   @@index([correspondenceId, createdAt])

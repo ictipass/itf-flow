@@ -27,12 +27,17 @@ export function signApprovalPayload(payload: Record<string, unknown>) {
   return createHmac("sha256", signingSecret()).update(stableStringify(payload)).digest("hex");
 }
 
+export function verifyCanonicalSignature(signature: { canonicalPayload: unknown; signatureValue: string }) {
+  if (!signature.canonicalPayload || typeof signature.canonicalPayload !== "object" || Array.isArray(signature.canonicalPayload)) return false;
+  if (!/^[a-f0-9]{64}$/i.test(signature.signatureValue)) return false;
+  const expectedBytes = Buffer.from(signApprovalPayload(signature.canonicalPayload as Record<string, unknown>), "hex");
+  const actualBytes = Buffer.from(signature.signatureValue, "hex");
+  return expectedBytes.length === actualBytes.length && timingSafeEqual(expectedBytes, actualBytes);
+}
+
 export function verifyApprovalSignature(signature: { canonicalPayload: unknown; signatureValue: string; documentDigest: string; revision?: Parameters<typeof revisionDigest>[0] | null }) {
   if (!signature.canonicalPayload || typeof signature.canonicalPayload !== "object" || Array.isArray(signature.canonicalPayload)) return false;
-  const expected = signApprovalPayload(signature.canonicalPayload as Record<string, unknown>);
-  const expectedBytes = Buffer.from(expected, "hex");
-  const actualBytes = Buffer.from(signature.signatureValue, "hex");
   const payloadDigest = (signature.canonicalPayload as Record<string, unknown>).documentDigest;
   const revisionMatches = !signature.revision || revisionDigest(signature.revision) === signature.documentDigest;
-  return payloadDigest === signature.documentDigest && revisionMatches && expectedBytes.length === actualBytes.length && timingSafeEqual(expectedBytes, actualBytes);
+  return payloadDigest === signature.documentDigest && revisionMatches && verifyCanonicalSignature(signature);
 }

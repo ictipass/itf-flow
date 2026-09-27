@@ -62,16 +62,20 @@ Announcements, Raise correspondence and How it works. Additional operational lin
    custody. Copy recipients can follow the record but do not own the action.
 4. **Treat or decide:** the owner performs the work and, where requested, records a recommendation, review,
    concurrence, approval or clarification response.
-5. **Minute and route:** if another desk must act, the current owner writes a clear minute and selects the next
+5. **Minute/sign on the document (where required):** the current action holder opens an available PDF, JPEG or PNG,
+   selects **Minute and sign on document**, chooses the page/placement, enters the minute and strongly
+   re-authenticates. Flow preserves the original and creates a new immutable PDF with an authenticated identity and
+   timestamp block. This is not the same as formal approval or a certificate-backed signature.
+6. **Minute and route:** if another desk must act, the current owner writes a clear minute and selects the next
    authorized recipient. A sequential A → B → C route is performed one movement at a time; selecting B and C
    together assigns them in parallel.
-6. **Correct:** when returned, the originator creates a numbered revision with a change note and resubmits. Earlier
+7. **Correct:** when returned, the originator creates a numbered revision with a change note and resubmits. Earlier
    versions, minutes and superseded decisions remain auditable.
-7. **Resolve:** the final action owner records what was done and selects **Mark resolved**. Incoming letters and
+8. **Resolve:** the final action owner records what was done and selects **Mark resolved**. Incoming letters and
    internal memos normally finish in `RESOLVED` status.
-8. **Dispatch and close:** an approved outgoing letter proceeds to the Dispatch registry. Secretariat or Records
+9. **Dispatch and close:** an approved outgoing letter proceeds to the Dispatch registry. Secretariat or Records
    records its channel and delivery outcome; confirmed delivery changes the correspondence to `CLOSED`.
-9. **Retain evidence:** the movement register, detailed passage, revisions, decisions, attachment events and any
+10. **Retain evidence:** the movement register, detailed passage, revisions, decisions, attachment events and any
    physical-file history remain available subject to role and classification controls.
 
 The compact **Movement & minutes** timeline is always visible on the detail page. **Passage and status** is the
@@ -87,6 +91,22 @@ expanded custody/elapsed-time view and is collapsed by default; select its headi
   explicitly disabled. This is recorded as a security exception and must not be represented as a clean scan.
 - **Failed:** processing did not complete; a system administrator must inspect and retry it.
 - **Rejected/Infected:** the security gate excluded the document from the controlled package.
+
+### In-document minute and signing
+
+1. Open a correspondence while you hold its current Action work item, then find an **Available** attachment.
+2. Select **Minute and sign on document**. PDF is the primary format; JPEG and PNG scans are converted to PDF before
+   the minute is applied.
+3. Inspect the in-app preview, enter the target page and choose a corner placement. Enter a concise minute.
+4. Confirm signing intent. A Workspace user uses recent enterprise MFA; a local/demo user re-confirms the password.
+5. Select **Create signed PDF version**. Flow verifies the stored source hash, preserves that source, creates a new
+   current PDF, captures a correspondence revision and records signer/delegation, authentication, hashes and time.
+6. Use **Document annotation history** to retrieve both the preserved original and each generated signed PDF.
+
+Supported upload formats remain PDF, DOCX, XLSX, JPEG and PNG. This annotation increment supports **PDF, JPEG and
+PNG only**. DOCX requires a separately approved Office renderer/editor or controlled conversion service; XLSX stays
+attachment-only because spreadsheet editing and formula integrity require a different workflow. A visual signature
+asset/profile and certificate-backed PAdES signature remain separate policy-led work.
 
 ### Records desk and physical tracking
 
@@ -105,7 +125,7 @@ not require a physical tracking record. This panel does not assign the digital a
 4. Search for the next authorized action recipient. Add copy recipients only for visibility.
 5. For a sequential A → B → C → Z route, A selects only B. B later routes to C, and C routes to Z. Selecting all
    three at once creates parallel responsibilities. A merely informed D belongs in Copy.
-6. Enter a specific routing minute and attach permitted PDF, JPEG or PNG material if needed.
+6. Enter a specific routing minute and attach permitted PDF, DOCX, XLSX, JPEG or PNG material if needed.
 7. Save as a private draft or raise and route. Retain the generated ITF Flow reference.
 8. Use **My inbox** to acknowledge assigned matters, then minute onward or resolve them.
 9. If correspondence is returned, create a corrected revision with a meaningful change note and resubmit.

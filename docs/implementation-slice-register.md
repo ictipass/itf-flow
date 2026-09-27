@@ -53,6 +53,7 @@ another developer without depending on unfinished work from a later slice.
 | S28 | Private Vercel Blob document storage | Implemented locally; live Vercel acceptance pending | Private quarantine/read/release adapter, environment validation and 46 assurance tests/full verification passed; see [`slices/S28-private-vercel-blob-storage.md`](slices/S28-private-vercel-blob-storage.md) |
 | S28A | Correspondence detail readability and workflow guidance | Implemented locally | Collapsible passage, Glass contrast repair, attachment/physical-record guidance and end-to-end operating workflow; see [`slices/S28A-correspondence-detail-usability.md`](slices/S28A-correspondence-detail-usability.md) |
 | S28B | Explicit malware-scanner bypass control | Implemented locally; migration/deployment pending | Safe-default `MALWARE_SCANNER` switch, auditable Available/Bypassed release, fail-closed enabled mode and security-gate coverage; 50 assurance tests and full verification passed; see [`slices/S28B-malware-scanner-bypass.md`](slices/S28B-malware-scanner-bypass.md) |
+| S31A | PDF-first in-document annotation and authenticated signing | Implemented locally; migration/deployment pending | Preserved source, generated PDF revision, MFA/password re-authentication, delegation attribution, source/output hashes, fail-closed integrity verification and signed audit payload; 54 assurance tests/full verification passed. See [`slices/S31A-pdf-first-document-annotation.md`](slices/S31A-pdf-first-document-annotation.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
@@ -89,9 +90,9 @@ environment-specific Workspace login; production local staff login remains disab
 
 **Priority 1 delivery sequence:** S27 recipient Department Secretary routing and S27A routing-readiness stabilization
 are implemented. The private Vercel Blob increment of S28 is implemented locally and awaits live deployment
-acceptance. The next business slice is Department Secretariat desk/context switching, followed by submission
-idempotency/managed malware-scanner hardening. It will be followed by the auditor evidence pack, approved visual-signature
-profile/output controls, document annotation, and the installable PWA baseline. Real EDMS integration remains S24B
+acceptance. S31A now supplies the controlled PDF-first annotation baseline. The next business slices are Department
+Secretariat desk/context switching, submission idempotency/managed malware-scanner hardening, the auditor evidence
+pack, approved visual-signature profile/output controls, and the installable PWA baseline. Real EDMS integration remains S24B
 and must not be simulated without its approved contract and test service.
 
 **Immediate integration action — A01-02 role-change/mismatch acceptance:** use a dedicated staging identity and
@@ -123,7 +124,7 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S28 | Provider-backed private document storage | Private Vercel Blob implemented locally; live acceptance and optional S3 adapter remain |
 | S29 | Auditor correspondence evidence pack | Priority 1; depends on stable revisions, passage and storage |
 | S30 | Approved visual-signature profile and memo output | Priority 1; depends on signature policy and evidence-pack renderer |
-| S31 | In-document annotation and signing workflow | Priority 1; must preserve original and immutable annotated versions |
+| S31B | Advanced annotation placement and governed visual/certificate signing | Depends on S31A acceptance, S30 signature policy and PKI decision where certificate signatures are required |
 | S32 | Installable PWA baseline and notification readiness | Priority 1; push delivery requires approved service-worker and subscription operations |
 
 ## Readiness tracks that remain active across all slices

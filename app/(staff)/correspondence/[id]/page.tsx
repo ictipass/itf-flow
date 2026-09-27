@@ -21,11 +21,12 @@ import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChan
 import { db } from "@/lib/db";
 import { activeDelegationsFor } from "@/lib/delegations";
 import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
+import { isAnnotatableDocument } from "@/lib/document-annotation";
 import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
-import { verifyApprovalSignature } from "@/lib/approval-signatures";
+import { verifyApprovalSignature, verifyCanonicalSignature } from "@/lib/approval-signatures";
 
 function attachmentGuidance(file: { isIncluded: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
@@ -60,6 +61,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       clarificationRequests: { include: { requestedBy: true, respondedByExternalAccount: true }, orderBy: { requestedAt: "desc" } },
       workflowCategory: true,
       workflowTemplateVersion: { include: { template: true } },
+      documentAnnotations: { include: { sourceAttachment: true, outputAttachment: true, signer: true }, orderBy: { version: "desc" } },
     },
   });
   if (!record) notFound();
@@ -95,6 +97,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const pendingDecision = activeActionItem?.decisionRequest?.outcome === null ? activeActionItem.decisionRequest : null;
   const mayDecide = !pendingDecision || pendingDecision.purpose !== WorkPurpose.APPROVAL || !activeDelegation || activeDelegation.canApprove;
   const canRoute = Boolean(activeActionItem && !pendingDecision && canMinute(authorityRole));
+  const canAnnotate = Boolean(activeActionItem && canMinute(authorityRole));
   const canReferToPeers = authorityRole === UserRole.DIRECTOR || authorityRole === UserRole.DIVISION_HEAD;
   const canHandleIntake =
     record.status === CorrespondenceStatus.SUBMITTED &&
@@ -105,6 +108,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id && latestReturnDecision?.type === EventType.RETURNED;
   const currentApproval = record.decisionRequests.some((request) => request.purpose === WorkPurpose.APPROVAL && request.outcome === DecisionOutcome.APPROVED && !request.supersededAt);
   const canPrepareDispatch = canDispatch(user.role) && record.type === CorrespondenceType.OUTGOING_LETTER && (!record.requiresApproval || currentApproval) && record.status !== CorrespondenceStatus.CLOSED;
+  const annotationSourceIds = new Set(record.documentAnnotations.map((annotation) => annotation.sourceAttachmentId));
   return (
     <>
       {record.classification === "CONFIDENTIAL" || record.classification === "SECRET" ? <div className="sensitive-watermark" aria-hidden="true">CONTROLLED COPY · {user.staffNumber ?? user.email} · {new Date().toLocaleDateString("en-NG")}</div> : null}
@@ -144,7 +148,25 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <h2>Correspondence</h2>
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div className="attachment-list"><strong>Attachments</strong>{record.attachments.map((file) => { const guidance = attachmentGuidance(file); return <div className="attachment-item" key={file.id}><p>{file.isIncluded && attachmentPassesDocumentSecurityGate(file) ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : "Excluded"} · {label(file.malwareScanStatus)})</small></p>{guidance ? <small className="attachment-help">{guidance}</small> : null}</div>; })}</div> : null}
+            {record.attachments.length ? <div className="attachment-list"><strong>Attachments</strong>{record.attachments.map((file) => {
+              const preservedSource = annotationSourceIds.has(file.id);
+              const canOpen = attachmentPassesDocumentSecurityGate(file) && (file.isIncluded || preservedSource);
+              const guidance = preservedSource ? "Preserved immutable source for a later annotated version." : attachmentGuidance(file);
+              return <div className="attachment-item" key={file.id}>
+                <p>{canOpen ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : preservedSource ? "Preserved original" : "Excluded"} · {label(file.malwareScanStatus)})</small></p>
+                {guidance ? <small className="attachment-help">{guidance}</small> : null}
+                {canAnnotate && file.isIncluded && canOpen && isAnnotatableDocument(file.mimeType) ? <div className="actions"><Link className="btn secondary compact" href={`/attachments/${file.id}/annotate`}>Minute and sign on document</Link></div> : null}
+              </div>;
+            })}</div> : null}
+            {record.documentAnnotations.length ? <details className="annotation-history">
+              <summary><strong>Document annotation history</strong> <span className="muted">({record.documentAnnotations.length} version{record.documentAnnotations.length === 1 ? "" : "s"})</span></summary>
+              <div className="annotation-history-list">{record.documentAnnotations.map((annotation) => <article key={annotation.id}>
+                <div><strong>Annotation {annotation.version} · revision {annotation.revisionVersion}</strong><small>{annotation.signedAt.toLocaleString("en-NG")} · page {annotation.pageNumber} · {label(annotation.placement)}</small></div>
+                <p>{annotation.minuteText}</p>
+                <small>{verifyCanonicalSignature(annotation) ? "Signature record verified" : "SIGNATURE RECORD FAILED VERIFICATION"} · Authenticated by {annotation.signerName} ({label(annotation.signerRole)}){annotation.authorityPrincipalName ? ` acting for ${annotation.authorityPrincipalName}` : ""} · {annotation.authenticationMethod.toLowerCase().replaceAll("_", " ")} · SHA-256 {annotation.outputSha256.slice(0, 16)}…</small>
+                <div className="actions"><a className="btn secondary compact" href={`/attachments/${annotation.sourceAttachmentId}`}>Original</a><a className="btn compact" href={`/attachments/${annotation.outputAttachmentId}`}>Signed PDF</a></div>
+              </article>)}</div>
+            </details> : null}
           </section>
           {canRegister(user.role) ? <details className="card records-desk" open={Boolean(record.secretariatRecord)}>
             <summary className="records-desk-summary"><span className="eyebrow">Records desk · Optional</span><strong className="records-desk-title">Physical file tracking</strong><span className="muted">Use this only when a hard-copy source or physical file must be tracked. It does not control the digital correspondence journey.</span></summary>
