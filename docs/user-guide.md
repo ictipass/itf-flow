@@ -50,6 +50,48 @@ to new correspondence; existing records retain the version shown on their detail
 Every signed-in user can use Overview, My inbox, Notifications, My drafts, All correspondence,
 Announcements, Raise correspondence and How it works. Additional operational links depend on role.
 
+## End-to-end correspondence workflow
+
+1. **Compose:** the sender selects the document type and workflow category, writes the correspondence, chooses the
+   next action recipient, adds copy recipients only for awareness, attaches supporting documents and submits.
+2. **Secure attachments:** every uploaded document enters quarantine. It cannot be viewed, downloaded, approved or
+   dispatched until document processing validates its file signature, scans it for malware and marks it
+   **Available · Clean**.
+3. **Receive:** the action recipient sees the matter in **My inbox** and acknowledges receipt. This establishes
+   custody. Copy recipients can follow the record but do not own the action.
+4. **Treat or decide:** the owner performs the work and, where requested, records a recommendation, review,
+   concurrence, approval or clarification response.
+5. **Minute and route:** if another desk must act, the current owner writes a clear minute and selects the next
+   authorized recipient. A sequential A → B → C route is performed one movement at a time; selecting B and C
+   together assigns them in parallel.
+6. **Correct:** when returned, the originator creates a numbered revision with a change note and resubmits. Earlier
+   versions, minutes and superseded decisions remain auditable.
+7. **Resolve:** the final action owner records what was done and selects **Mark resolved**. Incoming letters and
+   internal memos normally finish in `RESOLVED` status.
+8. **Dispatch and close:** an approved outgoing letter proceeds to the Dispatch registry. Secretariat or Records
+   records its channel and delivery outcome; confirmed delivery changes the correspondence to `CLOSED`.
+9. **Retain evidence:** the movement register, detailed passage, revisions, decisions, attachment events and any
+   physical-file history remain available subject to role and classification controls.
+
+The compact **Movement & minutes** timeline is always visible on the detail page. **Passage and status** is the
+expanded custody/elapsed-time view and is collapsed by default; select its heading to open or close it.
+
+### Document status shown beside attachments
+
+- **Quarantined · Pending:** the upload is stored in the configured private document store, but malware validation
+  has not completed. Viewing and download are intentionally blocked.
+- **Processing:** the protected document worker is validating the file.
+- **Available · Clean:** validation passed; an authorized user can view or download the attachment.
+- **Failed:** processing did not complete; a system administrator must inspect and retry it.
+- **Rejected/Infected:** the security gate excluded the document from the controlled package.
+
+### Records desk and physical tracking
+
+The optional **Records desk** panel is for a hard-copy source or physical file. Secretariat/Records staff use it to
+capture scan desk, scan time, page count, physical-file reference and current location, generate a tracking code and
+QR label, review possible duplicates, and record every physical movement. Digitally originated correspondence does
+not require a physical tracking record. This panel does not assign the digital action owner or advance the workflow.
+
 ## Officer and general originator
 
 1. Select **Raise correspondence** and choose the correspondence type. Incoming Letters are registered by authorized
@@ -195,8 +237,8 @@ is not connected until S24B.
 
 - Workspace v2 sessions consume enterprise MFA evidence and can be centrally revoked. Local/demo authentication is
   not a production fallback; production IdP registration, key management and central logout delivery must be operated.
-- Attachments use quarantine, hash/magic-byte validation and clean-only release. Local storage and the mock scanner
-  remain demonstration facilities; real EDMS, malware scanning and OCR are still production requirements.
+- Attachments can use private Vercel Blob storage while retaining quarantine, hash/magic-byte validation and
+  clean-only release. A real malware-scanner adapter, OCR and permanent EDMS integration remain production requirements.
 - Search is database-backed multi-field text search, not OCR or a dedicated enterprise search engine.
 - Digital-signature assertions, acting appointments, need-to-know groups and the external stakeholder portal are
   implemented; PKI/legal-signature policy, legal hold and governed retention/disposal remain external policy/integration work.

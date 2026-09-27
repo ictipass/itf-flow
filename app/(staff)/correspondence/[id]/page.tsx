@@ -26,6 +26,16 @@ import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
 import { verifyApprovalSignature } from "@/lib/approval-signatures";
 
+function attachmentGuidance(file: { isIncluded: boolean; processingStatus: string; malwareScanStatus: string }) {
+  if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
+  if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN") return null;
+  if (file.processingStatus === "QUARANTINED" && file.malwareScanStatus === "PENDING") return "Stored securely in quarantine. The document security worker has not completed malware validation, so viewing and download remain blocked.";
+  if (file.processingStatus === "PROCESSING") return "Document security validation is currently in progress.";
+  if (file.processingStatus === "FAILED") return "Document security processing failed. A system administrator can review and retry it.";
+  if (file.processingStatus === "REJECTED" || file.malwareScanStatus === "INFECTED") return "The document was rejected by the security gate and cannot be opened or downloaded.";
+  return "The document is not yet available. Viewing and download are enabled only after it is marked Available and Clean.";
+}
+
 export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const enterpriseMfaActive = await hasActiveEnterpriseMfa();
@@ -132,10 +142,11 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <h2>Correspondence</h2>
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div style={{ marginTop: 20 }}><strong>Attachments</strong>{record.attachments.map((file) => <p key={file.id}>{file.isIncluded && file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN" ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName}</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : "Excluded"} · {label(file.malwareScanStatus)})</small></p>)}</div> : null}
+            {record.attachments.length ? <div className="attachment-list"><strong>Attachments</strong>{record.attachments.map((file) => { const guidance = attachmentGuidance(file); return <div className="attachment-item" key={file.id}><p>{file.isIncluded && file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN" ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : "Excluded"} · {label(file.malwareScanStatus)})</small></p>{guidance ? <small className="attachment-help">{guidance}</small> : null}</div>; })}</div> : null}
           </section>
-          {canRegister(user.role) ? <section className="card">
-            <span className="eyebrow">Records desk</span><h2>Scanning and physical file</h2>
+          {canRegister(user.role) ? <details className="card records-desk" open={Boolean(record.secretariatRecord)}>
+            <summary className="records-desk-summary"><span className="eyebrow">Records desk · Optional</span><strong className="records-desk-title">Physical file tracking</strong><span className="muted">Use this only when a hard-copy source or physical file must be tracked. It does not control the digital correspondence journey.</span></summary>
+            <div className="records-desk-content">
             <form action={recordScanningMetadataAction} className="form-grid">
               <input type="hidden" name="correspondenceId" value={record.id} />
               <div className="field"><label>Scanning desk</label><input name="scanDesk" required minLength={2} defaultValue={record.secretariatRecord?.scanDesk ?? user.office} /></div>
@@ -145,7 +156,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <div className="field"><label>Physical file reference</label><input name="physicalFileReference" defaultValue={record.secretariatRecord?.physicalFileReference ?? ""} /></div>
               <div className="field"><label>Audit reason</label><input name="reason" required minLength={5} placeholder="Initial scan registration or metadata correction" /></div>
               <div className="field span-2"><label>Handling notes</label><textarea name="notes" defaultValue={record.secretariatRecord?.notes ?? ""} /></div>
-              <button className="btn span-2">{record.secretariatRecord ? "Update scanning metadata" : "Create tracking record"}</button>
+              <button className="btn span-2">{record.secretariatRecord ? "Update physical tracking metadata" : "Create physical tracking record"}</button>
             </form>
             {record.secretariatRecord ? <>
               <div className="handler-strip"><div><strong>{record.secretariatRecord.trackingCode}</strong><small>{record.secretariatRecord.currentLocation} · {record.secretariatRecord.pageCount} pages · {label(record.secretariatRecord.duplicateStatus)}</small></div><Link className="btn secondary compact" href={`/intake/labels/${record.id}`}>Print QR label</Link></div>
@@ -153,7 +164,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <h3>Duplicate review</h3>{record.secretariatRecord.duplicateOf ? <p className="notice">Potential/original match: <Link href={`/correspondence/${record.secretariatRecord.duplicateOf.id}`}><strong>{record.secretariatRecord.duplicateOf.referenceNumber}</strong></Link> · {record.secretariatRecord.duplicateOf.subject}</p> : null}
               <form action={reviewDuplicateAction} className="form-grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Original correspondence ID (required to confirm)</label><input name="duplicateOfCorrespondenceId" defaultValue={record.secretariatRecord.duplicateOfCorrespondenceId ?? ""} /></div><div className="field"><label>Review reason</label><input name="reason" required minLength={10} /></div><div className="actions span-2"><button className="btn secondary" name="outcome" value="CLEARED">Clear duplicate flag</button><button className="btn" name="outcome" value="CONFIRMED_DUPLICATE">Confirm duplicate</button></div></form>
             </> : null}
-          </section> : null}
+            </div>
+          </details> : null}
           {canHandleIntake ? (
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}

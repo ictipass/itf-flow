@@ -1,4 +1,4 @@
-import { Check, CircleDot, Clock3, Copy, GitBranch, MapPin, RotateCcw, UserRound } from "lucide-react";
+import { Check, ChevronDown, CircleDot, Clock3, Copy, GitBranch, MapPin, RotateCcw, UserRound } from "lucide-react";
 import { label } from "@/lib/reference";
 
 type Person = { id: string; name: string; role: string; office: string; department: string | null; division: string | null };
@@ -63,11 +63,11 @@ export function CorrespondencePassage({ status, receivedAt, initiator, externalS
   const currentSince = actionItems.length ? new Date(Math.min(...actionItems.map((item) => item.assignedAt.getTime()))) : chronologicalEvents.at(-1)?.createdAt ?? receivedAt;
 
   return (
-    <section className="passage-card card">
-      <div className="passage-heading">
+    <details className="passage-card card">
+      <summary className="passage-heading">
         <div><span className="eyebrow">Passage and status</span><h2>Correspondence journey</h2><p className="muted">An immutable, chronological view of where this correspondence has been and where it is now.</p></div>
-        <span className="passage-current-status"><CircleDot size={15} /> {label(status)}</span>
-      </div>
+        <span className="passage-heading-actions"><span className="passage-current-status"><CircleDot size={15} /> {label(status)}</span><ChevronDown className="passage-chevron" size={20} aria-hidden="true" /></span>
+      </summary>
       <div className="passage-summary">
         <div><small>Current action owner{actionItems.length === 1 ? "" : "s"}</small><strong>{actionItems.length ? actionItems.map((item) => item.assignee.name).join(", ") : "No active action owner"}</strong></div>
         <div><small>Current location</small><strong>{offices.length ? offices.join(" · ") : "Workflow completed or awaiting intake"}</strong></div>
@@ -108,6 +108,6 @@ export function CorrespondencePassage({ status, receivedAt, initiator, externalS
         })}
       </div>
       {activeItems.length ? <div className="passage-now"><strong><MapPin size={16} /> Current position</strong><div className="passage-now-grid">{activeItems.map((item) => <div className="passage-recipient" key={item.id}><span className="passage-avatar">{initials(item.assignee.name)}</span><div><strong>{item.assignee.name}</strong><small>{item.assignee.office} · assigned {item.assignedAt.toLocaleString("en-NG")}</small></div><span className={`badge ${item.kind === "COPY" ? "copy" : ""}`}>{label(item.kind)} · {label(item.status)}</span></div>)}</div></div> : null}
-    </section>
+    </details>
   );
 }
