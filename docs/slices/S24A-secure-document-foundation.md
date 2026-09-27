@@ -31,6 +31,11 @@ dedicated worker; ordinary application requests do not continuously poll the dat
 For local functional demonstration only, set `DOCUMENT_SCANNER_PROVIDER=MOCK`. Never use that value in production.
 The default `DISABLED` setting intentionally causes processing to fail and retry without releasing content.
 
+`MALWARE_SCANNER=ENABLED` is the safe default and retains that quarantine-first, fail-closed behavior. The explicit
+temporary exception `MALWARE_SCANNER=DISABLED` releases only size-, type- and file-signature-valid uploads
+immediately, records `Available · Bypassed` plus a `SCAN_BYPASSED` event, and never describes them as clean. The
+production assurance check continues to report this bypass as an unresolved security exception.
+
 ## S24B boundary
 
 S24A does not claim a real malware engine, OCR engine or EDMS connection. S24B still requires the EDMS API,

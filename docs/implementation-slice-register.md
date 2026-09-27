@@ -52,6 +52,7 @@ another developer without depending on unfinished work from a later slice.
 | S27A | Correspondence origination and routing readiness | Implemented | Flow `c1223c4`, Workspace W44 `f34a31f`; category filtering, form/search guidance and reporting-line reconciliation; 43 Flow/109 Workspace tests and both full verifications passed; see [`slices/S27A-correspondence-routing-readiness.md`](slices/S27A-correspondence-routing-readiness.md) |
 | S28 | Private Vercel Blob document storage | Implemented locally; live Vercel acceptance pending | Private quarantine/read/release adapter, environment validation and 46 assurance tests/full verification passed; see [`slices/S28-private-vercel-blob-storage.md`](slices/S28-private-vercel-blob-storage.md) |
 | S28A | Correspondence detail readability and workflow guidance | Implemented locally | Collapsible passage, Glass contrast repair, attachment/physical-record guidance and end-to-end operating workflow; see [`slices/S28A-correspondence-detail-usability.md`](slices/S28A-correspondence-detail-usability.md) |
+| S28B | Explicit malware-scanner bypass control | Implemented locally; migration/deployment pending | Safe-default `MALWARE_SCANNER` switch, auditable Available/Bypassed release, fail-closed enabled mode and security-gate coverage; 50 assurance tests and full verification passed; see [`slices/S28B-malware-scanner-bypass.md`](slices/S28B-malware-scanner-bypass.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 

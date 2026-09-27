@@ -20,6 +20,7 @@ import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { activeDelegationsFor } from "@/lib/delegations";
+import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
 import { canDispatch, canMinute, canRegister } from "@/lib/permissions";
 import { label } from "@/lib/reference";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
@@ -29,11 +30,12 @@ import { verifyApprovalSignature } from "@/lib/approval-signatures";
 function attachmentGuidance(file: { isIncluded: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
   if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN") return null;
+  if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "BYPASSED") return "Available under an explicit malware-scanner bypass. This document was not malware-scanned.";
   if (file.processingStatus === "QUARANTINED" && file.malwareScanStatus === "PENDING") return "Stored securely in quarantine. The document security worker has not completed malware validation, so viewing and download remain blocked.";
   if (file.processingStatus === "PROCESSING") return "Document security validation is currently in progress.";
   if (file.processingStatus === "FAILED") return "Document security processing failed. A system administrator can review and retry it.";
   if (file.processingStatus === "REJECTED" || file.malwareScanStatus === "INFECTED") return "The document was rejected by the security gate and cannot be opened or downloaded.";
-  return "The document is not yet available. Viewing and download are enabled only after it is marked Available and Clean.";
+  return "The document is not yet available. Viewing and download are enabled only after it is marked Available and Clean, or Available with an explicit bypass.";
 }
 
 export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -142,7 +144,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <h2>Correspondence</h2>
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div className="attachment-list"><strong>Attachments</strong>{record.attachments.map((file) => { const guidance = attachmentGuidance(file); return <div className="attachment-item" key={file.id}><p>{file.isIncluded && file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN" ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : "Excluded"} · {label(file.malwareScanStatus)})</small></p>{guidance ? <small className="attachment-help">{guidance}</small> : null}</div>; })}</div> : null}
+            {record.attachments.length ? <div className="attachment-list"><strong>Attachments</strong>{record.attachments.map((file) => { const guidance = attachmentGuidance(file); return <div className="attachment-item" key={file.id}><p>{file.isIncluded && attachmentPassesDocumentSecurityGate(file) ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : "Excluded"} · {label(file.malwareScanStatus)})</small></p>{guidance ? <small className="attachment-help">{guidance}</small> : null}</div>; })}</div> : null}
           </section>
           {canRegister(user.role) ? <details className="card records-desk" open={Boolean(record.secretariatRecord)}>
             <summary className="records-desk-summary"><span className="eyebrow">Records desk · Optional</span><strong className="records-desk-title">Physical file tracking</strong><span className="muted">Use this only when a hard-copy source or physical file must be tracked. It does not control the digital correspondence journey.</span></summary>

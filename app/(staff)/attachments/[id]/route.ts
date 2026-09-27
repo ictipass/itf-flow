@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { CorrespondenceStatus, DocumentEventType, DocumentProcessingStatus, MalwareScanStatus, UserRole } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, DocumentEventType, UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { readStoredDocument } from "@/lib/document-storage";
+import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
 import { getCurrentUser } from "@/lib/session";
 import { activeDelegationsFor } from "@/lib/delegations";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
@@ -31,7 +32,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const policy = await canAccessSensitiveRecord({ user, classification: attachment.correspondence.classification, createdById: attachment.correspondence.createdById, hasAccessGroups: attachment.correspondence.accessGroups.length > 0, groupMemberIds: [...new Set(attachment.correspondence.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
   if (policy.needsStepUp) return NextResponse.redirect(new URL(`/step-up?returnTo=${encodeURIComponent(`/attachments/${attachment.id}`)}`, _request.url));
   if (!policy.allowed) return new NextResponse("Forbidden", { status: 403 });
-  if (!attachment.isIncluded || attachment.processingStatus !== DocumentProcessingStatus.AVAILABLE || attachment.malwareScanStatus !== MalwareScanStatus.CLEAN) return new NextResponse("Attachment has not passed the document security gate", { status: 423 });
+  if (!attachment.isIncluded || !attachmentPassesDocumentSecurityGate(attachment)) return new NextResponse("Attachment has not passed the document security gate", { status: 423 });
   const bytes = await readStoredDocument(attachment.storageKey, attachment.storageProvider);
   const sensitive = attachment.correspondence.classification === "CONFIDENTIAL" || attachment.correspondence.classification === "SECRET";
   if (sensitive) await logSensitiveAccess({ correspondenceId: attachment.correspondenceId, userId: user.id, type: "DOWNLOAD", detail: attachment.originalName, userAgent: _request.headers.get("user-agent"), ipAddress: _request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() });

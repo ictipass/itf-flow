@@ -12,6 +12,7 @@ import {
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
+import { initialDocumentEvent } from "@/lib/document-security";
 import { getMailConfiguration, isMailEnabled } from "@/lib/mail-config";
 import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
@@ -174,7 +175,7 @@ export async function syncMailbox() {
               bytes: attachment.content,
             });
             await db.attachment.create({
-              data: { correspondenceId: correspondence.id, ...stored, documentEvents: { create: { type: "QUARANTINED", detail: "Mailbox attachment stored in quarantine." } } },
+              data: { correspondenceId: correspondence.id, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === "BYPASSED" ? "DISABLED" : "ENABLED", "Mailbox attachment") } },
             });
           } catch {
             // Unsupported, oversized, or unsafe attachments are not persisted.

@@ -54,9 +54,10 @@ Announcements, Raise correspondence and How it works. Additional operational lin
 
 1. **Compose:** the sender selects the document type and workflow category, writes the correspondence, chooses the
    next action recipient, adds copy recipients only for awareness, attaches supporting documents and submits.
-2. **Secure attachments:** every uploaded document enters quarantine. It cannot be viewed, downloaded, approved or
-   dispatched until document processing validates its file signature, scans it for malware and marks it
-   **Available · Clean**.
+2. **Secure attachments:** with `MALWARE_SCANNER=ENABLED`, every uploaded document enters quarantine. It cannot be
+   viewed, downloaded, approved or dispatched until document processing validates its file signature, scans it for
+   malware and marks it **Available · Clean**. With the temporary `DISABLED` bypass, signature-valid uploads are
+   immediately released as **Available · Bypassed** and the missing malware scan remains visible in the audit trail.
 3. **Receive:** the action recipient sees the matter in **My inbox** and acknowledges receipt. This establishes
    custody. Copy recipients can follow the record but do not own the action.
 4. **Treat or decide:** the owner performs the work and, where requested, records a recommendation, review,
@@ -82,6 +83,8 @@ expanded custody/elapsed-time view and is collapsed by default; select its headi
   has not completed. Viewing and download are intentionally blocked.
 - **Processing:** the protected document worker is validating the file.
 - **Available · Clean:** validation passed; an authorized user can view or download the attachment.
+- **Available · Bypassed:** file-signature validation passed and the upload is usable, but malware scanning was
+  explicitly disabled. This is recorded as a security exception and must not be represented as a clean scan.
 - **Failed:** processing did not complete; a system administrator must inspect and retry it.
 - **Rejected/Infected:** the security gate excluded the document from the controlled package.
 

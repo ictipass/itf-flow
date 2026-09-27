@@ -8,6 +8,7 @@ import {
 } from "../lib/database-url";
 import { resolveWorkspaceNavigationUrls } from "../lib/workspace-navigation-urls";
 import { stagingAcceptanceConfigurationIssues } from "../lib/workspace-staging-acceptance";
+import { malwareScannerMode } from "../lib/document-security";
 
 const required = [
   "DATABASE_URL",
@@ -38,8 +39,16 @@ async function main() {
   if ((process.env.APPROVAL_SIGNING_SECRET?.length ?? 0) < 32) warnings.push("APPROVAL_SIGNING_SECRET is missing or shorter than 32 characters; production approval signing will fail.");
   if ((process.env.WORKFLOW_WORKER_SECRET?.length ?? 0) < 32) warnings.push("WORKFLOW_WORKER_SECRET is missing or shorter than 32 characters; scheduled reminder processing will reject all requests.");
   if ((process.env.DOCUMENT_WORKER_SECRET?.length ?? 0) < 32) warnings.push("DOCUMENT_WORKER_SECRET is missing or shorter than 32 characters; quarantined documents cannot be processed.");
-  if ((process.env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED") === "DISABLED") warnings.push("Document malware scanning is disabled; new documents remain unavailable in quarantine.");
-  if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER === "MOCK") errors.push("The mock document scanner is forbidden in production.");
+  try {
+    if (malwareScannerMode() === "DISABLED") {
+      warnings.push("MALWARE_SCANNER=DISABLED explicitly bypasses malware scanning; uploads are released as Available and Bypassed.");
+    } else {
+      if ((process.env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED").trim().toUpperCase() === "DISABLED") warnings.push("Malware scanning is enabled but no document scanner provider is configured; uploads will remain quarantined.");
+      if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER?.trim().toUpperCase() === "MOCK") errors.push("The mock document scanner is forbidden in production.");
+    }
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "MALWARE_SCANNER is invalid.");
+  }
   if (process.env.NODE_ENV === "production" && process.env.STAFF_LOCAL_LOGIN_ENABLED === "true") errors.push("STAFF_LOCAL_LOGIN_ENABLED must not be true for an approved production deployment.");
   if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEMO_SEED === "true") errors.push("ALLOW_DEMO_SEED must not be true in production.");
   const documentStorageProvider = (process.env.DOCUMENT_STORAGE_PROVIDER ?? "LOCAL").trim().toUpperCase();

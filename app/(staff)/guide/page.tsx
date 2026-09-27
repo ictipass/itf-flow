@@ -39,7 +39,7 @@ const guides = [
 
 const endToEndSteps = [
   ["Compose and route", "The sender creates the correspondence, selects one or more action recipients, adds copy recipients only for awareness, records a clear instruction, and submits."],
-  ["Secure the document", "An attachment is first quarantined. It becomes viewable only after file-type validation and malware scanning mark it Available and Clean."],
+  ["Secure the document", "With scanning enabled, an attachment is quarantined until validation and malware scanning mark it Available and Clean. Under the explicit temporary bypass, a signature-valid upload is immediately Available and Bypassed, with the exception retained in its audit history."],
   ["Receive and acknowledge", "Each action recipient sees the item in My inbox and acknowledges it to establish custody. Copy recipients can follow it but do not own treatment."],
   ["Treat or decide", "The action owner performs the required work and records any requested review, concurrence, approval, recommendation, or clarification."],
   ["Minute and move", "If further action is required, the owner records a minute and routes to an authorized supervisor, direct report, or permitted peer. Sequential work is sent to the next desk only."],

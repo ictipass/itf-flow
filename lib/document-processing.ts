@@ -2,10 +2,9 @@ import { createHash } from "crypto";
 import { DocumentEventType, DocumentOcrStatus, DocumentProcessingStatus, MalwareScanStatus } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { readStoredDocument, releaseStoredDocument } from "@/lib/document-storage";
+import { malwareScannerEnabled } from "@/lib/document-security";
+import { detectDocumentMime } from "@/lib/document-validation";
 import { captureRevision } from "@/lib/revisions";
-
-const PDF = "application/pdf", JPEG = "image/jpeg", PNG = "image/png", DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document", XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-export function detectMime(bytes: Buffer) { if (bytes.subarray(0, 5).toString() === "%PDF-") return PDF; if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return JPEG; if (bytes.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a]))) return PNG; if (bytes[0] === 0x50 && bytes[1] === 0x4b) { const archive = bytes.subarray(Math.max(0, bytes.length - 256 * 1024)).toString("latin1"); if (archive.includes("word/")) return DOCX; if (archive.includes("xl/")) return XLSX; } return null; }
 
 export interface MalwareScanner { scan(bytes: Buffer): Promise<{ clean: boolean; engine: string; signature?: string }>; }
 export interface OcrProvider { extract(bytes: Buffer, mimeType: string): Promise<{ text: string | null; provider: string }>; }
@@ -18,12 +17,14 @@ async function processOne(attachmentId: string) {
     const bytes = await readStoredDocument(attachment.storageKey, attachment.storageProvider);
     const sha256 = createHash("sha256").update(bytes).digest("hex");
     if (sha256 !== attachment.sha256) throw new Error("Stored content hash does not match the intake hash.");
-    const detectedMimeType = detectMime(bytes);
+    const detectedMimeType = detectDocumentMime(bytes);
     if (!detectedMimeType || detectedMimeType !== attachment.mimeType) {
       await db.$transaction(async (tx) => { await tx.attachment.update({ where: { id: attachment.id }, data: { detectedMimeType, isIncluded: false, processingStatus: DocumentProcessingStatus.REJECTED, malwareScanStatus: MalwareScanStatus.QUARANTINED, processedAt: new Date(), processingLockedAt: null, processingError: "Declared type does not match file signature." } }); await tx.documentEvent.create({ data: { attachmentId: attachment.id, type: DocumentEventType.REJECTED, detail: "Magic-byte validation failed; attachment excluded from the document package.", metadata: { declaredMimeType: attachment.mimeType, detectedMimeType } } }); await captureRevision(tx, attachment.correspondenceId, null, `Rejected unsafe attachment ${attachment.originalName}.`); });
       return "rejected";
     }
-    const scan = await scanner().scan(bytes);
+    const scan = malwareScannerEnabled()
+      ? await scanner().scan(bytes)
+      : { clean: true, engine: "explicit-bypass" };
     if (!scan.clean) {
       await db.$transaction(async (tx) => { await tx.attachment.update({ where: { id: attachment.id }, data: { detectedMimeType, isIncluded: false, processingStatus: DocumentProcessingStatus.REJECTED, malwareScanStatus: MalwareScanStatus.INFECTED, processedAt: new Date(), processingLockedAt: null, processingError: scan.signature ?? "Malware detected." } }); await tx.documentEvent.create({ data: { attachmentId: attachment.id, type: DocumentEventType.SCAN_INFECTED, detail: "Malware scanner rejected and excluded the document.", metadata: { engine: scan.engine, signature: scan.signature } } }); await captureRevision(tx, attachment.correspondenceId, null, `Rejected infected attachment ${attachment.originalName}.`); });
       return "infected";
@@ -31,7 +32,8 @@ async function processOne(attachmentId: string) {
     const releasedKey = await releaseStoredDocument(attachment.storageKey, attachment.storageProvider);
     const ocrProvider = ocr();
     const ocrResult = ocrProvider ? await ocrProvider.extract(bytes, detectedMimeType) : null;
-    await db.$transaction([db.attachment.update({ where: { id: attachment.id }, data: { storageKey: releasedKey, detectedMimeType, processingStatus: DocumentProcessingStatus.AVAILABLE, malwareScanStatus: MalwareScanStatus.CLEAN, ocrStatus: ocrResult?.text ? DocumentOcrStatus.COMPLETED : DocumentOcrStatus.UNAVAILABLE, extractedText: ocrResult?.text?.slice(0, 1_000_000), processedAt: new Date(), processingLockedAt: null, processingError: null } }), db.documentEvent.create({ data: { attachmentId: attachment.id, type: DocumentEventType.RELEASED, detail: "Validated, malware-scanned and released.", metadata: { scanner: scan.engine, ocrProvider: ocrResult?.provider ?? null } } })]);
+    const bypassed = scan.engine === "explicit-bypass";
+    await db.$transaction([db.attachment.update({ where: { id: attachment.id }, data: { storageKey: releasedKey, detectedMimeType, processingStatus: DocumentProcessingStatus.AVAILABLE, malwareScanStatus: bypassed ? MalwareScanStatus.BYPASSED : MalwareScanStatus.CLEAN, ocrStatus: ocrResult?.text ? DocumentOcrStatus.COMPLETED : DocumentOcrStatus.UNAVAILABLE, extractedText: ocrResult?.text?.slice(0, 1_000_000), processedAt: new Date(), processingLockedAt: null, processingError: null } }), db.documentEvent.create({ data: { attachmentId: attachment.id, type: bypassed ? DocumentEventType.SCAN_BYPASSED : DocumentEventType.RELEASED, detail: bypassed ? "Validated and released without malware scanning because MALWARE_SCANNER=DISABLED." : "Validated, malware-scanned and released.", metadata: { scanner: scan.engine, scannerMode: bypassed ? "DISABLED" : "ENABLED", ocrProvider: ocrResult?.provider ?? null } } })]);
     return "released";
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 1000) : "Document processing failed.";

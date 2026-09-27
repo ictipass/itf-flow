@@ -27,6 +27,7 @@ import {
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { storeDocument } from "@/lib/document-storage";
+import { attachmentPassesDocumentSecurityGate, initialDocumentEvent } from "@/lib/document-security";
 import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
 import { canDispatch, canMinute, canOriginate, canReadClassification, canRegister } from "@/lib/permissions";
@@ -241,7 +242,7 @@ export async function externalSubmitAction(formData: FormData) {
   const file = formData.get("attachment");
   if (file instanceof File && file.size) {
     const stored = await persistAttachment(file, correspondence.id);
-    if (stored) await db.attachment.create({ data: { correspondenceId: correspondence.id, ...stored, documentEvents: { create: { type: "QUARANTINED", detail: "External upload stored in quarantine." } } } });
+    if (stored) await db.attachment.create({ data: { correspondenceId: correspondence.id, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "External upload") } } });
   }
   await db.$transaction((tx) => captureRevision(tx, correspondence.id, null, "Initial external submission."));
   redirect(`/submitted?reference=${encodeURIComponent(correspondence.referenceNumber)}`);
@@ -428,7 +429,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
   const file = formData.get("attachment");
   if (file instanceof File && file.size) {
     const stored = await persistAttachment(file, record.id);
-    if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored, documentEvents: { create: { type: "QUARANTINED", detail: "Staff upload stored in quarantine." } } } });
+    if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Staff upload") } } });
   }
   await db.$transaction((tx) => captureRevision(
     tx,
@@ -506,7 +507,7 @@ export async function saveDraftAction(formData: FormData) {
   const file = formData.get("attachment");
   if (file instanceof File && file.size) {
     const stored = await persistAttachment(file, draftId);
-    if (stored) await db.attachment.create({ data: { correspondenceId: draftId, ...stored, documentEvents: { create: { type: "QUARANTINED", detail: "Draft upload stored in quarantine." } } } });
+    if (stored) await db.attachment.create({ data: { correspondenceId: draftId, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Draft upload") } } });
   }
   redirect(`/correspondence/${draftId}/edit?saved=1`);
 }
@@ -787,7 +788,7 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
   const file = formData.get("attachment");
   if (file instanceof File && file.size) {
     const stored = await persistAttachment(file, correspondenceId);
-    if (stored) await db.attachment.create({ data: { correspondenceId, ...stored, documentEvents: { create: { type: "QUARANTINED", detail: "Revision upload stored in quarantine." } } } });
+    if (stored) await db.attachment.create({ data: { correspondenceId, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Revision upload") } } });
   }
   const context = await requestContext();
   const revision = await db.$transaction(async (tx) => {
@@ -1020,7 +1021,7 @@ async function assertDispatchable(correspondenceId: string) {
   if (record.requiresApproval && !record.decisionRequests.length) {
     throw new Error("This correspondence requires a current approval before dispatch.");
   }
-  if (record.attachments.some((attachment) => attachment.isIncluded && (attachment.processingStatus !== DocumentProcessingStatus.AVAILABLE || attachment.malwareScanStatus !== MalwareScanStatus.CLEAN))) throw new Error("Dispatch is blocked until every included attachment passes document security processing.");
+  if (record.attachments.some((attachment) => attachment.isIncluded && !attachmentPassesDocumentSecurityGate(attachment))) throw new Error("Dispatch is blocked until every included attachment passes document security processing or has an explicitly recorded scanner bypass.");
   if (record.decisionRequests[0]?.signature && !verifyApprovalSignature(record.decisionRequests[0].signature)) throw new Error("The current approval signature could not be verified; dispatch is blocked.");
   return record;
 }
@@ -1208,7 +1209,7 @@ export async function recordDecisionAction(formData: FormData) {
       if (!user.passwordHash || !await bcrypt.compare(password, user.passwordHash)) throw new Error("Strong re-authentication failed; approval was not recorded.");
     }
     if (!latestRevision) throw new Error("The document has no immutable revision to sign.");
-    const unsafeAttachments = await db.attachment.count({ where: { correspondenceId, isIncluded: true, OR: [{ processingStatus: { not: DocumentProcessingStatus.AVAILABLE } }, { malwareScanStatus: { not: MalwareScanStatus.CLEAN } }] } });
+    const unsafeAttachments = await db.attachment.count({ where: { correspondenceId, isIncluded: true, OR: [{ processingStatus: { not: DocumentProcessingStatus.AVAILABLE } }, { malwareScanStatus: { notIn: [MalwareScanStatus.CLEAN, MalwareScanStatus.BYPASSED] } }] } });
     if (unsafeAttachments) throw new Error("Approval is blocked until every attachment passes document security processing.");
   }
 

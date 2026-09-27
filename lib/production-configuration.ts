@@ -1,5 +1,6 @@
 import { resolveWorkspaceLaunchReceiverConfiguration } from "@/lib/workspace-token";
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
+import { malwareScannerMode } from "@/lib/document-security";
 
 export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.env) {
   const issues: string[] = [];
@@ -19,7 +20,12 @@ export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.e
   if (storageProvider === "LOCAL") issues.push("managed document storage is not configured");
   else if (storageProvider === "VERCEL_BLOB" && !env.BLOB_READ_WRITE_TOKEN?.trim()) issues.push("BLOB_READ_WRITE_TOKEN is missing for private Vercel Blob storage");
   else if (storageProvider !== "VERCEL_BLOB") issues.push(`unsupported document storage provider: ${storageProvider}`);
-  if (["DISABLED", "MOCK"].includes(env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED")) issues.push("a production malware scanner is not configured");
+  try {
+    if (malwareScannerMode(env) === "DISABLED") issues.push("malware scanning is explicitly bypassed by MALWARE_SCANNER=DISABLED");
+    else if (["DISABLED", "MOCK"].includes((env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED").trim().toUpperCase())) issues.push("a production malware scanner is not configured");
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : "malware-scanner mode is invalid");
+  }
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_OCR_PROVIDER ?? "DISABLED")) issues.push("a production OCR provider is not configured");
   if (env.STAFF_LOCAL_LOGIN_ENABLED === "true") issues.push("local staff-password login is enabled");
   return issues;

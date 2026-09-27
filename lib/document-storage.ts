@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "crypto";
 import { copy, get, put } from "@vercel/blob";
 import { copyFile, mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
+import { initialDocumentSecurityState, malwareScannerMode } from "@/lib/document-security";
+import { detectDocumentMime } from "@/lib/document-validation";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -20,8 +22,10 @@ export type StoredDocument = {
   storageKey: string;
   sha256: string;
   storageProvider: DocumentStorageProviderName;
-  malwareScanStatus: "PENDING";
-  processingStatus: "QUARANTINED";
+  malwareScanStatus: "PENDING" | "BYPASSED";
+  processingStatus: "QUARANTINED" | "AVAILABLE";
+  detectedMimeType?: string;
+  processedAt?: Date;
 };
 
 type DocumentInput = {
@@ -135,17 +139,23 @@ export async function storeDocument(input: DocumentInput): Promise<StoredDocumen
   if (!allowedMimeTypes.has(input.mimeType) || !input.bytes.length || input.bytes.length > maximumBytes) {
     throw new Error("Document type is not permitted or the document exceeds the configured size limit.");
   }
+  const scannerMode = malwareScannerMode();
+  const detectedMimeType = scannerMode === "DISABLED" ? detectDocumentMime(input.bytes) : null;
+  if (scannerMode === "DISABLED" && detectedMimeType !== input.mimeType) {
+    throw new Error("Declared document type does not match the file signature.");
+  }
   const provider = documentProvider();
   const stored = await provider.storeQuarantined(input);
+  const storedKey = scannerMode === "DISABLED" ? await provider.release(stored.storageKey) : stored.storageKey;
   return {
     originalName: input.originalName,
     mimeType: input.mimeType,
     sizeBytes: input.bytes.length,
-    storageKey: stored.storageKey,
+    storageKey: storedKey,
     sha256: createHash("sha256").update(input.bytes).digest("hex"),
     storageProvider: provider.name,
-    malwareScanStatus: "PENDING",
-    processingStatus: "QUARANTINED",
+    ...initialDocumentSecurityState(scannerMode),
+    ...(detectedMimeType ? { detectedMimeType, processedAt: new Date() } : {}),
   };
 }
 
