@@ -3,5 +3,9 @@ export function createReferenceNumber(sequence: number, date = new Date()) {
 }
 
 export function label(value: string) {
-  return value.toLowerCase().replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+  const acronyms = new Set(["DG", "EDMS", "IMAP", "ITF", "MFA", "OCR", "PDF", "PKI", "PWA", "SHA", "SMTP"]);
+  return value.split("_").map((word) => {
+    const upper = word.toUpperCase();
+    return acronyms.has(upper) ? upper : `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`;
+  }).join(" ");
 }

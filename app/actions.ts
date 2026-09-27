@@ -41,6 +41,7 @@ import { ensurePurposeAllowed, resolveWorkflowPolicy } from "@/lib/workflow-temp
 import { localStaffLoginEnabled } from "@/lib/authentication-policy";
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 import { resolveAutomaticDepartmentSecretaries, routingClassification, validateConfidentialRoute } from "@/lib/department-secretaries";
+import { routingFeedbackMessage } from "@/lib/routing-feedback";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -832,7 +833,7 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
   redirect(`/correspondence/${correspondenceId}?revision=${revision.version}`);
 }
 
-export async function routeCorrespondenceAction(formData: FormData) {
+async function performRouteCorrespondence(formData: FormData) {
   const user = await requireUser();
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
   const minute = String(formData.get("minute") ?? "").trim();
@@ -989,6 +990,29 @@ export async function routeCorrespondenceAction(formData: FormData) {
       },
     });
   });
+  return correspondenceId;
+}
+
+export type RouteCorrespondenceState = {
+  status: "idle" | "error";
+  message: string;
+  attempt: number;
+};
+
+function safeRoutingErrorMessage(error: unknown) {
+  const message = routingFeedbackMessage(error);
+  if (message) return message;
+  console.error("Correspondence routing failed unexpectedly.", error);
+  return "Routing could not be completed. Your entries were retained; review them and try again. If it continues, contact the system administrator.";
+}
+
+export async function routeCorrespondenceAction(previous: RouteCorrespondenceState, formData: FormData): Promise<RouteCorrespondenceState> {
+  let correspondenceId: string;
+  try {
+    correspondenceId = await performRouteCorrespondence(formData);
+  } catch (error) {
+    return { status: "error", message: safeRoutingErrorMessage(error), attempt: previous.attempt + 1 };
+  }
   revalidatePath(`/correspondence/${correspondenceId}`);
   redirect(`/correspondence/${correspondenceId}`);
 }

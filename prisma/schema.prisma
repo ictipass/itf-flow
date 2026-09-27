@@ -656,12 +656,15 @@ model ScheduledAutomationRun {
 }
 
 model ApplicationConfiguration {
-  id          String      @id
-  staffUiMode StaffUiMode @default(CLASSIC)
-  version     Int         @default(1)
-  updatedById String?
-  updatedAt   DateTime    @updatedAt
-  updatedBy   User?       @relation("ConfigurationUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  id                                    String      @id
+  staffUiMode                           StaffUiMode @default(CLASSIC)
+  annotationMfaRequiredForDg            Boolean     @default(true)
+  annotationMfaRequiredForDirectors     Boolean     @default(true)
+  annotationMfaRequiredForDivisionHeads Boolean     @default(true)
+  version                               Int         @default(1)
+  updatedById                           String?
+  updatedAt                             DateTime    @updatedAt
+  updatedBy                             User?       @relation("ConfigurationUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
 }
 
 model ConfigurationChange {

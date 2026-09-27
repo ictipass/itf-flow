@@ -18,7 +18,10 @@ version.
 - Source bytes are re-hashed and compared with the immutable database hash before rendering.
 - Every later document view/download rechecks the stored byte hash; generated annotated documents also fail closed
   if their canonical signing-record HMAC no longer verifies.
-- Workspace users sign with recent enterprise MFA; local/demo users re-confirm their password.
+- Strong authentication is required by default. An administrator can independently relax it for DG, Director and
+  Division Head authority, with optimistic concurrency, a mandatory reason and a `ConfigurationChange` audit row.
+  Relaxed annotations record `ADMIN_POLICY_RELAXED` and the configuration version in their signed payload/event.
+  Other roles continue to require recent Workspace MFA or the local/demo password fallback.
 - The database retains source/output attachment IDs and hashes, page, placement, minute, actor and substantive
   authority, delegation, authentication method, time, correspondence revision and an HMAC-protected canonical
   payload.
@@ -37,7 +40,8 @@ version.
 ## Data and deployment
 
 Migration `20260927160000_add_document_annotations` adds `DocumentAnnotation`, placement values and the `ANNOTATED`
-document event. Deploy with the normal `npm run db:migrate` procedure before releasing the application build.
+document event. The corrective migration `20260927180000_add_annotation_auth_policy` adds safe-default leadership
+authentication toggles. Deploy both with the normal `npm run db:migrate` procedure before releasing the application build.
 
 No new environment variable is required. `pdf-lib` is an application dependency and does not require a SaaS
 subscription. Generated PDFs use the configured document-storage provider and inherit the source's Clean or
@@ -49,6 +53,7 @@ Bypassed security provenance.
 - A responsive in-app preview and annotation form collect page, corner, minute and signing confirmation.
 - **Document annotation history** exposes the preserved source and generated signed PDF with audit details.
 - Document Administration reports the total authenticated annotation count and explains provenance.
+- Document Administration exposes the three role-specific authentication toggles and their change history.
 
 ## Verification
 

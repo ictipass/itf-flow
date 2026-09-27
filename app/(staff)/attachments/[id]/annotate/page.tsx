@@ -8,6 +8,7 @@ import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
 import { canMinute } from "@/lib/permissions";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
+import { annotationAuthenticationPolicyFor } from "@/lib/annotation-policy";
 
 export default async function AnnotateAttachmentPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -19,7 +20,8 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
   if (!attachment || !attachmentPassesDocumentSecurityGate(attachment) || !isAnnotatableDocument(attachment.mimeType)) notFound();
   const authority = await workAuthority({ correspondenceId: attachment.correspondenceId, actor: user });
   if (!authority || !canMinute(authority.principal.role)) notFound();
-  const enterpriseMfaActive = await hasActiveEnterpriseMfa();
+  const authenticationPolicy = await annotationAuthenticationPolicyFor(authority.principal.role);
+  const enterpriseMfaActive = authenticationPolicy.required ? await hasActiveEnterpriseMfa() : false;
   const isImage = attachment.mimeType === "image/jpeg" || attachment.mimeType === "image/png";
 
   return (
@@ -62,7 +64,9 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
               <label>Minute</label>
               <textarea name="minuteText" minLength={3} maxLength={1500} required rows={9} placeholder="Enter the instruction, observation or decision to place directly on the document…" />
             </div>
-            {enterpriseMfaActive ? (
+            {!authenticationPolicy.required ? (
+              <p className="notice">The administrator has relaxed annotation re-authentication for the {label(authority.principal.role)} role. This exception and policy version will be recorded with the annotation.</p>
+            ) : enterpriseMfaActive ? (
               <p className="notice success">Your recent Workspace MFA will authenticate this signing action.</p>
             ) : (
               <div className="field">

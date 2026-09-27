@@ -23,6 +23,7 @@ type RecipientSelectorProps = {
   initialActionRecipients?: DirectoryPerson[];
   initialCopyRecipients?: DirectoryPerson[];
   onSelectionChange?: () => void;
+  copyDisabled?: boolean;
 };
 
 function PersonPicker({
@@ -186,6 +187,7 @@ export function RecipientSelector({
   initialActionRecipients = [],
   initialCopyRecipients = [],
   onSelectionChange,
+  copyDisabled = false,
 }: RecipientSelectorProps) {
   const [actionRecipients, setActionRecipients] = useState<DirectoryPerson[]>(initialActionRecipients);
   const [copyRecipients, setCopyRecipients] = useState<DirectoryPerson[]>(initialCopyRecipients);
@@ -205,19 +207,19 @@ export function RecipientSelector({
         fieldName={actionFieldName}
         placeholder="Type a name, staff number, department, division or position…"
       />
-      <PersonPicker
-        mode="copy"
-        selected={copyRecipients}
-        blockedIds={actionRecipients.map((person) => person.id)}
-        onChange={(people) => {
-          setCopyRecipients(people);
-          onSelectionChange?.();
-        }}
-        label="Copy — CC recipients"
-        hint="Copied recipients can read and track the correspondence but are not accountable owners. Copy search is not restricted by the reporting line."
-        fieldName={copyFieldName}
-        placeholder="Type a name, staff number or department to copy someone…"
-      />
+      {copyDisabled ? <div className="recipient-picker"><label className="recipient-picker-label">Copy — CC recipients</label><p className="recipient-picker-hint" role="status">Copy recipients are disabled for Confidential and Secret routing.</p></div> : <PersonPicker
+          mode="copy"
+          selected={copyRecipients}
+          blockedIds={actionRecipients.map((person) => person.id)}
+          onChange={(people) => {
+            setCopyRecipients(people);
+            onSelectionChange?.();
+          }}
+          label="Copy — CC recipients"
+          hint="Copied recipients can read and track the correspondence but are not accountable owners. Copy search is not restricted by the reporting line."
+          fieldName={copyFieldName}
+          placeholder="Type a name, staff number or department to copy someone…"
+        />}
     </div>
   );
 }

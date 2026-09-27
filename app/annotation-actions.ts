@@ -21,6 +21,7 @@ import { canMinute } from "@/lib/permissions";
 import { captureRevision } from "@/lib/revisions";
 import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, signApprovalPayload } from "@/lib/approval-signatures";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
+import { annotationAuthenticationPolicyFor } from "@/lib/annotation-policy";
 
 const annotationSchema = z.object({
   attachmentId: z.string().min(1),
@@ -59,14 +60,18 @@ export async function annotateAttachmentAction(formData: FormData) {
     throw new Error("Only the current action holder or an authorized delegate can minute and sign this document.");
   }
 
-  const enterpriseMfa = await hasActiveEnterpriseMfa();
-  let authenticationMethod = "RECENT_ENTERPRISE_MFA";
-  if (!enterpriseMfa) {
-    const password = String(formData.get("signaturePassword") ?? "");
-    if (!user.passwordHash || !await bcrypt.compare(password, user.passwordHash)) {
-      throw new Error("Strong re-authentication failed; the document was not annotated.");
+  const authenticationPolicy = await annotationAuthenticationPolicyFor(authority.principal.role);
+  let authenticationMethod = "ADMIN_POLICY_RELAXED";
+  if (authenticationPolicy.required) {
+    const enterpriseMfa = await hasActiveEnterpriseMfa();
+    authenticationMethod = "RECENT_ENTERPRISE_MFA";
+    if (!enterpriseMfa) {
+      const password = String(formData.get("signaturePassword") ?? "");
+      if (!user.passwordHash || !await bcrypt.compare(password, user.passwordHash)) {
+        throw new Error("Strong re-authentication failed; the document was not annotated.");
+      }
+      authenticationMethod = "PASSWORD_RECONFIRMATION";
     }
-    authenticationMethod = "PASSWORD_RECONFIRMATION";
   }
 
   const annotationVersion = (await db.documentAnnotation.aggregate({
@@ -144,6 +149,7 @@ export async function annotateAttachmentAction(formData: FormData) {
       authorityPrincipalName: authority.delegation ? authority.principal.name : null,
       delegationId: authority.delegation?.id ?? null,
       authenticationMethod,
+      authenticationPolicyVersion: authenticationPolicy.configurationVersion,
       signedAt: signedAt.toISOString(),
       algorithm: APPROVAL_SIGNATURE_ALGORITHM,
       keyId: APPROVAL_SIGNATURE_KEY_ID,
@@ -201,6 +207,7 @@ export async function annotateAttachmentAction(formData: FormData) {
           pageNumber: parsed.pageNumber,
           placement: parsed.placement,
           authenticationMethod,
+          authenticationPolicyVersion: authenticationPolicy.configurationVersion,
           ...authorityMetadata(authority),
         },
       },

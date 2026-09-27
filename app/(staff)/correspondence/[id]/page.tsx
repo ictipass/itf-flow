@@ -10,12 +10,11 @@ import {
   resubmitReturnedAction,
   resolveAction,
   returnToInitiatorAction,
-  routeCorrespondenceAction,
   updateDispatchStatusAction,
 } from "@/app/actions";
 import { recordScanningMetadataAction, reassignSecretariatLocationAction, reviewDuplicateAction } from "@/app/secretariat-actions";
 import { closeStakeholderClarificationAction, requestStakeholderClarificationAction } from "@/app/stakeholder-actions";
-import { RecipientSelector } from "@/components/recipient-selector";
+import { RouteCorrespondenceForm } from "@/components/route-correspondence-form";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
@@ -223,21 +222,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <section className="card">
               <h2>Minute and route</h2>
               <p className="muted">{canReferToPeers ? "Route through the formal hierarchy or make an authorized peer referral." : "Formal reporting line: your assigned supervisor or direct reports."}</p>
-              <form action={routeCorrespondenceAction} className="grid">
-                <input type="hidden" name="correspondenceId" value={record.id} />
-                <div className="field"><label>Routing purpose</label><select name="workPurpose" defaultValue="ACTION"><option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option></select></div>
-                {authorityRole === UserRole.DG || authorityRole === UserRole.DIRECTOR ? <>
-                  <div className="field"><label>Distribution classification</label><select name="routeClassification" defaultValue={record.classification}><option value={record.classification}>Keep {label(record.classification)}</option>{record.classification === "PUBLIC" || record.classification === "INTERNAL" ? <option value="CONFIDENTIAL">Mark Confidential</option> : null}</select><small className="muted">Public/Internal routing automatically copies the recipient department Secretary. Confidential/Secret routing creates no copies; the DG must send it to a Director.</small></div>
-                  <div className="field"><label>Classification reason, when changing</label><textarea name="classificationReason" minLength={10} maxLength={500} placeholder="State why this correspondence must be handled as Confidential…" /></div>
-                </> : null}
-                <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
-                <div className="field">
-                  <RecipientSelector
-                    actionHint={canReferToPeers ? "Select your supervisor, direct reports, or an authorized peer. Division Head peers are limited to your department." : "Select your assigned supervisor or one or more direct reports."}
-                  />
-                </div>
-                <button className="btn" type="submit">Record minute and route</button>
-              </form>
+              <RouteCorrespondenceForm correspondenceId={record.id} currentClassification={record.classification} authorityRole={authorityRole} canReferToPeers={canReferToPeers} />
             </section>
           ) : null}
           {activeActionItem && !pendingDecision ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}

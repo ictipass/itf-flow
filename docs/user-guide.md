@@ -98,7 +98,10 @@ expanded custody/elapsed-time view and is collapsed by default; select its headi
 2. Select **Minute and sign on document**. PDF is the primary format; JPEG and PNG scans are converted to PDF before
    the minute is applied.
 3. Inspect the in-app preview, enter the target page and choose a corner placement. Enter a concise minute.
-4. Confirm signing intent. A Workspace user uses recent enterprise MFA; a local/demo user re-confirms the password.
+4. Confirm signing intent. By default, a Workspace user uses recent enterprise MFA and a local/demo user re-confirms
+   the password. A system administrator may relax this extra annotation-authentication step independently for DG,
+   Directors or Division Heads. A relaxed action remains session-authenticated and is recorded as an administrator
+   policy exception; document authority, classification and integrity checks still apply.
 5. Select **Create signed PDF version**. Flow verifies the stored source hash, preserves that source, creates a new
    current PDF, captures a correspondence revision and records signer/delegation, authentication, hashes and time.
 6. Use **Document annotation history** to retrieve both the preserved original and each generated signed PDF.
@@ -148,6 +151,11 @@ returning a legitimate empty result, the form displays a synchronization/support
 
 Expected control: prior decisions remain in the decision register when a later correction supersedes them.
 
+If routing validation fails, the page retains the entered minute and selections and shows an error toast instead of
+opening a server error page. Missing classification reasons and Department Secretary assignments are explained in
+the toast. Confidential/Secret selection also disables and removes copy-recipient fields before submission; the
+server independently rejects a crafted request that still supplies copies.
+
 ### Formally approving a document
 
 1. Confirm the document version, attachments, passage and decision request before selecting **Approve**.
@@ -192,10 +200,13 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
    require a reason and affect future movements only.
 3. Use **Appearance** to preview a UI privately, then activate Classic, Modern, Soft UI or Glass for staff
    with a recorded reason.
-4. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
-5. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
-6. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
-7. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
+4. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
+   DG, Directors and Division Heads independently. Give a reason for every change. Enforcement is the safe default;
+   the audit trail records old/new role sets, administrator and time.
+5. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
+6. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
+7. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
+8. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
 
 Expected control: operational administration does not grant blanket access to restricted business records;
 classification rules continue to apply to registry queries and exports.
