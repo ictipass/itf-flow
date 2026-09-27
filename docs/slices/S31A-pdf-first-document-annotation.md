@@ -1,6 +1,8 @@
 # S31A — PDF-first in-document annotation and authenticated signing
 
-Status: **Implemented locally; migration and deployment pending**
+Status: **Implemented; migration and deployment pending**
+
+Implementation commit: `5a03f02`
 
 ## Outcome
 
