@@ -1,6 +1,8 @@
 # S31A1 — Annotation authentication policy and safe routing feedback
 
-Status: **Implemented locally; migration and deployment pending**
+Status: **Implemented; migration and deployment pending**
+
+Implementation commit: `e093018`
 
 ## Outcome
 
