@@ -128,14 +128,21 @@ reusable visual signature profiles are described below; certificate-backed signi
    administrator approval step. Submitting a replacement creates and activates a new version and supersedes the
    earlier active version without deleting its governed history.
 3. Complete the internal-memo workflow and select **Mark resolved** at its final action point.
-4. Open **ITF memo output** on the correspondence detail page and select **Generate ITF memo output**. Flow requires
+4. On initial submission, Flow automatically creates an **ITF memo packet** in the configured document store. Every
+   authorized action recipient opens that packet in the in-app renderer and can minute or sign any page. Available
+   PDF, JPEG and PNG attachments are appended after the memo pages. DOCX/XLSX files remain separate because they
+   require a governed Office conversion service before they can safely become PDF pages.
+5. When malware scanning is enabled, a security-pending attachment remains separate until released. Flow refreshes
+   an unannotated working packet after release; if the packet has already been annotated, it preserves that immutable
+   version and leaves the newly released attachment separately accessible rather than discarding annotations.
+6. Open **ITF memo output** on a resolved correspondence and select **Generate ITF memo output**. Flow requires
    the originator’s active signature profile and uses the current correspondence revision.
-5. Download the generated PDF from its version history. Its first page follows the ITF memo template, including the
+7. Download the generated PDF from its version history. Its first page follows the ITF memo template, including the
    originator’s department, name, reference, initial action recipient, memo date, subject, body, visual signature,
-   printed name and position. A controlled appendix contains routing/movement minutes, decisions and included-
-   attachment hashes. Flow stores the PDF through the configured
+   printed name and position. Compatible attachments follow the memo and a controlled appendix contains routing/
+   movement minutes, decisions and included-attachment hashes. Flow stores the PDF through the configured
    document provider and records its own hash and tamper-evident canonical payload.
-6. Generating another output creates the next output version. Older outputs remain retrievable evidence and are not
+8. Generating another output creates the next output version. Older outputs remain retrievable evidence and are not
    silently replaced. Revoking a signature profile stops future use but does not invalidate historical outputs.
 
 The reusable image is a governed visual mark, not a certificate-backed or qualified electronic signature. Formal

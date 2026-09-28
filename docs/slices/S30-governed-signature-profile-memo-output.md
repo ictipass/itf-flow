@@ -2,7 +2,7 @@
 
 Status: **Implemented; migrations, policy and staging acceptance pending**
 
-Implementation commits: `ef99432`, `5f649a6`
+Implementation commits: `ef99432`, `5f649a6`, `2137b8d`
 
 ## Outcome
 
@@ -16,6 +16,11 @@ versioned PDF. The first page follows the supplied ITF memo template. It contain
 reference, initial action recipient, memo date, subject, body, active visual signature, printed name and position.
 Controlled lifecycle evidence follows as appendix pages with routing/minute history, decisions and the included-
 document hash manifest.
+
+At initial submission, Flow also creates an annotatable **working memo packet** in the configured document store.
+It places the ITF memo first and appends every security-cleared PDF, JPEG or PNG attachment. Action recipients minute
+and sign that packet through the existing in-app annotation workspace. The original and each annotated version remain
+immutable. Existing memos can create their packet from the correspondence page.
 
 ## Signature governance
 
@@ -60,6 +65,10 @@ the official output still answers an auditor's question about route, decisions, 
   access log and controlled filename behavior.
 - The output is stored by the configured document provider and therefore works with local development storage or
   private Vercel Blob without another provider or environment variable.
+- The renderer uses a small bundled ITF logo asset and never reads `/var/task/public` or writes a generated file to
+  the serverless filesystem. Working packets and final outputs are stored through the configured provider.
+- Security-cleared PDF/JPEG/PNG attachments are appended between the memo and lifecycle appendix. DOCX/XLSX remain
+  separate pending a governed Office conversion contract.
 
 ## Data and deployment
 
@@ -68,6 +77,9 @@ Migration `20260928120000_add_signature_profiles_and_memo_outputs` adds `Signatu
 
 Migration `20260928140000_auto_approve_signature_profiles` changes new submissions to the active persisted status,
 activates the latest existing pending version for each user, and supersedes older pending/active versions safely.
+
+Migration `20260928170000_add_working_memo_packets` identifies the current derived memo packet without confusing it
+with user-supplied source attachments or correspondence revision manifests.
 
 No new paid service is introduced. Signature bytes are small governed profile data in PostgreSQL; generated PDFs use
 the configured document store. Existing `pdf-lib` rendering and application HMAC controls are used. If ITF later
