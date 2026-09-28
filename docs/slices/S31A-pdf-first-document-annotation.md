@@ -50,23 +50,23 @@ Bypassed security provenance.
 ## User-visible changes
 
 - **Minute and sign on document** appears for an eligible current action holder.
-- A responsive in-app preview and annotation form collect page, corner, minute and signing confirmation.
+- A responsive PDF.js canvas and annotation form collect page, stylus/touch/mouse ink, optional typed text, corner and signing confirmation.
 - **Document annotation history** exposes the preserved source and generated signed PDF with audit details.
 - Document Administration reports the total authenticated annotation count and explains provenance.
 - Document Administration exposes the three role-specific authentication toggles and their change history.
 
 ## Verification
 
-- 54 assurance tests pass, including PDF immutability, generated-PDF parsing, page bounds, signed-record tampering and
+- 59 assurance tests pass, including PDF immutability, stylus-ink embedding, generated-PDF parsing, page bounds, signed-record tampering and
   the supported-format boundary.
 - `npm run verify` passes Prisma validation, generated route/type checking, ESLint and the optimized 44-route build.
 
 ## Remaining boundary
 
-This increment embeds authenticated name/role/time evidence, not an uploaded handwritten image or public-key PDF
-certificate. S30 still needs ITF's visual-signature policy and profile controls. Certificate-backed PAdES and trusted
-timestamps require an approved PKI/HSM/trust-service architecture. More precise drag-and-drop coordinates and mobile
-freehand markup can be considered after this controlled baseline is accepted.
+S31A2 adds direct freehand visual ink and records its hash/input method, but that mark is not a public-key PDF
+certificate. S30 still needs ITF's reusable visual-signature policy and profile controls. Certificate-backed PAdES
+and trusted timestamps require an approved PKI/HSM/trust-service architecture. More precise movable/resizable markup
+and multi-page ink sessions can be considered after this controlled baseline is accepted.
 
 ## Rollback
 

@@ -63,12 +63,14 @@ Announcements, Raise correspondence and How it works. Additional operational lin
 4. **Treat or decide:** the owner performs the work and, where requested, records a recommendation, review,
    concurrence, approval or clarification response.
 5. **Minute/sign on the document (where required):** the current action holder opens an available PDF, JPEG or PNG,
-   selects **Minute and sign on document**, chooses the page/placement, enters the minute and strongly
-   re-authenticates. Flow preserves the original and creates a new immutable PDF with an authenticated identity and
-   timestamp block. This is not the same as formal approval or a certificate-backed signature.
-6. **Minute and route:** if another desk must act, the current owner writes a clear minute and selects the next
-   authorized recipient. A sequential A → B → C route is performed one movement at a time; selecting B and C
-   together assigns them in parallel.
+   selects **Minute and sign on document**, chooses the page and writes with a stylus, touch or mouse and/or enters a
+   typed minute before re-authenticating where policy requires it. Flow preserves the original and creates a new
+   immutable PDF with the ink plus an authenticated identity and timestamp block. This is not the same as formal
+   approval or a certificate-backed signature.
+6. **Minute and route:** if another desk must act, the current owner selects the next authorized recipient and enters
+   a clear routing minute. When that owner has already annotated the current included document version, the routing
+   field may be left blank and Flow uses the saved annotation as the movement minute. A sequential A → B → C route
+   is performed one movement at a time; selecting B and C together assigns them in parallel.
 7. **Correct:** when returned, the originator creates a numbered revision with a change note and resubmits. Earlier
    versions, minutes and superseded decisions remain auditable.
 8. **Resolve:** the final action owner records what was done and selects **Mark resolved**. Incoming letters and
@@ -97,19 +99,26 @@ expanded custody/elapsed-time view and is collapsed by default; select its headi
 1. Open a correspondence while you hold its current Action work item, then find an **Available** attachment.
 2. Select **Minute and sign on document**. PDF is the primary format; JPEG and PNG scans are converted to PDF before
    the minute is applied.
-3. Inspect the in-app preview, enter the target page and choose a corner placement. Enter a concise minute.
+3. Inspect the in-app page renderer and use **Previous page** or **Next page** to select the target page. Write
+   directly on it with a stylus, touch or mouse, enter searchable typed text, or use both. Choose the corner for the
+   authenticated identity block. At least ink or typed text is required.
 4. Confirm signing intent. By default, a Workspace user uses recent enterprise MFA and a local/demo user re-confirms
    the password. A system administrator may relax this extra annotation-authentication step independently for DG,
    Directors or Division Heads. A relaxed action remains session-authenticated and is recorded as an administrator
    policy exception; document authority, classification and integrity checks still apply.
-5. Select **Create signed PDF version**. Flow verifies the stored source hash, preserves that source, creates a new
-   current PDF, captures a correspondence revision and records signer/delegation, authentication, hashes and time.
+5. Select **Create signed PDF version**. Flow verifies the stored source hash, validates and hashes any ink drawing,
+   preserves the source, creates a new current PDF, captures a correspondence revision and records the input method,
+   signer/delegation, authentication, hashes and time.
 6. Use **Document annotation history** to retrieve both the preserved original and each generated signed PDF.
+7. When routing immediately after your annotation, leave **Minute / instruction** blank if the annotation itself is
+   the instruction. Flow reuses only your annotation attached to the current included document version; otherwise a
+   routing minute remains mandatory.
 
 Supported upload formats remain PDF, DOCX, XLSX, JPEG and PNG. This annotation increment supports **PDF, JPEG and
 PNG only**. DOCX requires a separately approved Office renderer/editor or controlled conversion service; XLSX stays
-attachment-only because spreadsheet editing and formula integrity require a different workflow. A visual signature
-asset/profile and certificate-backed PAdES signature remain separate policy-led work.
+attachment-only because spreadsheet editing and formula integrity require a different workflow. Stylus ink is a
+visual mark tied to Flow's authenticated audit evidence; it is not a certificate-backed PAdES signature. A reusable
+signature asset/profile and certificate-backed signing remain separate policy-led work.
 
 ### Records desk and physical tracking
 

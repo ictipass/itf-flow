@@ -55,6 +55,7 @@ another developer without depending on unfinished work from a later slice.
 | S28B | Explicit malware-scanner bypass control | Implemented locally; migration/deployment pending | Safe-default `MALWARE_SCANNER` switch, auditable Available/Bypassed release, fail-closed enabled mode and security-gate coverage; 50 assurance tests and full verification passed; see [`slices/S28B-malware-scanner-bypass.md`](slices/S28B-malware-scanner-bypass.md) |
 | S31A | PDF-first in-document annotation and authenticated signing | Implemented; migration/deployment pending | `5a03f02`; preserved source, generated PDF revision, MFA/password re-authentication, delegation attribution, source/output hashes, fail-closed integrity verification and signed audit payload; 54 assurance tests/full verification passed. See [`slices/S31A-pdf-first-document-annotation.md`](slices/S31A-pdf-first-document-annotation.md) |
 | S31A1 | Annotation authentication policy and safe routing feedback | Implemented; migration/deployment pending | `e093018`; safe-default per-role DG/Director/Division Head policy with audited administrative relaxation; retained-form routing error toast for classification reason, missing Department Secretary and restricted copies; corrected DG labels; 57 assurance tests/full verification passed. See [`slices/S31A1-annotation-policy-routing-feedback.md`](slices/S31A1-annotation-policy-routing-feedback.md) |
+| S31A2 | Stylus annotation, reliable in-app rendering and routing-minute reuse | Implemented; migration/deployment pending | `904d7d3`; PDF.js canvas removes self-frame failure, stylus/touch/mouse ink is embedded and hashed, typed text is optional with ink, and a current actor's included annotation can supply the next routing minute; 59 assurance tests/full verification passed. See [`slices/S31A2-stylus-annotation-routing-reuse.md`](slices/S31A2-stylus-annotation-routing-reuse.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
@@ -91,7 +92,7 @@ environment-specific Workspace login; production local staff login remains disab
 
 **Priority 1 delivery sequence:** S27 recipient Department Secretary routing and S27A routing-readiness stabilization
 are implemented. The private Vercel Blob increment of S28 is implemented locally and awaits live deployment
-acceptance. S31A now supplies the controlled PDF-first annotation baseline. The next business slices are Department
+acceptance. S31A-S31A2 now supply the controlled PDF-first annotation and direct stylus baseline. The next business slices are Department
 Secretariat desk/context switching, submission idempotency/managed malware-scanner hardening, the auditor evidence
 pack, approved visual-signature profile/output controls, and the installable PWA baseline. Real EDMS integration remains S24B
 and must not be simulated without its approved contract and test service.
@@ -125,7 +126,7 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S28 | Provider-backed private document storage | Private Vercel Blob implemented locally; live acceptance and optional S3 adapter remain |
 | S29 | Auditor correspondence evidence pack | Priority 1; depends on stable revisions, passage and storage |
 | S30 | Approved visual-signature profile and memo output | Priority 1; depends on signature policy and evidence-pack renderer |
-| S31B | Advanced annotation placement and governed visual/certificate signing | Depends on S31A acceptance, S30 signature policy and PKI decision where certificate signatures are required |
+| S31B | Governed reusable visual/certificate signing and advanced markup | Depends on S31A-S31A2 acceptance, S30 signature policy and PKI decision where certificate signatures are required |
 | S32 | Installable PWA baseline and notification readiness | Priority 1; push delivery requires approved service-worker and subscription operations |
 
 ## Readiness tracks that remain active across all slices
