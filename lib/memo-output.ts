@@ -5,6 +5,7 @@ export const MEMO_TEMPLATE_VERSION = "ITF_MEMO_V2";
 type MemoEvent = { type: string; minute: string | null; createdAt: Date; actorName: string };
 type MemoAttachment = { name: string; mimeType: string; sizeBytes: number; sha256: string };
 type MemoDecision = { purpose: string; outcome: string | null; note: string | null; decidedAt: Date | null; decidedBy: string | null };
+type MemoPacketDocument = { name: string; mimeType: string; bytes: Buffer };
 
 export type MemoOutputInput = {
   outputId: string;
@@ -22,13 +23,15 @@ export type MemoOutputInput = {
   routingNames: string[];
   generatedBy: string;
   generatedAt: Date;
-  signaturePng: Buffer;
+  signaturePng?: Buffer | null;
   signatureProfileVersion: number;
   signatureSha256: string;
   events: MemoEvent[];
   attachments: MemoAttachment[];
   decisions: MemoDecision[];
   logoPng?: Buffer | null;
+  includedDocuments?: MemoPacketDocument[];
+  includeLifecycleEvidence?: boolean;
 };
 
 const PAGE_WIDTH = 595.28;
@@ -68,7 +71,7 @@ export async function renderMemoOutput(input: MemoOutputInput) {
   document.setCreationDate(input.generatedAt);
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
-  const signature = await document.embedPng(input.signaturePng);
+  const signature = input.signaturePng ? await document.embedPng(input.signaturePng) : null;
   const logo = input.logoPng ? await document.embedPng(input.logoPng) : null;
   let page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = PAGE_HEIGHT - MARGIN;
@@ -147,16 +150,37 @@ export async function renderMemoOutput(input: MemoOutputInput) {
   page.drawLine({ start: { x: 72, y: 580 }, end: { x: 72 + bold.widthOfTextAtSize(subject, 10), y: 580 }, thickness: 0.7, color: rgb(0, 0, 0) });
   y = 556;
   text(input.body?.trim() || input.summary, { size: 10, gap: 14 });
-  ensure(125, "ITF memorandum - signature");
-  const signatureWidth = 150;
-  const signatureHeight = Math.min(55, signature.height * (signatureWidth / signature.width));
-  page.drawImage(signature, { x: MARGIN, y: y - signatureHeight, width: signatureWidth, height: signatureHeight });
-  y -= signatureHeight + 7;
+  ensure(signature ? 125 : 62, "ITF memorandum - signature");
+  if (signature) {
+    const signatureWidth = 150;
+    const signatureHeight = Math.min(55, signature.height * (signatureWidth / signature.width));
+    page.drawImage(signature, { x: MARGIN, y: y - signatureHeight, width: signatureWidth, height: signatureHeight });
+    y -= signatureHeight + 7;
+  }
   text(input.originator.name, { font: bold, gap: 1 });
   text(`${input.originator.position ?? "Staff"} | ${input.originator.department ?? input.originator.office}`, { size: 8, gap: 1 });
-  text(`Authenticated self-service signature profile v${input.signatureProfileVersion} | SHA-256 ${input.signatureSha256.slice(0, 20)}...`, { size: 6.5, color: rgb(0.35, 0.35, 0.35) });
+  if (signature) text(`Authenticated self-service signature profile v${input.signatureProfileVersion} | SHA-256 ${input.signatureSha256.slice(0, 20)}...`, { size: 6.5, color: rgb(0.35, 0.35, 0.35) });
 
-  newPage("CORRESPONDENCE LIFECYCLE EVIDENCE");
+  for (const included of input.includedDocuments ?? []) {
+    if (included.mimeType === "application/pdf") {
+      const source = await PDFDocument.load(included.bytes, { updateMetadata: false });
+      const copied = await document.copyPages(source, source.getPageIndices());
+      copied.forEach((copiedPage) => document.addPage(copiedPage));
+      continue;
+    }
+    if (included.mimeType === "image/jpeg" || included.mimeType === "image/png") {
+      const image = included.mimeType === "image/jpeg" ? await document.embedJpg(included.bytes) : await document.embedPng(included.bytes);
+      const imagePage = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      const imageMargin = 24;
+      const scale = Math.min((PAGE_WIDTH - imageMargin * 2) / image.width, (PAGE_HEIGHT - imageMargin * 2) / image.height, 1);
+      const imageWidth = image.width * scale;
+      const imageHeight = image.height * scale;
+      imagePage.drawImage(image, { x: (PAGE_WIDTH - imageWidth) / 2, y: (PAGE_HEIGHT - imageHeight) / 2, width: imageWidth, height: imageHeight });
+    }
+  }
+
+  if (input.includeLifecycleEvidence !== false) {
+    newPage("CORRESPONDENCE LIFECYCLE EVIDENCE");
   text(`Output ID: ${input.outputId}`, { font: bold, gap: 1 });
   text(`Reference: ${input.referenceNumber} | Revision: ${input.revisionVersion} | Status: ${input.status} | Priority: ${input.priority}`, { size: 8, gap: 1 });
   text(`Generated: ${input.generatedAt.toISOString()} by ${input.generatedBy} | Template: ${MEMO_TEMPLATE_VERSION}`, { size: 8, gap: 12 });
@@ -180,6 +204,7 @@ export async function renderMemoOutput(input: MemoOutputInput) {
   for (const attachment of input.attachments) {
     text(`${attachment.name} | ${attachment.mimeType} | ${attachment.sizeBytes} bytes`, { font: bold, size: 7.5, gap: 1 });
     text(`SHA-256 ${attachment.sha256}`, { size: 6.5, indent: 10, gap: 6 });
+  }
   }
 
   const pages = document.getPages();

@@ -5,6 +5,7 @@ import { readStoredDocument, releaseStoredDocument } from "@/lib/document-storag
 import { malwareScannerEnabled } from "@/lib/document-security";
 import { detectDocumentMime } from "@/lib/document-validation";
 import { captureRevision } from "@/lib/revisions";
+import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
 
 export interface MalwareScanner { scan(bytes: Buffer): Promise<{ clean: boolean; engine: string; signature?: string }>; }
 export interface OcrProvider { extract(bytes: Buffer, mimeType: string): Promise<{ text: string | null; provider: string }>; }
@@ -34,6 +35,14 @@ async function processOne(attachmentId: string) {
     const ocrResult = ocrProvider ? await ocrProvider.extract(bytes, detectedMimeType) : null;
     const bypassed = scan.engine === "explicit-bypass";
     await db.$transaction([db.attachment.update({ where: { id: attachment.id }, data: { storageKey: releasedKey, detectedMimeType, processingStatus: DocumentProcessingStatus.AVAILABLE, malwareScanStatus: bypassed ? MalwareScanStatus.BYPASSED : MalwareScanStatus.CLEAN, ocrStatus: ocrResult?.text ? DocumentOcrStatus.COMPLETED : DocumentOcrStatus.UNAVAILABLE, extractedText: ocrResult?.text?.slice(0, 1_000_000), processedAt: new Date(), processingLockedAt: null, processingError: null } }), db.documentEvent.create({ data: { attachmentId: attachment.id, type: bypassed ? DocumentEventType.SCAN_BYPASSED : DocumentEventType.RELEASED, detail: bypassed ? "Validated and released without malware scanning because MALWARE_SCANNER=DISABLED." : "Validated, malware-scanned and released.", metadata: { scanner: scan.engine, scannerMode: bypassed ? "DISABLED" : "ENABLED", ocrProvider: ocrResult?.provider ?? null } } })]);
+    try {
+      const packet = await regenerateWorkingMemoPacket(attachment.correspondenceId);
+      if (packet.status === "generated") {
+        await db.$transaction((tx) => captureRevision(tx, attachment.correspondenceId, null, `Refreshed the working memo packet after releasing ${attachment.originalName}.`));
+      }
+    } catch (packetError) {
+      console.error("Released the source document, but could not refresh its working memo packet.", packetError);
+    }
     return "released";
   } catch (error) {
     const message = error instanceof Error ? error.message.slice(0, 1000) : "Document processing failed.";

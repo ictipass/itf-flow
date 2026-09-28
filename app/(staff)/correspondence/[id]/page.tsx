@@ -17,6 +17,7 @@ import { closeStakeholderClarificationAction, requestStakeholderClarificationAct
 import { RouteCorrespondenceForm } from "@/components/route-correspondence-form";
 import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { GenerateMemoOutputForm } from "@/components/generate-memo-output-form";
+import { GenerateWorkingMemoPacketForm } from "@/components/generate-working-memo-packet-form";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, SignatureProfileStatus, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { activeDelegationsFor } from "@/lib/delegations";
@@ -28,8 +29,9 @@ import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
 import { verifyApprovalSignature, verifyCanonicalSignature } from "@/lib/approval-signatures";
 
-function attachmentGuidance(file: { isIncluded: boolean; processingStatus: string; malwareScanStatus: string }) {
+function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
+  if (file.isMemoPacket && file.processingStatus === "AVAILABLE") return "System-generated from the memo data and security-cleared source documents; stored through the configured document provider and available for annotation.";
   if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN") return null;
   if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "BYPASSED") return "Available under an explicit malware-scanner bypass. This document was not malware-scanned.";
   if (file.processingStatus === "QUARANTINED" && file.malwareScanStatus === "PENDING") return "Stored securely in quarantine. The document security worker has not completed malware validation, so viewing and download remain blocked.";
@@ -50,7 +52,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       createdBy: { include: { signatureProfiles: { where: { status: SignatureProfileStatus.APPROVED }, orderBy: { version: "desc" }, take: 1 } } },
       claimedBy: true,
       emailMessage: true,
-      attachments: true,
+      attachments: { orderBy: [{ isMemoPacket: "desc" }, { createdAt: "asc" }] },
       workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true, signature: { include: { revision: true } } } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
@@ -115,6 +117,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   );
   const canGenerateMemoOutput = record.type === CorrespondenceType.INTERNAL_MEMO && (record.status === CorrespondenceStatus.RESOLVED || record.status === CorrespondenceStatus.CLOSED);
   const hasActiveOriginatorSignature = Boolean(record.createdBy?.signatureProfiles.length);
+  const hasCurrentMemoPacket = record.attachments.some((attachment) => attachment.isIncluded && attachment.isMemoPacket);
   return (
     <>
       {record.classification === "CONFIDENTIAL" || record.classification === "SECRET" ? <div className="sensitive-watermark" aria-hidden="true">CONTROLLED COPY · {user.staffNumber ?? user.email} · {new Date().toLocaleDateString("en-NG")}</div> : null}
@@ -152,16 +155,18 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
         <div className="grid">
           <section className="card">
             <h2>Correspondence</h2>
+            {record.type === CorrespondenceType.INTERNAL_MEMO ? <p className="notice">The current ITF memo packet appears first below. Open it in the in-app renderer to read, minute, sign or annotate the memo. Available PDF/JPEG/PNG attachments are appended after the memo pages; unsupported or security-pending files remain listed separately.</p> : null}
+            {record.type === CorrespondenceType.INTERNAL_MEMO && !hasCurrentMemoPacket ? <GenerateWorkingMemoPacketForm correspondenceId={record.id} /> : null}
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div className="attachment-list"><strong>Attachments</strong>{record.attachments.map((file) => {
+            {record.attachments.length ? <div className="attachment-list"><strong>{record.type === CorrespondenceType.INTERNAL_MEMO ? "Document package" : "Attachments"}</strong>{record.attachments.map((file) => {
               const preservedSource = annotationSourceIds.has(file.id);
               const canOpen = attachmentPassesDocumentSecurityGate(file) && (file.isIncluded || preservedSource);
               const guidance = preservedSource ? "Preserved immutable source for a later annotated version." : attachmentGuidance(file);
               return <div className="attachment-item" key={file.id}>
-                <p>{canOpen ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : preservedSource ? "Preserved original" : "Excluded"} · {label(file.malwareScanStatus)})</small></p>
+                <p>{file.isMemoPacket ? <span className="badge">ITF memo packet</span> : null} {canOpen ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : preservedSource ? "Preserved original" : "Excluded"} · {label(file.malwareScanStatus)})</small></p>
                 {guidance ? <small className="attachment-help">{guidance}</small> : null}
-                {canAnnotate && file.isIncluded && canOpen && isAnnotatableDocument(file.mimeType) ? <div className="actions"><Link className="btn secondary compact" href={`/attachments/${file.id}/annotate`}>Minute and sign on document</Link></div> : null}
+                {canAnnotate && file.isIncluded && canOpen && isAnnotatableDocument(file.mimeType) ? <div className="actions"><Link className="btn secondary compact" href={`/attachments/${file.id}/annotate`}>{file.isMemoPacket ? "Open memo package to minute and sign" : "Minute and sign on document"}</Link></div> : null}
               </div>;
             })}</div> : null}
             {record.documentAnnotations.length ? <details className="annotation-history">

@@ -120,6 +120,7 @@ export async function annotateAttachmentAction(formData: FormData) {
       data: {
         correspondenceId: source.correspondenceId,
         ...stored,
+        isMemoPacket: source.isMemoPacket,
         documentEvents: {
           create: {
             type: DocumentEventType.ANNOTATED,

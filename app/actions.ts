@@ -42,6 +42,7 @@ import { localStaffLoginEnabled } from "@/lib/authentication-policy";
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 import { resolveAutomaticDepartmentSecretaries, routingClassification, validateConfidentialRoute } from "@/lib/department-secretaries";
 import { routingFeedbackMessage } from "@/lib/routing-feedback";
+import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -432,6 +433,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
     const stored = await persistAttachment(file, record.id);
     if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Staff upload") } } });
   }
+  if (record.type === CorrespondenceType.INTERNAL_MEMO) await regenerateWorkingMemoPacket(record.id);
   await db.$transaction((tx) => captureRevision(
     tx,
     record.id,
@@ -829,6 +831,9 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
     });
     return created;
   });
+  if (parsed.type === CorrespondenceType.INTERNAL_MEMO) {
+    await regenerateWorkingMemoPacket(correspondenceId, { replaceAnnotated: true });
+  }
   revalidatePath(`/correspondence/${correspondenceId}`);
   redirect(`/correspondence/${correspondenceId}?revision=${revision.version}`);
 }

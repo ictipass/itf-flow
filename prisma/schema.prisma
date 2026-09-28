@@ -999,6 +999,7 @@ model Attachment {
   processedAt        DateTime?
   processingError    String?
   isIncluded         Boolean                  @default(true)
+  isMemoPacket       Boolean                  @default(false)
   createdAt          DateTime                 @default(now())
   correspondence     Correspondence           @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   documentEvents     DocumentEvent[]
@@ -1006,6 +1007,7 @@ model Attachment {
   annotationOutput   DocumentAnnotation?      @relation("DocumentAnnotationOutput")
 
   @@index([correspondenceId])
+  @@index([correspondenceId, isMemoPacket, isIncluded])
   @@index([processingStatus, nextProcessingAt])
   @@index([malwareScanStatus, processingStatus])
 }
