@@ -117,8 +117,26 @@ expanded custody/elapsed-time view and is collapsed by default; select its headi
 Supported upload formats remain PDF, DOCX, XLSX, JPEG and PNG. This annotation increment supports **PDF, JPEG and
 PNG only**. DOCX requires a separately approved Office renderer/editor or controlled conversion service; XLSX stays
 attachment-only because spreadsheet editing and formula integrity require a different workflow. Stylus ink is a
-visual mark tied to Flow's authenticated audit evidence; it is not a certificate-backed PAdES signature. A reusable
-signature asset/profile and certificate-backed signing remain separate policy-led work.
+visual mark tied to Flow's authenticated audit evidence; it is not a certificate-backed PAdES signature. Governed
+reusable visual signature profiles are described below; certificate-backed signing remains separate policy-led work.
+
+### Signature profile and ITF memo output
+
+1. Open **Signature profile** from the staff navigation, select a PNG image of your own signature, confirm the
+   ownership statement and submit it. The PNG must be no larger than 1 MB or 3000×1500 pixels.
+2. The profile remains **Pending review** and cannot appear on an output until a system administrator verifies and
+   approves it. Submitting a replacement creates a new version; an already approved version remains governed history.
+3. Complete the internal-memo workflow and select **Mark resolved** at its final action point.
+4. Open **ITF memo output** on the correspondence detail page and select **Generate ITF memo output**. Flow requires
+   the originator’s approved signature profile and uses the current correspondence revision.
+5. Download the generated PDF from its version history. It contains the ITF memo, approved visual signature,
+   routing/movement minutes, decisions and included-attachment hashes. Flow stores the PDF through the configured
+   document provider and records its own hash and tamper-evident canonical payload.
+6. Generating another output creates the next output version. Older outputs remain retrievable evidence and are not
+   silently replaced. Revoking a signature profile stops future use but does not invalidate historical outputs.
+
+The reusable image is a governed visual mark, not a certificate-backed or qualified electronic signature. Formal
+approval assertions, annotation identity evidence and memo-output integrity records remain separate controls.
 
 ### Records desk and physical tracking
 
@@ -212,10 +230,13 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 4. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
    DG, Directors and Division Heads independently. Give a reason for every change. Enforcement is the safe default;
    the audit trail records old/new role sets, administrator and time.
-5. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
-6. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
-7. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
-8. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
+5. Use **Signature approvals** to inspect the submitted signature and staff identity, then approve, reject or revoke
+   it with a reason. Only the latest submitted version can be reviewed; approval supersedes an earlier approved
+   profile for future outputs while retaining its history.
+6. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
+7. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
+8. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
+9. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
 
 Expected control: operational administration does not grant blanket access to restricted business records;
 classification rules continue to apply to registry queries and exports.
