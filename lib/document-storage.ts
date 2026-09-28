@@ -183,6 +183,24 @@ export async function storeGeneratedPdf(
   };
 }
 
+export async function storeSystemGeneratedPdf(input: Omit<DocumentInput, "mimeType">) {
+  const maximumBytes = Number(process.env.DOCUMENT_MAX_SIZE_MB ?? "50") * 1024 * 1024;
+  if (!input.bytes.length || input.bytes.length > maximumBytes || detectDocumentMime(input.bytes) !== "application/pdf") {
+    throw new Error("Generated document is not a valid PDF or exceeds the configured size limit.");
+  }
+  const provider = documentProvider();
+  const stored = await provider.storeQuarantined({ ...input, mimeType: "application/pdf" });
+  const storageKey = await provider.release(stored.storageKey);
+  return {
+    originalName: input.originalName,
+    mimeType: "application/pdf",
+    sizeBytes: input.bytes.length,
+    storageKey,
+    sha256: createHash("sha256").update(input.bytes).digest("hex"),
+    storageProvider: provider.name,
+  };
+}
+
 export async function readStoredDocument(storageKey: string, provider = "LOCAL") {
   return documentProvider(provider).read(storageKey);
 }

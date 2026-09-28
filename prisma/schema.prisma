@@ -232,6 +232,15 @@ enum EventType {
   RESOLVED
   CLOSED
   COMMENTED
+  MEMO_OUTPUT_GENERATED
+}
+
+enum SignatureProfileStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+  REVOKED
+  SUPERSEDED
 }
 
 enum MalwareScanStatus {
@@ -352,6 +361,10 @@ model User {
   assuranceChecks                  AssuranceCheck[]                @relation("AssuranceCheckUpdater")
   departmentSecretaryAssignments   DepartmentSecretaryAssignment[] @relation("DepartmentSecretary")
   assignedDepartmentSecretaries    DepartmentSecretaryAssignment[] @relation("DepartmentSecretaryAssigner")
+  signatureProfiles                SignatureProfile[]              @relation("SignatureProfileOwner")
+  reviewedSignatureProfiles        SignatureProfile[]              @relation("SignatureProfileReviewer")
+  generatedMemoOutputs             MemoOutput[]                    @relation("MemoOutputGenerator")
+  originatedMemoOutputs            MemoOutput[]                    @relation("MemoOutputOriginator")
 
   @@index([role, isActive])
   @@index([supervisorId, isActive])
@@ -837,6 +850,7 @@ model Correspondence {
   approvalSignatures         ApprovalSignature[]
   clarificationRequests      ClarificationRequest[]
   documentAnnotations        DocumentAnnotation[]
+  memoOutputs                MemoOutput[]
 
   @@index([status, updatedAt])
   @@index([intakeSource, status, receivedAt])
@@ -1050,6 +1064,63 @@ model DocumentAnnotation {
   @@index([correspondenceId, signedAt])
 }
 
+model SignatureProfile {
+  id           String                 @id @default(cuid())
+  userId       String
+  version      Int
+  mimeType     String                 @default("image/png")
+  sizeBytes    Int
+  imageBytes   Bytes
+  sha256       String
+  status       SignatureProfileStatus @default(PENDING_REVIEW)
+  attestation  String
+  submittedAt  DateTime               @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  reviewReason String?
+  user         User                   @relation("SignatureProfileOwner", fields: [userId], references: [id], onDelete: Restrict)
+  reviewedBy   User?                  @relation("SignatureProfileReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  memoOutputs  MemoOutput[]
+
+  @@unique([userId, version])
+  @@index([status, submittedAt])
+  @@index([reviewedById, reviewedAt])
+}
+
+model MemoOutput {
+  id                 String                 @id
+  correspondenceId   String
+  version            Int
+  revisionId         String
+  revisionVersion    Int
+  generatedById      String
+  originatorId       String
+  signatureProfileId String
+  templateVersion    String
+  originalName       String
+  mimeType           String                 @default("application/pdf")
+  sizeBytes          Int
+  storageKey         String
+  storageProvider    String
+  sha256             String
+  canonicalPayload   Json
+  signatureValue     String
+  algorithm          String                 @default("HMAC-SHA256")
+  keyId              String
+  generatedAt        DateTime
+  createdAt          DateTime               @default(now())
+  correspondence     Correspondence         @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
+  revision           CorrespondenceRevision @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  generatedBy        User                   @relation("MemoOutputGenerator", fields: [generatedById], references: [id], onDelete: Restrict)
+  originator         User                   @relation("MemoOutputOriginator", fields: [originatorId], references: [id], onDelete: Restrict)
+  signatureProfile   SignatureProfile       @relation(fields: [signatureProfileId], references: [id], onDelete: Restrict)
+
+  @@unique([correspondenceId, version])
+  @@index([generatedById, generatedAt])
+  @@index([originatorId, generatedAt])
+  @@index([sha256])
+}
+
 model EmailMessage {
   id               String         @id @default(cuid())
   correspondenceId String         @unique
@@ -1177,6 +1248,7 @@ model CorrespondenceRevision {
   createdBy          User?               @relation(fields: [createdById], references: [id], onDelete: SetNull)
   approvalSignatures ApprovalSignature[]
   documentAnnotation DocumentAnnotation?
+  memoOutputs        MemoOutput[]
 
   @@unique([correspondenceId, version])
   @@index([correspondenceId, createdAt])

@@ -21,6 +21,7 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number):
     { href: "/correspondence/new", label: "Raise correspondence", shortLabel: "Create" },
     { href: "/broadcasts", label: "Announcements", shortLabel: "News" },
     { href: "/guide", label: "How it works", shortLabel: "Guide" },
+    { href: "/profile/signature", label: "Signature profile", shortLabel: "Signature" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/appearance", label: "Appearance", shortLabel: "Display" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/provisioning", label: "Provisioning admin", shortLabel: "Directory" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/department-secretaries", label: "Department Secretaries", shortLabel: "Secretaries" },
@@ -29,6 +30,7 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number):
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/delegations", label: "Delegations and acting", shortLabel: "Acting" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/access-groups", label: "Need-to-know access", shortLabel: "Access" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/documents", label: "Document security", shortLabel: "Documents" },
+    role === UserRole.SYSTEM_ADMIN && { href: "/admin/signatures", label: "Signature approvals", shortLabel: "Signatures" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/workflows", label: "Workflow policies", shortLabel: "Workflow" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/assurance", label: "Production assurance", shortLabel: "Assurance" },
   ];
