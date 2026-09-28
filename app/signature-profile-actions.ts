@@ -23,6 +23,10 @@ export async function submitSignatureProfileAction(formData: FormData) {
     await assertSignatureImageDecodable(bytes);
     await db.$transaction(async (tx) => {
       const latest = await tx.signatureProfile.aggregate({ where: { userId: user.id }, _max: { version: true } });
+      await tx.signatureProfile.updateMany({
+        where: { userId: user.id, status: SignatureProfileStatus.APPROVED },
+        data: { status: SignatureProfileStatus.SUPERSEDED, reviewedAt: new Date(), reviewReason: "Superseded by the staff member's authenticated replacement signature." },
+      });
       await tx.signatureProfile.create({
         data: {
           userId: user.id,
@@ -31,8 +35,10 @@ export async function submitSignatureProfileAction(formData: FormData) {
           mimeType: "image/png",
           sizeBytes: validated.sizeBytes,
           sha256: validated.sha256,
-          status: SignatureProfileStatus.PENDING_REVIEW,
+          status: SignatureProfileStatus.APPROVED,
           attestation: SIGNATURE_PROFILE_ATTESTATION,
+          reviewedAt: new Date(),
+          reviewReason: "Activated by authenticated staff self-submission.",
         },
       });
     });
@@ -44,48 +50,6 @@ export async function submitSignatureProfileAction(formData: FormData) {
   revalidatePath("/profile/signature");
   revalidatePath("/admin/signatures");
   profileRedirect("submitted");
-}
-
-export async function reviewSignatureProfileAction(formData: FormData) {
-  const administrator = await requireUser();
-  if (administrator.role !== UserRole.SYSTEM_ADMIN) redirect("/dashboard");
-  const parsed = z.object({
-    profileId: z.string().min(1),
-    version: z.coerce.number().int().positive(),
-    decision: z.enum(["APPROVE", "REJECT"]),
-    reason: z.string().trim().min(10).max(500),
-  }).safeParse({
-    profileId: formData.get("profileId"),
-    version: formData.get("version"),
-    decision: formData.get("decision"),
-    reason: formData.get("reason"),
-  });
-  if (!parsed.success) redirect("/admin/signatures?result=validation");
-  const result = await db.$transaction(async (tx) => {
-    const profile = await tx.signatureProfile.findUnique({ where: { id: parsed.data.profileId } });
-    if (!profile || profile.version !== parsed.data.version || profile.status !== SignatureProfileStatus.PENDING_REVIEW) return "stale" as const;
-    const latestForUser = await tx.signatureProfile.aggregate({ where: { userId: profile.userId }, _max: { version: true } });
-    if (profile.version !== latestForUser._max.version) return "stale" as const;
-    if (parsed.data.decision === "APPROVE") {
-      await tx.signatureProfile.updateMany({
-        where: { userId: profile.userId, status: SignatureProfileStatus.APPROVED },
-        data: { status: SignatureProfileStatus.SUPERSEDED, reviewedAt: new Date(), reviewedById: administrator.id, reviewReason: "Superseded by an approved replacement signature profile." },
-      });
-    }
-    await tx.signatureProfile.update({
-      where: { id: profile.id },
-      data: {
-        status: parsed.data.decision === "APPROVE" ? SignatureProfileStatus.APPROVED : SignatureProfileStatus.REJECTED,
-        reviewedAt: new Date(),
-        reviewedById: administrator.id,
-        reviewReason: parsed.data.reason,
-      },
-    });
-    return "updated" as const;
-  });
-  revalidatePath("/admin/signatures");
-  revalidatePath("/profile/signature");
-  redirect(`/admin/signatures?result=${result}`);
 }
 
 export async function revokeSignatureProfileAction(formData: FormData) {

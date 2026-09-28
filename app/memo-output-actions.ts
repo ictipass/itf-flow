@@ -15,15 +15,21 @@ import { canAccessSensitiveRecord } from "@/lib/sensitive-access";
 
 export type MemoOutputState = { status: "idle" | "error" | "success"; message: string; outputId?: string; attempt: number };
 
+function actionRecipientIds(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return [];
+  const value = (metadata as Record<string, unknown>).actionRecipientIds;
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
 function safeMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "";
   const allowed = new Set([
     "Only resolved internal memos can produce the governed memo output.",
-    "The memo originator has no approved signature profile.",
+    "The memo originator has no active signature profile.",
     "You are not authorized to generate this memo output.",
     "Complete the required Secret step-up authentication before generating an output.",
     "The correspondence changed while the output was being generated. Reload and try again.",
-    "The approved signature profile changed while the output was being generated. Reload and try again.",
+    "The active signature profile changed while the output was being generated. Reload and try again.",
   ]);
   if (allowed.has(message)) return message;
   console.error("Memo output generation failed unexpectedly.", error);
@@ -56,18 +62,21 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
     const access = await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
     if (access.needsStepUp) throw new Error("Complete the required Secret step-up authentication before generating an output.");
     if (!access.allowed) throw new Error("You are not authorized to generate this memo output.");
-    if (!record.createdBy || !record.revisions[0]) throw new Error("The memo originator has no approved signature profile.");
+    if (!record.createdBy || !record.revisions[0]) throw new Error("The memo originator has no active signature profile.");
     const signatureProfile = await db.signatureProfile.findFirst({
       where: { userId: record.createdBy.id, status: SignatureProfileStatus.APPROVED },
       orderBy: { version: "desc" },
     });
-    if (!signatureProfile) throw new Error("The memo originator has no approved signature profile.");
+    if (!signatureProfile) throw new Error("The memo originator has no active signature profile.");
 
     const version = ((await db.memoOutput.aggregate({ where: { correspondenceId }, _max: { version: true } }))._max.version ?? 0) + 1;
     const outputId = randomUUID();
     const generatedAt = new Date();
     const logoPng = await readFile(path.join(process.cwd(), "public", "itf-logo.png"));
-    const routingNames = [...new Set(record.workItems.filter((item) => item.kind === RecipientKind.ACTION).map((item) => `${item.assignee.name}${item.assignee.position ? ` (${item.assignee.position})` : ""}`))];
+    const initialRecipientIds = record.events.map((event) => actionRecipientIds(event.metadata)).find((ids) => ids.length) ?? [];
+    const actionItems = record.workItems.filter((item) => item.kind === RecipientKind.ACTION);
+    const addressedItems = initialRecipientIds.length ? actionItems.filter((item) => initialRecipientIds.includes(item.assigneeId)) : actionItems.slice(0, 1);
+    const routingNames = [...new Set(addressedItems.map((item) => `${item.assignee.name}${item.assignee.position ? ` (${item.assignee.position})` : ""}`))];
     const bytes = await renderMemoOutput({
       outputId,
       referenceNumber: record.referenceNumber,
@@ -78,7 +87,7 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
       summary: record.summary,
       body: record.body,
       senderReference: record.senderReference,
-      receivedAt: record.receivedAt,
+      memoDate: record.dateOnDocument ?? record.receivedAt,
       revisionVersion: record.revisions[0].version,
       originator: { name: record.createdBy.name, position: record.createdBy.position, office: record.createdBy.office, department: record.createdBy.department },
       routingNames,
@@ -123,7 +132,7 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
         throw new Error("The correspondence changed while the output was being generated. Reload and try again.");
       }
       if (currentSignature?.status !== SignatureProfileStatus.APPROVED || currentSignature.sha256 !== signatureProfile.sha256) {
-        throw new Error("The approved signature profile changed while the output was being generated. Reload and try again.");
+        throw new Error("The active signature profile changed while the output was being generated. Reload and try again.");
       }
       await tx.memoOutput.create({ data: {
         id: outputId,

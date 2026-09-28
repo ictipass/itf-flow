@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { MEMO_TEMPLATE_VERSION, renderMemoOutput } from "../lib/memo-output";
 import { assertSignatureImageDecodable, validateSignatureImage } from "../lib/signature-profile";
 
@@ -32,7 +33,7 @@ test("governed memo output renders a parseable lifecycle PDF", async () => {
     summary: "A controlled summary of the completed work.",
     body: "Management is invited to note that the assigned action has been completed and recorded in ITF Flow.",
     senderReference: "ITF/ICT/2026/01",
-    receivedAt: new Date("2026-09-28T08:00:00.000Z"),
+    memoDate: new Date("2026-09-28T08:00:00.000Z"),
     revisionVersion: 3,
     originator: { name: "Ada Officer", position: "Programme Officer", office: "ICT", department: "Information Technology" },
     routingNames: ["Director ICT", "Director Administration"],
@@ -52,6 +53,15 @@ test("governed memo output renders a parseable lifecycle PDF", async () => {
   const pdf = await PDFDocument.load(generated);
   assert.ok(pdf.getPageCount() >= 2);
   assert.equal(pdf.getCreator(), "ITF Flow");
-  assert.ok(MEMO_TEMPLATE_VERSION.startsWith("ITF_MEMO_"));
+  assert.equal(MEMO_TEMPLATE_VERSION, "ITF_MEMO_V2");
   assert.match(pdf.getTitle() ?? "", /ITF\/FLOW\/2026\/00001/);
+  const parsed = await getDocument({ data: new Uint8Array(generated) }).promise;
+  const firstPageText = await parsed.getPage(1).then((page) => page.getTextContent());
+  const firstPage = firstPageText.items.map((item) => "str" in item ? item.str : "").join(" ");
+  assert.match(firstPage, /INDUSTRIAL TRAINING FUND/);
+  assert.match(firstPage, /INFORMATION TECHNOLOGY DEPARTMENT/);
+  assert.match(firstPage, /FROM:.*Ada Officer/);
+  assert.match(firstPage, /REF:.*ITF\/ICT\/2026\/01/);
+  assert.match(firstPage, /TO:.*Director ICT/);
+  assert.match(firstPage, /IMPLEMENTATION STATUS MEMORANDUM/);
 });

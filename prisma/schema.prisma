@@ -1072,7 +1072,7 @@ model SignatureProfile {
   sizeBytes    Int
   imageBytes   Bytes
   sha256       String
-  status       SignatureProfileStatus @default(PENDING_REVIEW)
+  status       SignatureProfileStatus @default(APPROVED)
   attestation  String
   submittedAt  DateTime               @default(now())
   reviewedAt   DateTime?
