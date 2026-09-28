@@ -4,6 +4,7 @@ const guides = [
     steps: [
       ["Raise or save", "Create correspondence, select authorized action and copy recipients, add a clear minute, and either save privately or route it."],
       ["Monitor", "Use My inbox for assigned work, Notifications for alerts, and the correspondence register to search matters you are permitted to see."],
+      ["Annotate a document", "While you own the Action item, open an Available PDF or scan and write with a stylus, touch, or mouse and/or add typed text. Flow preserves the source and creates a signed PDF version."],
       ["Treat and route", "Acknowledge custody, record any requested formal decision, then resolve or minute the matter to an authorized next recipient."],
       ["Correct safely", "When returned, create a numbered revision with a change note; the earlier document and superseded decisions remain auditable."],
     ],
@@ -13,6 +14,7 @@ const guides = [
     steps: [
       ["Prioritize the inbox", "Review urgent, overdue, and decision-requested items before routine correspondence."],
       ["Record authority", "Use review, concurrence, or approval outcomes where requested; always add a decision note."],
+      ["Minute directly", "Use Minute and sign on document for PDF, JPEG, or PNG material. After saving your annotation on the current document version, the separate routing-minute field may be left blank."],
       ["Route within policy", "Send work through explicit reporting lines. Directors and eligible Division Heads may use controlled peer referrals."],
       ["Use the audit trail", "Confirm current custody and elapsed time from the correspondence passage before following up or escalating."],
     ],
@@ -31,6 +33,7 @@ const guides = [
     steps: [
       ["Provision access", "Review synchronized users and organizational identifiers; access follows active role and reporting-line data."],
       ["Configure experience", "Privately preview Classic, Modern, Soft UI, or Glass, then activate the approved interface with an audit reason."],
+      ["Govern annotations", "Under Document Administration, require or relax annotation re-authentication separately for DG, Directors, and Division Heads. Every change needs an audit reason."],
       ["Operate automation", "Monitor reminder policy and runs, process or retry email delivery, and investigate dead-letter items without changing correspondence history."],
       ["Respect separation", "Administration does not silently broaden document visibility; Secret classification remains restricted by role."],
     ],
@@ -42,7 +45,8 @@ const endToEndSteps = [
   ["Secure the document", "With scanning enabled, an attachment is quarantined until validation and malware scanning mark it Available and Clean. Under the explicit temporary bypass, a signature-valid upload is immediately Available and Bypassed, with the exception retained in its audit history."],
   ["Receive and acknowledge", "Each action recipient sees the item in My inbox and acknowledges it to establish custody. Copy recipients can follow it but do not own treatment."],
   ["Treat or decide", "The action owner performs the required work and records any requested review, concurrence, approval, recommendation, or clarification."],
-  ["Minute and move", "If further action is required, the owner records a minute and routes to an authorized supervisor, direct report, or permitted peer. Sequential work is sent to the next desk only."],
+  ["Annotate where needed", "For an Available PDF or scanned image, the owner can select a page and write with a stylus, touch, or mouse and/or add typed text. Saving preserves the source and creates a new authenticated PDF version."],
+  ["Minute and move", "If further action is required, the owner records a minute and routes to an authorized supervisor, direct report, or permitted peer. If that owner just annotated the current document, the saved annotation can supply the routing minute. Sequential work is sent to the next desk only."],
   ["Correct when returned", "The originator creates a numbered revision, explains the correction, and resubmits. Earlier versions and decisions remain in the audit history."],
   ["Resolve", "The final action owner records the outcome and selects Mark resolved. Incoming letters and internal memos normally finish in Resolved status."],
   ["Dispatch and close", "For an outgoing letter, authorized Secretariat or Records staff prepare dispatch, record delivery or failure, and successful delivery closes the correspondence."],
