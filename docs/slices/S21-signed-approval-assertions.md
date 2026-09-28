@@ -32,5 +32,6 @@ versioned key ring rather than overwriting the old key.
 This is an application-level electronic signature assertion using a symmetric server secret. It proves that ITF
 Flow recorded the authenticated approval against the identified revision and detects later payload tampering. It
 is not a certificate-backed signature, a qualified electronic signature, or independent non-repudiation because
-the application controls the signing key. PKI, certificate identity, timestamp authority, signature placement and
-approved signature images require ITF legal policy and enterprise trust-service decisions.
+the application controls the signing key. S30 now provides governed self-service visual signature images and ITF
+memo-output placement. PKI, certificate identity and timestamp authority still require ITF legal policy and
+enterprise trust-service decisions.

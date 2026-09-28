@@ -124,13 +124,16 @@ reusable visual signature profiles are described below; certificate-backed signi
 
 1. Open **Signature profile** from the staff navigation, select a PNG image of your own signature, confirm the
    ownership statement and submit it. The PNG must be no larger than 1 MB or 3000×1500 pixels.
-2. The profile remains **Pending review** and cannot appear on an output until a system administrator verifies and
-   approves it. Submitting a replacement creates a new version; an already approved version remains governed history.
+2. The authenticated submission becomes **Active** immediately and can appear on new outputs without a system
+   administrator approval step. Submitting a replacement creates and activates a new version and supersedes the
+   earlier active version without deleting its governed history.
 3. Complete the internal-memo workflow and select **Mark resolved** at its final action point.
 4. Open **ITF memo output** on the correspondence detail page and select **Generate ITF memo output**. Flow requires
-   the originator’s approved signature profile and uses the current correspondence revision.
-5. Download the generated PDF from its version history. It contains the ITF memo, approved visual signature,
-   routing/movement minutes, decisions and included-attachment hashes. Flow stores the PDF through the configured
+   the originator’s active signature profile and uses the current correspondence revision.
+5. Download the generated PDF from its version history. Its first page follows the ITF memo template, including the
+   originator’s department, name, reference, initial action recipient, memo date, subject, body, visual signature,
+   printed name and position. A controlled appendix contains routing/movement minutes, decisions and included-
+   attachment hashes. Flow stores the PDF through the configured
    document provider and records its own hash and tamper-evident canonical payload.
 6. Generating another output creates the next output version. Older outputs remain retrievable evidence and are not
    silently replaced. Revoking a signature profile stops future use but does not invalidate historical outputs.
@@ -230,9 +233,9 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 4. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
    DG, Directors and Division Heads independently. Give a reason for every change. Enforcement is the safe default;
    the audit trail records old/new role sets, administrator and time.
-5. Use **Signature approvals** to inspect the submitted signature and staff identity, then approve, reject or revoke
-   it with a reason. Only the latest submitted version can be reviewed; approval supersedes an earlier approved
-   profile for future outputs while retaining its history.
+5. Use **Signature governance** to audit submitted signatures and staff identity. Staff submissions activate
+   immediately; revoke a signature with a reason when it must no longer be used. Replacement versions supersede the
+   earlier active profile for future outputs while retaining its history.
 6. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
 7. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
 8. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.

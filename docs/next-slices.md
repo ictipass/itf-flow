@@ -112,11 +112,12 @@ Acting appointments and time-bound delegation are implemented through S19's inte
 
 - Approval policy by correspondence type and authority threshold.
 - PIN/password re-confirmation for sensitive approval.
-- Signature placement and approved signature assets.
+- Signature placement and governed self-service signature assets.
 - Certificate-backed cryptographic signatures where policy requires them.
 - Password-confirmed, revision-bound HMAC-SHA256 approval assertions with visible verification, acting-authority
   attribution, concurrency protection and dispatch integrity checks are implemented. Certificate/PKI signatures,
-  timestamp authority and approved visual signature assets remain policy and trust-service dependencies.
+  and timestamp authority remain policy and trust-service dependencies. Governed self-service visual signature
+  profiles and ITF memo-output placement are implemented in S30.
 
 ## Slice 10 — External stakeholder portal
 
