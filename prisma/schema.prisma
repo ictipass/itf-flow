@@ -1028,6 +1028,8 @@ model DocumentAnnotation {
   authorityPrincipalName String?
   delegationId           String?
   authenticationMethod   String
+  inputMethod            String                      @default("TEXT")
+  inkSha256              String?
   sourceSha256           String
   outputSha256           String
   canonicalPayload       Json

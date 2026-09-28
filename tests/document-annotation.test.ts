@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { PDFDocument } from "pdf-lib";
 import { annotateDocument, isAnnotatableDocument } from "../lib/document-annotation";
+import { annotationInputMethod, parseAnnotationInk } from "../lib/annotation-ink";
 import { signApprovalPayload, verifyCanonicalSignature } from "../lib/approval-signatures";
+
+const onePixelPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nWQAAAAASUVORK5CYII=",
+  "base64",
+);
 
 async function twoPagePdf() {
   const document = await PDFDocument.create();
@@ -46,6 +52,34 @@ test("annotation rejects an out-of-range page", async () => {
     }),
     /between 1 and 2/,
   );
+});
+
+test("stylus ink is embedded into the selected PDF page", async () => {
+  const source = await twoPagePdf();
+  const result = await annotateDocument({
+    source,
+    mimeType: "application/pdf",
+    pageNumber: 1,
+    placement: "BOTTOM_RIGHT",
+    minuteText: "Handwritten in-document annotation and signature.",
+    inkPng: onePixelPng,
+    signerName: "Director Test",
+    signerRole: "DIRECTOR",
+    signedAt: new Date("2026-09-28T09:00:00.000Z"),
+  });
+  assert.notDeepEqual(result.bytes, source);
+  assert.equal((await PDFDocument.load(result.bytes)).getPageCount(), 2);
+});
+
+test("annotation input accepts typed text, stylus ink, or both and rejects an empty submission", () => {
+  const dataUrl = `data:image/png;base64,${onePixelPng.toString("base64")}`;
+  const ink = parseAnnotationInk(dataUrl);
+  assert.deepEqual(ink, onePixelPng);
+  assert.equal(annotationInputMethod("Please action this.", null), "TEXT");
+  assert.equal(annotationInputMethod("", ink), "INK");
+  assert.equal(annotationInputMethod("Please action this.", ink), "TEXT_AND_INK");
+  assert.throws(() => annotationInputMethod("", null), /typed minute or write directly/);
+  assert.throws(() => parseAnnotationInk("data:image/jpeg;base64,AAAA"), /PNG drawing/);
 });
 
 test("PDF and scanned image formats are annotatable while Office formats remain out of scope", () => {

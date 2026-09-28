@@ -576,8 +576,14 @@ button, input, select, textarea { font: inherit; }
 .annotation-heading { display: flex; align-items: start; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
 .annotation-heading h1 { margin-bottom: 6px; }
 .annotation-workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, .7fr); gap: 18px; align-items: start; margin-top: 18px; }
-.annotation-preview { min-height: 760px; display: grid; grid-template-rows: minmax(680px, 1fr) auto; gap: 12px; }
-.annotation-preview iframe { width: 100%; height: 100%; min-height: 680px; border: 1px solid #ddd6cb; border-radius: 12px; background: #f4f1eb; }
+.annotation-preview { min-height: 760px; display: grid; gap: 12px; }
+.document-ink-editor { min-width: 0; }
+.ink-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.ink-toolbar label { display: flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 800; }
+.ink-toolbar input[type="color"] { width: 36px; height: 30px; padding: 2px; border: 1px solid #d8d0c6; border-radius: 7px; background: white; }
+.ink-page-stage { position: relative; width: 100%; overflow: hidden; border: 1px solid #d8d0c6; border-radius: 12px; background: #d8d5d0; box-shadow: inset 0 1px 4px rgb(0 0 0 / .08); }
+.ink-document-layer { display: block; width: 100%; height: auto; background: white; }
+.ink-drawing-layer { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 .annotation-form-card { position: sticky; top: 18px; }
 .annotation-history { margin-top: 18px; border-top: 1px solid #e6dfd4; padding-top: 14px; }
 .annotation-history > summary { cursor: pointer; }
@@ -650,8 +656,8 @@ button, input, select, textarea { font: inherit; }
   .annotation-heading { align-items: stretch; flex-direction: column; }
   .annotation-workspace { grid-template-columns: 1fr; }
   .annotation-form-card { position: static; }
-  .annotation-preview { min-height: 560px; grid-template-rows: minmax(480px, 1fr) auto; }
-  .annotation-preview iframe { min-height: 480px; }
+  .annotation-preview { min-height: 560px; }
+  .ink-toolbar { align-items: stretch; flex-direction: column; }
   .annotation-history-list article > div:first-child { flex-direction: column; }
   .appearance-options:has(.soft-preview-option) { grid-template-columns: 1fr; }
   .appearance-heading, .appearance-preview-notice { align-items: stretch; flex-direction: column; }

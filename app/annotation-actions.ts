@@ -22,12 +22,14 @@ import { captureRevision } from "@/lib/revisions";
 import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, signApprovalPayload } from "@/lib/approval-signatures";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { annotationAuthenticationPolicyFor } from "@/lib/annotation-policy";
+import { annotationInputMethod, parseAnnotationInk } from "@/lib/annotation-ink";
 
 const annotationSchema = z.object({
   attachmentId: z.string().min(1),
   pageNumber: z.coerce.number().int().min(1).max(10_000),
   placement: z.enum(DocumentAnnotationPlacement),
-  minuteText: z.string().trim().min(3).max(1_500),
+  minuteText: z.string().trim().max(1_500),
+  inkDataUrl: z.string().max(6_000_000).optional(),
   confirmSignature: z.literal("CONFIRM"),
 });
 
@@ -43,8 +45,12 @@ export async function annotateAttachmentAction(formData: FormData) {
     pageNumber: formData.get("pageNumber"),
     placement: formData.get("placement"),
     minuteText: formData.get("minuteText"),
+    inkDataUrl: formData.get("inkDataUrl") || undefined,
     confirmSignature: formData.get("confirmSignature"),
   });
+  const ink = parseAnnotationInk(parsed.inkDataUrl);
+  const inputMethod = annotationInputMethod(parsed.minuteText, ink);
+  const auditMinute = parsed.minuteText || "Handwritten in-document annotation and signature.";
   const source = await db.attachment.findFirst({
     where: { id: parsed.attachmentId, isIncluded: true },
     include: { correspondence: true },
@@ -89,7 +95,8 @@ export async function annotateAttachmentAction(formData: FormData) {
     mimeType: source.mimeType,
     pageNumber: parsed.pageNumber,
     placement: parsed.placement,
-    minuteText: parsed.minuteText,
+    minuteText: auditMinute,
+    inkPng: ink,
     signerName: user.name,
     signerRole: authority.principal.role,
     signerPosition: user.position,
@@ -117,7 +124,7 @@ export async function annotateAttachmentAction(formData: FormData) {
           create: {
             type: DocumentEventType.ANNOTATED,
             detail: "Generated from an available source document with an authenticated minute and signing block.",
-            metadata: { sourceAttachmentId: source.id, sourceSha256: source.sha256, pageNumber: parsed.pageNumber, placement: parsed.placement },
+            metadata: { sourceAttachmentId: source.id, sourceSha256: source.sha256, pageNumber: parsed.pageNumber, placement: parsed.placement, inputMethod },
           },
         },
       },
@@ -126,7 +133,7 @@ export async function annotateAttachmentAction(formData: FormData) {
       tx,
       source.correspondenceId,
       user.id,
-      `Document annotation ${nextAnnotationVersion}: ${parsed.minuteText}`,
+      `Document annotation ${nextAnnotationVersion}: ${auditMinute}`,
     );
     const payload = {
       schema: "ITF_FLOW_DOCUMENT_ANNOTATION_V1",
@@ -138,7 +145,9 @@ export async function annotateAttachmentAction(formData: FormData) {
       revisionVersion: revision.version,
       pageNumber: parsed.pageNumber,
       placement: parsed.placement,
-      minuteText: parsed.minuteText,
+      minuteText: auditMinute,
+      inputMethod,
+      inkSha256: ink ? createHash("sha256").update(ink).digest("hex") : null,
       sourceSha256: source.sha256,
       outputSha256: stored.sha256,
       signerId: user.id,
@@ -164,7 +173,7 @@ export async function annotateAttachmentAction(formData: FormData) {
         revisionVersion: revision.version,
         pageNumber: parsed.pageNumber,
         placement: parsed.placement,
-        minuteText: parsed.minuteText,
+        minuteText: auditMinute,
         signerId: user.id,
         signerName: user.name,
         signerRole: authority.principal.role,
@@ -173,6 +182,8 @@ export async function annotateAttachmentAction(formData: FormData) {
         authorityPrincipalName: authority.delegation ? authority.principal.name : null,
         delegationId: authority.delegation?.id,
         authenticationMethod,
+        inputMethod,
+        inkSha256: ink ? createHash("sha256").update(ink).digest("hex") : null,
         sourceSha256: source.sha256,
         outputSha256: stored.sha256,
         canonicalPayload: payload,
@@ -198,7 +209,7 @@ export async function annotateAttachmentAction(formData: FormData) {
         type: EventType.REVISED,
         fromStatus: source.correspondence.status,
         toStatus: source.correspondence.status,
-        minute: parsed.minuteText,
+        minute: auditMinute,
         metadata: {
           annotationVersion: nextAnnotationVersion,
           revisionVersion: revision.version,
@@ -208,6 +219,7 @@ export async function annotateAttachmentAction(formData: FormData) {
           placement: parsed.placement,
           authenticationMethod,
           authenticationPolicyVersion: authenticationPolicy.configurationVersion,
+          inputMethod,
           ...authorityMetadata(authority),
         },
       },

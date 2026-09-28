@@ -57,6 +57,7 @@ export async function annotateDocument(input: {
   pageNumber: number;
   placement: AnnotationPlacement;
   minuteText: string;
+  inkPng?: Buffer | null;
   signerName: string;
   signerRole: string;
   signerPosition?: string | null;
@@ -70,6 +71,10 @@ export async function annotateDocument(input: {
     throw new Error(`Select a page between 1 and ${pages.length}.`);
   }
   const page = pages[input.pageNumber - 1];
+  if (input.inkPng) {
+    const ink = await document.embedPng(input.inkPng);
+    page.drawImage(ink, { x: 0, y: 0, width: page.getWidth(), height: page.getHeight() });
+  }
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
   const width = Math.min(280, Math.max(180, page.getWidth() - 44));

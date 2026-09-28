@@ -12,11 +12,13 @@ export function RouteCorrespondenceForm({
   currentClassification,
   authorityRole,
   canReferToPeers,
+  hasCurrentActorAnnotation,
 }: {
   correspondenceId: string;
   currentClassification: string;
   authorityRole: string;
   canReferToPeers: boolean;
+  hasCurrentActorAnnotation: boolean;
 }) {
   const [state, formAction, pending] = useActionState(routeCorrespondenceAction, initialState);
   const [classification, setClassification] = useState(currentClassification);
@@ -36,7 +38,16 @@ export function RouteCorrespondenceForm({
         <div className="field"><label>Distribution classification</label><select name="routeClassification" value={classification} onChange={(event) => setClassification(event.target.value)}><option value={currentClassification}>Keep {label(currentClassification)}</option>{currentClassification === "PUBLIC" || currentClassification === "INTERNAL" ? <option value="CONFIDENTIAL">Mark Confidential</option> : null}</select><small className="muted">Public/Internal routing automatically copies the recipient department Secretary. Confidential/Secret routing creates no copies; the DG must send it to a Director.</small></div>
         <div className="field"><label>Classification reason, when changing</label><textarea name="classificationReason" maxLength={500} placeholder="Give a reason of at least 10 characters when changing classification…" /></div>
       </> : null}
-      <div className="field"><label>Minute / instruction</label><textarea name="minute" required minLength={3} placeholder="State the action required, expected outcome, and any deadline…" /></div>
+      <div className="field">
+        <label>Minute / instruction{hasCurrentActorAnnotation ? " (optional after document annotation)" : ""}</label>
+        <textarea
+          name="minute"
+          required={!hasCurrentActorAnnotation}
+          minLength={hasCurrentActorAnnotation ? undefined : 3}
+          placeholder={hasCurrentActorAnnotation ? "Leave blank to use your current document annotation, or enter a separate routing instruction…" : "State the action required, expected outcome, and any deadline…"}
+        />
+        {hasCurrentActorAnnotation ? <small className="muted">If left blank, your annotation on the current included document version becomes the routing minute.</small> : null}
+      </div>
       <div className="field">
         <RecipientSelector
           actionHint={canReferToPeers ? "Select your supervisor, direct reports, or an authorized peer. Division Head peers are limited to your department." : "Select your assigned supervisor or one or more direct reports."}

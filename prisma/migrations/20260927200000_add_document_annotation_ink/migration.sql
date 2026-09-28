@@ -1,0 +1,3 @@
+ALTER TABLE "DocumentAnnotation"
+  ADD COLUMN "inputMethod" TEXT NOT NULL DEFAULT 'TEXT',
+  ADD COLUMN "inkSha256" TEXT;

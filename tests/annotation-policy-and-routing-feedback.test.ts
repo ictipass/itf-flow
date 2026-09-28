@@ -29,6 +29,7 @@ test("known routing validation failures are safe for toast feedback", () => {
     "Give a classification reason of at least 10 characters.",
     "Assign an active Department Secretary for Administration & Human Resource Management Department before routing.",
     "Confidential and Secret routing cannot include copy recipients.",
+    "Enter a minute or annotate the current document before routing.",
   ];
   for (const message of messages) assert.equal(routingFeedbackMessage(new Error(message)), message);
   assert.equal(routingFeedbackMessage(new Error("database password is secret")), null);

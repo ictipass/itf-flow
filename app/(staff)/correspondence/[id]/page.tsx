@@ -108,6 +108,9 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const currentApproval = record.decisionRequests.some((request) => request.purpose === WorkPurpose.APPROVAL && request.outcome === DecisionOutcome.APPROVED && !request.supersededAt);
   const canPrepareDispatch = canDispatch(user.role) && record.type === CorrespondenceType.OUTGOING_LETTER && (!record.requiresApproval || currentApproval) && record.status !== CorrespondenceStatus.CLOSED;
   const annotationSourceIds = new Set(record.documentAnnotations.map((annotation) => annotation.sourceAttachmentId));
+  const hasCurrentActorAnnotation = record.documentAnnotations.some(
+    (annotation) => annotation.signerId === user.id && annotation.outputAttachment.isIncluded,
+  );
   return (
     <>
       {record.classification === "CONFIDENTIAL" || record.classification === "SECRET" ? <div className="sensitive-watermark" aria-hidden="true">CONTROLLED COPY · {user.staffNumber ?? user.email} · {new Date().toLocaleDateString("en-NG")}</div> : null}
@@ -222,7 +225,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <section className="card">
               <h2>Minute and route</h2>
               <p className="muted">{canReferToPeers ? "Route through the formal hierarchy or make an authorized peer referral." : "Formal reporting line: your assigned supervisor or direct reports."}</p>
-              <RouteCorrespondenceForm correspondenceId={record.id} currentClassification={record.classification} authorityRole={authorityRole} canReferToPeers={canReferToPeers} />
+              <RouteCorrespondenceForm correspondenceId={record.id} currentClassification={record.classification} authorityRole={authorityRole} canReferToPeers={canReferToPeers} hasCurrentActorAnnotation={hasCurrentActorAnnotation} />
             </section>
           ) : null}
           {activeActionItem && !pendingDecision ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}

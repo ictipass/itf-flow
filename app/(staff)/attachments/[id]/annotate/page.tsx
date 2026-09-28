@@ -9,6 +9,7 @@ import { canMinute } from "@/lib/permissions";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
 import { annotationAuthenticationPolicyFor } from "@/lib/annotation-policy";
+import { DocumentInkCanvas } from "@/components/document-ink-canvas";
 
 export default async function AnnotateAttachmentPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -22,7 +23,7 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
   if (!authority || !canMinute(authority.principal.role)) notFound();
   const authenticationPolicy = await annotationAuthenticationPolicyFor(authority.principal.role);
   const enterpriseMfaActive = authenticationPolicy.required ? await hasActiveEnterpriseMfa() : false;
-  const isImage = attachment.mimeType === "image/jpeg" || attachment.mimeType === "image/png";
+  const annotationFormId = "document-annotation-form";
 
   return (
     <>
@@ -37,20 +38,15 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
       <p className="notice">The original remains immutable. Saving creates a new PDF version, a correspondence revision and a tamper-evident authenticated signing record. It does not record formal approval.</p>
       <div className="annotation-workspace">
         <section className="card annotation-preview">
-          <iframe src={`/attachments/${attachment.id}?inline=1`} title={`Preview of ${attachment.originalName}`} />
+          <DocumentInkCanvas attachmentId={attachment.id} mimeType={attachment.mimeType} formId={annotationFormId} />
           <a className="btn secondary compact" href={`/attachments/${attachment.id}`} target="_blank" rel="noreferrer">Open source in a new tab</a>
         </section>
         <section className="card annotation-form-card">
           <span className="eyebrow">Authenticated signing block</span>
           <h2>Add minute</h2>
           <p className="muted">Signing as <strong>{user.name}</strong> · {label(authority.principal.role)}{authority.delegation ? ` · acting for ${authority.principal.name}` : ""}.</p>
-          <form action={annotateAttachmentAction} className="grid">
+          <form id={annotationFormId} action={annotateAttachmentAction} className="grid">
             <input type="hidden" name="attachmentId" value={attachment.id} />
-            <div className="field">
-              <label>Page number</label>
-              <input name="pageNumber" type="number" min="1" max={isImage ? 1 : 10000} defaultValue="1" required readOnly={isImage} />
-              <small className="muted">{isImage ? "Images are converted to a one-page PDF." : "Use the page number shown in the preview."}</small>
-            </div>
             <div className="field">
               <label>Placement</label>
               <select name="placement" defaultValue="TOP_RIGHT" required>
@@ -61,8 +57,8 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
               </select>
             </div>
             <div className="field">
-              <label>Minute</label>
-              <textarea name="minuteText" minLength={3} maxLength={1500} required rows={9} placeholder="Enter the instruction, observation or decision to place directly on the document…" />
+              <label>Typed minute (optional when handwriting on the document)</label>
+              <textarea name="minuteText" maxLength={1500} rows={9} placeholder="Enter searchable text, or use the stylus canvas to handwrite directly on the selected page…" />
             </div>
             {!authenticationPolicy.required ? (
               <p className="notice">The administrator has relaxed annotation re-authentication for the {label(authority.principal.role)} role. This exception and policy version will be recorded with the annotation.</p>

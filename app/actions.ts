@@ -836,7 +836,7 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
 async function performRouteCorrespondence(formData: FormData) {
   const user = await requireUser();
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
-  const minute = String(formData.get("minute") ?? "").trim();
+  const submittedMinute = String(formData.get("minute") ?? "").trim();
   const purpose = workPurpose(formData);
   const templateRules = await ensurePurposeAllowed(correspondenceId, purpose);
   const actionRecipientIds = formData
@@ -848,13 +848,22 @@ async function performRouteCorrespondence(formData: FormData) {
     .map(String)
     .filter(Boolean)
     .filter((id) => !actionRecipientIds.includes(id));
-  if (!correspondenceId || minute.length < 3 || actionRecipientIds.length === 0) {
+  if (!correspondenceId || actionRecipientIds.length === 0) {
     throw new Error("A minute and at least one action recipient are required.");
   }
   const authority = await workAuthority({ correspondenceId, actor: user });
   if (!authority || !canMinute(authority.principal.role)) throw new Error("You do not hold current authority to route this correspondence.");
   const [record, actionRecipients, explicitCopyRecipients] = await Promise.all([
-    db.correspondence.findUnique({ where: { id: correspondenceId } }),
+    db.correspondence.findUnique({
+      where: { id: correspondenceId },
+      include: {
+        documentAnnotations: {
+          where: { signerId: user.id, outputAttachment: { isIncluded: true } },
+          orderBy: { signedAt: "desc" },
+          take: 1,
+        },
+      },
+    }),
     db.user.findMany({ where: { id: { in: actionRecipientIds }, isActive: true } }),
     db.user.findMany({ where: { id: { in: copyRecipientIds }, isActive: true } }),
   ]);
@@ -865,6 +874,8 @@ async function performRouteCorrespondence(formData: FormData) {
   ) {
     throw new Error("Invalid routing request.");
   }
+  const minute = submittedMinute || record.documentAnnotations[0]?.minuteText?.trim() || "";
+  if (minute.length < 3) throw new Error("Enter a minute or annotate the current document before routing.");
   const effectiveClassification = routingClassification({ actorRole: authority.principal.role, current: record.classification, requested: String(formData.get("routeClassification") ?? "") || null });
   const classificationChanged = effectiveClassification !== record.classification;
   const classificationReason = String(formData.get("classificationReason") ?? "").trim();
