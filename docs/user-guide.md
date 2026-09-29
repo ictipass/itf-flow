@@ -168,6 +168,11 @@ not require a physical tracking record. This panel does not assign the digital a
 4. Search for the next authorized action recipient. Add copy recipients only for visibility.
 5. For a sequential A → B → C → Z route, A selects only B. B later routes to C, and C routes to Z. Selecting all
    three at once creates parallel responsibilities. A merely informed D belongs in Copy.
+6. Select Z separately as the **Ultimate recipient**. This endpoint remains stable while B and C temporarily own the
+   action. Internal memo **TO** output uses the ultimate recipient rather than the first intermediate desk.
+7. Select the official record category, file-plan code and retention class. For Personnel, select the staff member
+   whose official file owns the record; for Office/Corporate/External Case, identify the owning organizational unit.
+   Creator, ultimate recipient and record subject may legitimately be different people.
 6. Enter a specific routing minute and attach permitted PDF, DOCX, XLSX, JPEG or PNG material if needed.
 7. Save as a private draft or raise and route. Retain the generated ITF Flow reference.
 8. Use **My inbox** to acknowledge assigned matters, then minute onward or resolve them.
@@ -250,6 +255,9 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 7. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
 8. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
 9. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
+10. Use **Records governance** to appoint Open or Secret Registry staff, set expiry/revoke appointments with reasons,
+    and enable or relax Secret Registry MFA. Open Registry is limited to Public/Internal; Secret Registry can retrieve
+    all classifications. Blob credentials are never given to registry staff.
 
 Expected control: operational administration does not grant blanket access to restricted business records;
 classification rules continue to apply to registry queries and exports.
@@ -276,6 +284,9 @@ priority, status, active owner, office, department and received-date filters.
 - On-screen results are limited to the latest 200; authorized exports are capped at 5,000 records per request.
 - CSV cells are escaped against spreadsheet formula injection.
 - The server reapplies visibility and Secret-classification rules during export; altering a URL cannot broaden access.
+- Appointed registry staff use **Official records** to search logical files by ultimate recipient, record subject,
+  staff number or file-plan code. The correspondence page and registry provide a unified S29 ZIP containing documents,
+  movement, minutes, revisions, approvals, annotations, hashes and archival manifest evidence.
 
 Search includes composed text and minutes. It can include released attachment extracted text, but a real OCR provider
 is not connected until S24B.

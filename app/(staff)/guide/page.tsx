@@ -2,9 +2,9 @@ const guides = [
   {
     title: "All staff and originators",
     steps: [
-      ["Raise or save", "Create correspondence and format the memo body with safe headings, bold, italic, underline, lists or quotations. Select authorized action/copy recipients, add a clear routing minute, and either save privately or route it."],
+      ["Raise or save", "Create correspondence and format the memo body. Select the ultimate recipient separately from the next action desk, then choose the official filing category, file-plan code, retention class and personnel subject/owning unit."],
       ["Monitor", "Use My inbox for assigned work, Notifications for alerts, and the correspondence register to search matters you are permitted to see."],
-      ["Annotate a document", "While you own the Action item, open an Available PDF or scan and write with a stylus, touch, or mouse and/or add typed text. Flow preserves the source and creates a signed PDF version."],
+      ["Annotate a document", "While you own the Action item, use pen/eraser, stroke undo/redo, custom draggable minute placement and typed text. Flow preserves the source and creates a signed PDF version."],
       ["Register your signature", "Open Signature profile and submit your own PNG signature. Your authenticated submission activates immediately and can appear on new ITF memo outputs."],
       ["Treat and route", "For an internal memo, open the single ITF memo packet to read and annotate the formatted document and converted attachment pages. Source files already present in the packet are hidden from the package list to prevent duplication."],
       ["Correct safely", "When returned, create a numbered revision with a change note; the earlier document and superseded decisions remain auditable."],
@@ -27,6 +27,7 @@ const guides = [
       ["Register the file", "Verify the document, capture scan desk, pages, physical location and file reference, then review any duplicate suggestion."],
       ["Label and move", "Print the QR tracking label and record every physical-file reassignment with a reason."],
       ["Dispatch", "For approved outgoing correspondence, prepare a delivery record and update it through dispatch, delivery, or failure."],
+      ["Retrieve official records", "Open Registry appointments retrieve Public/Internal files; Secret Registry appointments retrieve every classification under the active MFA policy. Export the S29 evidence ZIP when an auditor or archive needs the complete record."],
     ],
   },
   {
@@ -36,6 +37,7 @@ const guides = [
       ["Configure experience", "Privately preview Classic, Modern, Soft UI, or Glass, then activate the approved interface with an audit reason."],
       ["Govern annotations", "Under Document Administration, require or relax annotation re-authentication separately for DG, Directors, and Division Heads. Every change needs an audit reason."],
       ["Govern signature profiles", "Use Signature governance to audit staff submissions and revoke a signature with a recorded reason when it must no longer be used."],
+      ["Govern records access", "Use Records governance to appoint or revoke Open/Secret Registry staff and to enforce or relax Secret Registry MFA with a recorded reason."],
       ["Operate automation", "Monitor reminder policy and runs, process or retry email delivery, and investigate dead-letter items without changing correspondence history."],
       ["Respect separation", "Administration does not silently broaden document visibility; Secret classification remains restricted by role."],
     ],
@@ -43,7 +45,7 @@ const guides = [
 ];
 
 const endToEndSteps = [
-  ["Compose and route", "The sender creates the correspondence, selects one or more action recipients, adds copy recipients only for awareness, records a clear instruction, and submits."],
+  ["Compose, file and route", "The sender selects the stable ultimate recipient and logical official file, then selects the next action recipient, adds copies only for awareness, records a clear instruction, and submits."],
   ["Secure the document", "With scanning enabled, an attachment is quarantined until validation and malware scanning mark it Available and Clean. Under the explicit temporary bypass, a signature-valid upload is immediately Available and Bypassed, with the exception retained in its audit history."],
   ["Receive and acknowledge", "Each action recipient sees the item in My inbox and acknowledges it to establish custody. Copy recipients can follow it but do not own treatment."],
   ["Treat or decide", "The action owner performs the required work and records any requested review, concurrence, approval, recommendation, or clarification."],
@@ -53,7 +55,7 @@ const endToEndSteps = [
   ["Resolve", "The final action owner records the outcome and selects Mark resolved. Incoming letters and internal memos normally finish in Resolved status."],
   ["Generate the memo output", "For a resolved internal memo whose originator has an active signature profile, generate the versioned PDF. It contains the ITF memo, compatible attachments, and then the lifecycle evidence appendix with movement/decision history and attachment hashes."],
   ["Dispatch and close", "For an outgoing letter, authorized Secretariat or Records staff prepare dispatch, record delivery or failure, and successful delivery closes the correspondence."],
-  ["Retain the evidence", "Movement, minutes, decisions, revisions, document events and physical-file history remain available according to the user's authorization."],
+  ["Retain and export evidence", "Movement, minutes, decisions, revisions, annotations, documents and hashes remain authorized and auditable. The S29 ZIP provides one integrity-checked archival/auditor package."],
 ];
 
 function StepList({ steps }: { steps: string[][] }) {
