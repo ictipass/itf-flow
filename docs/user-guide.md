@@ -129,9 +129,10 @@ reusable visual signature profiles are described below; certificate-backed signi
    earlier active version without deleting its governed history.
 3. Complete the internal-memo workflow and select **Mark resolved** at its final action point.
 4. On initial submission, Flow automatically creates an **ITF memo packet** in the configured document store. Every
-   authorized action recipient opens that packet in the in-app renderer and can minute or sign any page. Available
-   PDF, JPEG and PNG attachments are appended after the memo pages. DOCX/XLSX files remain separate because they
-   require a governed Office conversion service before they can safely become PDF pages.
+   authorized action recipient opens that packet in the in-app renderer and can minute or sign any page. PDF, JPEG
+   and PNG are normalized directly. DOCX/XLSX are converted when `DOCUMENT_CONVERTER_PROVIDER=GOTENBERG` is active.
+   A source attachment successfully included in the packet is hidden from the separate package list, avoiding a
+   confusing duplicate; a security-pending or unconverted source remains visible separately.
 5. When malware scanning is enabled, a security-pending attachment remains separate until released. Flow refreshes
    an unannotated working packet after release; if the packet has already been annotated, it preserves that immutable
    version and leaves the newly released attachment separately accessible rather than discarding annotations.
@@ -161,7 +162,9 @@ not require a physical tracking record. This panel does not assign the digital a
    Secretariat/Records staff; ordinary originators use Internal Memo or Outgoing Letter.
 2. Select a compatible Workflow Category or keep **Automatic default**. The category controls business policy and SLA;
    it does not change what kind of document is being raised.
-3. Enter subject, summary, body, classification, priority, reference and due date as applicable.
+3. Enter subject, summary, classification, priority, reference and due date as applicable. Compose the memo/body in
+   the rich-text editor using safe headings, bold, italic, underline, ordered/unordered lists and quotations. Flow
+   sanitizes the content server-side and carries the approved formatting into the correspondence view and PDF.
 4. Search for the next authorized action recipient. Add copy recipients only for visibility.
 5. For a sequential A → B → C → Z route, A selects only B. B later routes to C, and C routes to Z. Selecting all
    three at once creates parallel responsibilities. A merely informed D belongs in Copy.

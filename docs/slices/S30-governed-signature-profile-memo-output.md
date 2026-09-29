@@ -22,6 +22,10 @@ It places the ITF memo first and appends every security-cleared PDF, JPEG or PNG
 and sign that packet through the existing in-app annotation workspace. The original and each annotated version remain
 immutable. Existing memos can create their packet from the correspondence page.
 
+Memo composition uses a constrained rich-text editor. Server-side sanitization permits paragraphs, headings,
+bold/italic/underline, lists and quotations and removes scripts, attributes and unsupported markup. The same
+normalized content drives both the correspondence page and styled PDF rendering.
+
 ## Signature governance
 
 - PNG only, maximum 1 MB, bounded dimensions and server-side file-signature/header/decoder validation.
@@ -67,8 +71,10 @@ the official output still answers an auditor's question about route, decisions, 
   private Vercel Blob without another provider or environment variable.
 - The renderer uses a small bundled ITF logo asset and never reads `/var/task/public` or writes a generated file to
   the serverless filesystem. Working packets and final outputs are stored through the configured provider.
-- Security-cleared PDF/JPEG/PNG attachments are appended between the memo and lifecycle appendix. DOCX/XLSX remain
-  separate pending a governed Office conversion contract.
+- Security-cleared PDF/JPEG/PNG attachments are appended between the memo and lifecycle appendix. With
+  `DOCUMENT_CONVERTER_PROVIDER=GOTENBERG`, DOCX/XLSX are converted through the LibreOffice API and appended as PDF
+  pages. Successfully included sources are hidden from the separate package list; pending/unconverted sources remain
+  visible. Disabling or losing the converter never makes the original source disappear.
 
 ## Data and deployment
 
@@ -81,10 +87,11 @@ activates the latest existing pending version for each user, and supersedes olde
 Migration `20260928170000_add_working_memo_packets` identifies the current derived memo packet without confusing it
 with user-supplied source attachments or correspondence revision manifests.
 
-No new paid service is introduced. Signature bytes are small governed profile data in PostgreSQL; generated PDFs use
-the configured document store. Existing `pdf-lib` rendering and application HMAC controls are used. If ITF later
-requires a signature verifiable outside Flow, a certificate authority, managed signing key/HSM and trusted timestamp
-service remain separate dependencies.
+Signature bytes are small governed profile data in PostgreSQL; generated PDFs use the configured document store.
+Existing `pdf-lib` rendering and application HMAC controls are used. DOCX/XLSX conversion introduces an optional
+Gotenberg deployment or managed-service cost; keep `DOCUMENT_CONVERTER_PROVIDER=DISABLED` until an approved private
+endpoint is available. If ITF later requires a signature verifiable outside Flow, a certificate authority, managed
+signing key/HSM and trusted timestamp service remain separate dependencies.
 
 ## Verification
 
@@ -93,7 +100,7 @@ service remain separate dependencies.
 
 ## Staging acceptance
 
-1. Apply both S30 migrations and deploy the implementation commits.
+1. Apply the S30 migrations and deploy the implementation commits.
 2. Submit a transparent PNG from a normal staff account; confirm it is immediately **Active** and usable.
 3. Submit a replacement; confirm the new version activates and the earlier version becomes superseded.
 4. Resolve an internal memo raised by that user and generate the output from an authorized participant.
@@ -102,6 +109,9 @@ service remain separate dependencies.
 7. Generate a second output and verify both versions remain downloadable with successful integrity indicators.
 8. Revoke the current signature, confirm future generation is blocked and historical output remains valid.
 9. Repeat with Confidential and Secret test records to validate need-to-know and step-up controls.
+10. With the converter disabled, verify DOCX/XLSX remain separately accessible. Then configure an approved Gotenberg
+    endpoint, submit one DOCX and one XLSX, and confirm each rendition appears in the packet as PDF while its included
+    source is not shown twice.
 
 ## Policy boundary and next slice
 
