@@ -9,6 +9,7 @@ import {
 import { resolveWorkspaceNavigationUrls } from "../lib/workspace-navigation-urls";
 import { stagingAcceptanceConfigurationIssues } from "../lib/workspace-staging-acceptance";
 import { malwareScannerMode } from "../lib/document-security";
+import { assertDocumentConverterConfiguration, documentConverterProvider } from "../lib/document-conversion";
 
 const required = [
   "DATABASE_URL",
@@ -56,6 +57,12 @@ async function main() {
     errors.push("BLOB_READ_WRITE_TOKEN is required when DOCUMENT_STORAGE_PROVIDER=VERCEL_BLOB.");
   } else if (documentStorageProvider !== "LOCAL" && documentStorageProvider !== "VERCEL_BLOB") {
     errors.push(`DOCUMENT_STORAGE_PROVIDER ${documentStorageProvider} is unsupported.`);
+  }
+  try {
+    if (documentConverterProvider() === "DISABLED") warnings.push("Office-to-PDF conversion is disabled; DOCX/XLSX files will remain separate from memo packets.");
+    else assertDocumentConverterConfiguration();
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "Document-converter configuration is invalid.");
   }
   try {
     resolveWorkspaceNavigationUrls(process.env);

@@ -1,6 +1,7 @@
 import { resolveWorkspaceLaunchReceiverConfiguration } from "@/lib/workspace-token";
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 import { malwareScannerMode } from "@/lib/document-security";
+import { assertDocumentConverterConfiguration } from "@/lib/document-conversion";
 
 export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.env) {
   const issues: string[] = [];
@@ -27,6 +28,11 @@ export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.e
     issues.push(error instanceof Error ? error.message : "malware-scanner mode is invalid");
   }
   if (["DISABLED", "MOCK"].includes(env.DOCUMENT_OCR_PROVIDER ?? "DISABLED")) issues.push("a production OCR provider is not configured");
+  try {
+    assertDocumentConverterConfiguration(env);
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : "document-converter configuration is invalid");
+  }
   if (env.STAFF_LOCAL_LOGIN_ENABLED === "true") issues.push("local staff-password login is enabled");
   return issues;
 }

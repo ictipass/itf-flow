@@ -23,6 +23,7 @@ import { APPROVAL_SIGNATURE_ALGORITHM, APPROVAL_SIGNATURE_KEY_ID, signApprovalPa
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { annotationAuthenticationPolicyFor } from "@/lib/annotation-policy";
 import { annotationInputMethod, parseAnnotationInk } from "@/lib/annotation-ink";
+import { memoPacketIncludedAttachmentIds } from "@/lib/memo-packet-metadata";
 
 const annotationSchema = z.object({
   attachmentId: z.string().min(1),
@@ -53,7 +54,7 @@ export async function annotateAttachmentAction(formData: FormData) {
   const auditMinute = parsed.minuteText || "Handwritten in-document annotation and signature.";
   const source = await db.attachment.findFirst({
     where: { id: parsed.attachmentId, isIncluded: true },
-    include: { correspondence: true },
+    include: { correspondence: true, documentEvents: { orderBy: { createdAt: "desc" } } },
   });
   if (!source || !attachmentPassesDocumentSecurityGate(source)) {
     throw new Error("The current document is unavailable or has not passed its security gate.");
@@ -109,6 +110,9 @@ export async function annotateAttachmentAction(formData: FormData) {
     bytes: rendered.bytes,
     sourceMalwareScanStatus: source.malwareScanStatus === "CLEAN" ? "CLEAN" : "BYPASSED",
   });
+  const includedAttachmentIds = source.isMemoPacket
+    ? memoPacketIncludedAttachmentIds(source.documentEvents)
+    : [];
 
   const result = await db.$transaction(async (tx) => {
     const replaced = await tx.attachment.updateMany({
@@ -125,7 +129,7 @@ export async function annotateAttachmentAction(formData: FormData) {
           create: {
             type: DocumentEventType.ANNOTATED,
             detail: "Generated from an available source document with an authenticated minute and signing block.",
-            metadata: { sourceAttachmentId: source.id, sourceSha256: source.sha256, pageNumber: parsed.pageNumber, placement: parsed.placement, inputMethod },
+            metadata: { sourceAttachmentId: source.id, sourceSha256: source.sha256, pageNumber: parsed.pageNumber, placement: parsed.placement, inputMethod, includedAttachmentIds },
           },
         },
       },

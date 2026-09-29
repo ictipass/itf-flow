@@ -13,6 +13,7 @@ import { canAccessSensitiveRecord } from "@/lib/sensitive-access";
 import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
 import { itfLogoPng } from "@/lib/itf-branding";
 import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
+import { convertOfficeDocumentToPdf, OFFICE_CONVERSION_MIME_TYPES } from "@/lib/document-conversion";
 
 export type MemoOutputState = { status: "idle" | "error" | "success"; message: string; outputId?: string; attempt: number };
 export type WorkingMemoPacketState = { status: "idle" | "error" | "success"; message: string; attempt: number };
@@ -111,12 +112,20 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
     const generatedAt = new Date();
     const includedDocuments: { name: string; mimeType: string; bytes: Buffer }[] = [];
     for (const attachment of record.attachments) {
-      if (!["application/pdf", "image/jpeg", "image/png"].includes(attachment.mimeType) || !attachmentPassesDocumentSecurityGate(attachment)) continue;
+      if (!["application/pdf", "image/jpeg", "image/png"].includes(attachment.mimeType) && !OFFICE_CONVERSION_MIME_TYPES.has(attachment.mimeType)) continue;
+      if (!attachmentPassesDocumentSecurityGate(attachment)) continue;
       const attachmentBytes = await readStoredDocument(attachment.storageKey, attachment.storageProvider);
       if (createHash("sha256").update(attachmentBytes).digest("hex") !== attachment.sha256) {
         throw new Error("An included attachment failed integrity verification.");
       }
-      includedDocuments.push({ name: attachment.originalName, mimeType: attachment.mimeType, bytes: attachmentBytes });
+      if (OFFICE_CONVERSION_MIME_TYPES.has(attachment.mimeType)) {
+        try {
+          const converted = await convertOfficeDocumentToPdf({ bytes: attachmentBytes, mimeType: attachment.mimeType, originalName: attachment.originalName });
+          if (converted) includedDocuments.push({ name: `${attachment.originalName}.pdf`, mimeType: "application/pdf", bytes: converted });
+        } catch (error) {
+          console.error(`Could not convert ${attachment.originalName} for the controlled memo output.`, error);
+        }
+      } else includedDocuments.push({ name: attachment.originalName, mimeType: attachment.mimeType, bytes: attachmentBytes });
     }
     const logoPng = await itfLogoPng();
     const initialRecipientIds = record.events.map((event) => actionRecipientIds(event.metadata)).find((ids) => ids.length) ?? [];

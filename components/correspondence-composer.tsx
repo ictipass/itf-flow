@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { autosaveDraftAction, registerCorrespondenceAction, saveDraftAction } from "@/app/actions";
 import { DirectoryPerson, RecipientSelector } from "@/components/recipient-selector";
 import { categoriesForDocumentType, routingPurposeHelp, type WorkflowCategoryOption } from "@/lib/correspondence-form";
+import { RichTextEditor } from "@/components/rich-text-editor";
 
 type InitialDraft = {
   id: string;
@@ -76,7 +77,7 @@ export function CorrespondenceComposer({
       <div className="field"><label>Classification</label><select name="classification" defaultValue={initial?.classification ?? "INTERNAL"}><option>PUBLIC</option><option>INTERNAL</option><option>CONFIDENTIAL</option><option>SECRET</option></select></div>
       <div className="field"><label>Priority</label><select name="priority" defaultValue={initial?.priority ?? "ROUTINE"}><option>ROUTINE</option><option>URGENT</option><option>IMMEDIATE</option></select></div>
       <div className="field span-2"><label>Summary *</label><textarea name="summary" defaultValue={initial?.summary} placeholder="Summarize the request, decision required, and important context" required minLength={10} /></div>
-      <div className="field span-2"><label>Compose memo / transcribe letter</label><textarea name="body" defaultValue={initial?.body} placeholder="Compose the full memo or transcribe the main content of the letter" style={{ minHeight: 180 }} /></div>
+      <div className="field span-2"><label>Compose memo / transcribe letter</label><RichTextEditor initialHtml={initial?.body} onDirty={() => setDirty(true)} /></div>
       <div className="field span-2"><RecipientSelector
         initialActionRecipients={initial?.actionRecipients}
         initialCopyRecipients={initial?.copyRecipients}
@@ -91,7 +92,7 @@ export function CorrespondenceComposer({
         <option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option>
       </select><small className="muted">{routingPurposeHelp[routingPurpose]}</small></div>
       <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /><small className="muted">For a sequential path A → B → C → Z, A selects only B as the action recipient. Each accountable holder minutes it to the next person. Select D as a copy recipient only when D is being informed, not asked to act.</small></div>
-      <div className="field span-2"><label>Scanned document</label><input name="attachment" type="file" accept=".pdf,.jpg,.jpeg,.png" /></div>
+      <div className="field span-2"><label>Supporting document</label><input name="attachment" type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" /><small className="muted">PDF and images are normalized into the memo packet. DOCX/XLSX are converted when the governed converter is enabled.</small></div>
       <div className="actions span-2">
         <button className="btn secondary" type="submit" formAction={saveDraftAction} formNoValidate>Save draft</button>
         <button className="btn" type="submit">Submit through reporting line</button>

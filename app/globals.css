@@ -693,6 +693,20 @@ button, input, select, textarea { font: inherit; }
   .glass-activity-list { grid-template-columns: 1fr; }
 }
 
+.rich-text-editor { display: grid; gap: 8px; }
+.rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; border: 1px solid #d8d1ca; border-bottom: 0; border-radius: 10px 10px 0 0; background: #f7f3ef; }
+.rich-text-toolbar button { min-height: 32px; padding: 5px 9px; border: 1px solid #d7cec7; border-radius: 7px; background: white; color: inherit; cursor: pointer; font: inherit; font-size: .78rem; }
+.rich-text-toolbar button:hover, .rich-text-toolbar button:focus-visible { border-color: var(--accent); outline: none; }
+.rich-text-surface { min-height: 230px; padding: 16px; overflow-y: auto; border: 1px solid #d8d1ca; border-radius: 0 0 10px 10px; background: white; line-height: 1.7; }
+.rich-text-surface:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); }
+.rich-text-surface.is-empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; }
+.rich-text-surface h2, .correspondence-rich-text h2 { margin: 1em 0 .4em; font-size: 1.2rem; }
+.rich-text-surface p, .correspondence-rich-text p { margin: 0 0 .8em; }
+.rich-text-surface blockquote, .correspondence-rich-text blockquote { margin: .8em 0; padding-left: 14px; border-left: 3px solid var(--accent); color: var(--muted); }
+.rich-text-surface ul, .rich-text-surface ol, .correspondence-rich-text ul, .correspondence-rich-text ol { padding-left: 1.7em; }
+.glass-shell .rich-text-toolbar { border-color: rgb(255 255 255 / .12); background: rgb(255 255 255 / .06); }
+.glass-shell .rich-text-toolbar button, .glass-shell .rich-text-surface { border-color: rgb(255 255 255 / .14); background: rgb(255 255 255 / .055); color: inherit; }
+
 @media (max-width: 560px) {
   .registry-filters { grid-template-columns: 1fr; }
   .registry-search { grid-column: auto; }

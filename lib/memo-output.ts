@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { richTextBlocks, type RichTextRun } from "@/lib/rich-text";
 
 export const MEMO_TEMPLATE_VERSION = "ITF_MEMO_V2";
 
@@ -71,6 +72,8 @@ export async function renderMemoOutput(input: MemoOutputInput) {
   document.setCreationDate(input.generatedAt);
   const regular = await document.embedFont(StandardFonts.Helvetica);
   const bold = await document.embedFont(StandardFonts.HelveticaBold);
+  const italic = await document.embedFont(StandardFonts.HelveticaOblique);
+  const boldItalic = await document.embedFont(StandardFonts.HelveticaBoldOblique);
   const signature = input.signaturePng ? await document.embedPng(input.signaturePng) : null;
   const logo = input.logoPng ? await document.embedPng(input.logoPng) : null;
   let page = document.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
@@ -100,6 +103,69 @@ export async function renderMemoOutput(input: MemoOutputInput) {
       y -= size + 3;
     }
     y -= options.gap ?? 5;
+  }
+
+  function runFont(run: RichTextRun, forceBold = false) {
+    if ((run.bold || forceBold) && run.italic) return boldItalic;
+    if (run.bold || forceBold) return bold;
+    if (run.italic) return italic;
+    return regular;
+  }
+
+  function richText(value: string) {
+    for (const block of richTextBlocks(value)) {
+      const size = block.kind === "heading" ? 12 : 10;
+      const indent = block.kind === "blockquote" ? 16 : block.kind === "list-item" ? 12 : 0;
+      const maximumWidth = PAGE_WIDTH - MARGIN * 2 - indent;
+      const sourceRuns: RichTextRun[] = block.prefix ? [{ text: block.prefix, bold: true }, ...block.runs] : block.runs;
+      let line: { value: string; run: RichTextRun; font: PDFFont }[] = [];
+      let lineWidth = 0;
+      let pendingSpace: { run: RichTextRun; font: PDFFont } | null = null;
+      const lines: typeof line[] = [];
+      const flush = () => {
+        lines.push(line);
+        line = [];
+        lineWidth = 0;
+        pendingSpace = null;
+      };
+      for (const run of sourceRuns) {
+        const font = runFont(run, block.kind === "heading");
+        for (const part of printable(run.text).split(/(\n|\s+)/)) {
+          if (!part) continue;
+          if (part === "\n") {
+            flush();
+            continue;
+          }
+          if (/^\s+$/.test(part)) {
+            if (line.length) pendingSpace = { run, font };
+            continue;
+          }
+          const spaceWidth = pendingSpace ? pendingSpace.font.widthOfTextAtSize(" ", size) : 0;
+          const wordWidth = font.widthOfTextAtSize(part, size);
+          if (line.length && lineWidth + spaceWidth + wordWidth > maximumWidth) flush();
+          if (pendingSpace && line.length) {
+            line.push({ value: " ", run: pendingSpace.run, font: pendingSpace.font });
+            lineWidth += pendingSpace.font.widthOfTextAtSize(" ", size);
+          }
+          line.push({ value: part, run, font });
+          lineWidth += wordWidth;
+          pendingSpace = null;
+        }
+      }
+      if (line.length || !lines.length) flush();
+      for (const renderedLine of lines) {
+        ensure(size + 4, "ITF memo output - continued");
+        let x = MARGIN + indent;
+        for (const token of renderedLine) {
+          page.drawText(token.value, { x, y, size, font: token.font, color: rgb(0.1, 0.1, 0.1) });
+          const width = token.font.widthOfTextAtSize(token.value, size);
+          if (token.run.underline && token.value.trim()) page.drawLine({ start: { x, y: y - 1 }, end: { x: x + width, y: y - 1 }, thickness: 0.55, color: rgb(0.1, 0.1, 0.1) });
+          x += width;
+        }
+        y -= size + 4;
+      }
+      y -= block.kind === "heading" ? 7 : 5;
+    }
   }
 
   function truncate(value: string, font: PDFFont, size: number, maximumWidth: number) {
@@ -149,7 +215,8 @@ export async function renderMemoOutput(input: MemoOutputInput) {
   page.drawText(subject, { x: 72, y: 582, size: 10, font: bold, color: rgb(0, 0, 0) });
   page.drawLine({ start: { x: 72, y: 580 }, end: { x: 72 + bold.widthOfTextAtSize(subject, 10), y: 580 }, thickness: 0.7, color: rgb(0, 0, 0) });
   y = 556;
-  text(input.body?.trim() || input.summary, { size: 10, gap: 14 });
+  if (input.body?.trim()) richText(input.body);
+  else text(input.summary, { size: 10, gap: 14 });
   ensure(signature ? 125 : 62, "ITF memorandum - signature");
   if (signature) {
     const signatureWidth = 150;

@@ -28,6 +28,8 @@ import { label } from "@/lib/reference";
 import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
 import { verifyApprovalSignature, verifyCanonicalSignature } from "@/lib/approval-signatures";
+import { richTextHtml, richTextPlainText } from "@/lib/rich-text";
+import { memoPacketIncludedAttachmentIds } from "@/lib/memo-packet-metadata";
 
 function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
@@ -52,7 +54,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       createdBy: { include: { signatureProfiles: { where: { status: SignatureProfileStatus.APPROVED }, orderBy: { version: "desc" }, take: 1 } } },
       claimedBy: true,
       emailMessage: true,
-      attachments: { orderBy: [{ isMemoPacket: "desc" }, { createdAt: "asc" }] },
+      attachments: { include: { documentEvents: { orderBy: { createdAt: "desc" } } }, orderBy: [{ isMemoPacket: "desc" }, { createdAt: "asc" }] },
       workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true, signature: { include: { revision: true } } } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
@@ -117,7 +119,11 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   );
   const canGenerateMemoOutput = record.type === CorrespondenceType.INTERNAL_MEMO && (record.status === CorrespondenceStatus.RESOLVED || record.status === CorrespondenceStatus.CLOSED);
   const hasActiveOriginatorSignature = Boolean(record.createdBy?.signatureProfiles.length);
-  const hasCurrentMemoPacket = record.attachments.some((attachment) => attachment.isIncluded && attachment.isMemoPacket);
+  const currentMemoPacket = record.attachments.find((attachment) => attachment.isIncluded && attachment.isMemoPacket);
+  const packetIncludedAttachmentIds = new Set(currentMemoPacket ? memoPacketIncludedAttachmentIds(currentMemoPacket.documentEvents) : []);
+  const displayedAttachments = record.attachments.filter((attachment) => attachment.isMemoPacket || !packetIncludedAttachmentIds.has(attachment.id));
+  const hasCurrentMemoPacket = Boolean(currentMemoPacket);
+  const hasComposedMemo = Boolean(richTextPlainText(record.body));
   return (
     <>
       {record.classification === "CONFIDENTIAL" || record.classification === "SECRET" ? <div className="sensitive-watermark" aria-hidden="true">CONTROLLED COPY · {user.staffNumber ?? user.email} · {new Date().toLocaleDateString("en-NG")}</div> : null}
@@ -155,11 +161,11 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
         <div className="grid">
           <section className="card">
             <h2>Correspondence</h2>
-            {record.type === CorrespondenceType.INTERNAL_MEMO ? <p className="notice">The current ITF memo packet appears first below. Open it in the in-app renderer to read, minute, sign or annotate the memo. Available PDF/JPEG/PNG attachments are appended after the memo pages; unsupported or security-pending files remain listed separately.</p> : null}
-            {record.type === CorrespondenceType.INTERNAL_MEMO && !hasCurrentMemoPacket ? <GenerateWorkingMemoPacketForm correspondenceId={record.id} /> : null}
+            {record.type === CorrespondenceType.INTERNAL_MEMO && hasComposedMemo ? <p className="notice">The current ITF memo packet appears first below. Open it in the in-app renderer to read, minute, sign or annotate the memo. Attachments successfully converted into packet pages are hidden from this list to avoid duplication; security-pending or unconverted files remain separately visible.</p> : null}
+            {record.type === CorrespondenceType.INTERNAL_MEMO && hasComposedMemo && !hasCurrentMemoPacket ? <GenerateWorkingMemoPacketForm correspondenceId={record.id} /> : null}
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
-            {record.body ? <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }}>{record.body}</div> : null}
-            {record.attachments.length ? <div className="attachment-list"><strong>{record.type === CorrespondenceType.INTERNAL_MEMO ? "Document package" : "Attachments"}</strong>{record.attachments.map((file) => {
+            {record.body ? <div className="correspondence-rich-text" style={{ lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }} dangerouslySetInnerHTML={{ __html: richTextHtml(record.body) }} /> : null}
+            {displayedAttachments.length ? <div className="attachment-list"><strong>{record.type === CorrespondenceType.INTERNAL_MEMO ? "Document package" : "Attachments"}</strong>{displayedAttachments.map((file) => {
               const preservedSource = annotationSourceIds.has(file.id);
               const canOpen = attachmentPassesDocumentSecurityGate(file) && (file.isIncluded || preservedSource);
               const guidance = preservedSource ? "Preserved immutable source for a later annotated version." : attachmentGuidance(file);

@@ -43,6 +43,7 @@ import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls"
 import { resolveAutomaticDepartmentSecretaries, routingClassification, validateConfidentialRoute } from "@/lib/department-secretaries";
 import { routingFeedbackMessage } from "@/lib/routing-feedback";
 import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
+import { normalizeRichTextForStorage } from "@/lib/rich-text";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -50,7 +51,7 @@ const correspondenceSchema = z.object({
   priority: z.enum(Priority),
   subject: z.string().trim().min(5).max(250),
   summary: z.string().trim().min(10).max(2000),
-  body: z.string().trim().max(20000).optional(),
+  body: z.string().trim().max(40000).optional(),
   senderName: z.string().trim().min(2).max(200),
   senderReference: z.string().trim().max(100).optional(),
   dueAt: z.string().optional(),
@@ -62,7 +63,7 @@ const draftSchema = z.object({
   priority: z.enum(Priority),
   subject: z.string().trim().max(250),
   summary: z.string().trim().max(2000),
-  body: z.string().trim().max(20000).optional(),
+  body: z.string().trim().max(40000).optional(),
   senderName: z.string().trim().max(200),
   senderReference: z.string().trim().max(100).optional(),
   dueAt: z.string().optional(),
@@ -75,7 +76,7 @@ function draftData(formData: FormData) {
     priority: formData.get("priority"),
     subject: formData.get("subject") ?? "",
     summary: formData.get("summary") ?? "",
-    body: formData.get("body") || undefined,
+    body: normalizeRichTextForStorage(formData.get("body")),
     senderName: formData.get("senderName") ?? "",
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,
@@ -194,7 +195,7 @@ export async function externalSubmitAction(formData: FormData) {
     priority: formData.get("priority"),
     subject: formData.get("subject"),
     summary: formData.get("summary"),
-    body: formData.get("body") || undefined,
+    body: normalizeRichTextForStorage(formData.get("body")),
     senderName: formData.get("contactName"),
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,
@@ -259,7 +260,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
     priority: formData.get("priority"),
     subject: formData.get("subject"),
     summary: formData.get("summary"),
-    body: formData.get("body") || undefined,
+    body: normalizeRichTextForStorage(formData.get("body")),
     senderName: formData.get("senderName"),
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,
@@ -764,7 +765,7 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
     priority: formData.get("priority"),
     subject: formData.get("subject"),
     summary: formData.get("summary"),
-    body: formData.get("body") || undefined,
+    body: normalizeRichTextForStorage(formData.get("body")),
     senderName: formData.get("senderName"),
     senderReference: formData.get("senderReference") || undefined,
     dueAt: formData.get("dueAt") || undefined,

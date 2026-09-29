@@ -2,11 +2,11 @@ const guides = [
   {
     title: "All staff and originators",
     steps: [
-      ["Raise or save", "Create correspondence, select authorized action and copy recipients, add a clear minute, and either save privately or route it."],
+      ["Raise or save", "Create correspondence and format the memo body with safe headings, bold, italic, underline, lists or quotations. Select authorized action/copy recipients, add a clear routing minute, and either save privately or route it."],
       ["Monitor", "Use My inbox for assigned work, Notifications for alerts, and the correspondence register to search matters you are permitted to see."],
       ["Annotate a document", "While you own the Action item, open an Available PDF or scan and write with a stylus, touch, or mouse and/or add typed text. Flow preserves the source and creates a signed PDF version."],
       ["Register your signature", "Open Signature profile and submit your own PNG signature. Your authenticated submission activates immediately and can appear on new ITF memo outputs."],
-      ["Treat and route", "For an internal memo, open the ITF memo packet to read and annotate the template-formatted document and its appended PDF/image attachments. Acknowledge custody, record any requested formal decision, then resolve or minute the matter onward."],
+      ["Treat and route", "For an internal memo, open the single ITF memo packet to read and annotate the formatted document and converted attachment pages. Source files already present in the packet are hidden from the package list to prevent duplication."],
       ["Correct safely", "When returned, create a numbered revision with a change note; the earlier document and superseded decisions remain auditable."],
     ],
   },
