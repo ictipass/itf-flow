@@ -693,18 +693,25 @@ button, input, select, textarea { font: inherit; }
   .glass-activity-list { grid-template-columns: 1fr; }
 }
 
+.rich-text-editor, .correspondence-rich-text { --rich-text-accent: var(--accent, var(--burgundy)); }
 .rich-text-editor { display: grid; gap: 8px; }
 .rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; border: 1px solid #d8d1ca; border-bottom: 0; border-radius: 10px 10px 0 0; background: #f7f3ef; }
 .rich-text-toolbar button { min-height: 32px; padding: 5px 9px; border: 1px solid #d7cec7; border-radius: 7px; background: white; color: inherit; cursor: pointer; font: inherit; font-size: .78rem; }
-.rich-text-toolbar button:hover, .rich-text-toolbar button:focus-visible { border-color: var(--accent); outline: none; }
+.rich-text-toolbar button:hover, .rich-text-toolbar button:focus-visible { border-color: var(--rich-text-accent); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--rich-text-accent) 14%, transparent); }
 .rich-text-surface { min-height: 230px; padding: 16px; overflow-y: auto; border: 1px solid #d8d1ca; border-radius: 0 0 10px 10px; background: white; line-height: 1.7; }
-.rich-text-surface:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 18%, transparent); }
+.rich-text-surface:focus { border-color: var(--rich-text-accent); outline: 2px solid color-mix(in srgb, var(--rich-text-accent) 18%, transparent); }
 .rich-text-surface.is-empty::before { content: attr(data-placeholder); color: var(--muted); pointer-events: none; }
 .rich-text-surface h2, .correspondence-rich-text h2 { margin: 1em 0 .4em; font-size: 1.2rem; }
 .rich-text-surface p, .correspondence-rich-text p { margin: 0 0 .8em; }
-.rich-text-surface blockquote, .correspondence-rich-text blockquote { margin: .8em 0; padding-left: 14px; border-left: 3px solid var(--accent); color: var(--muted); }
-.rich-text-surface ul, .rich-text-surface ol, .correspondence-rich-text ul, .correspondence-rich-text ol { padding-left: 1.7em; }
+.rich-text-surface u, .correspondence-rich-text u { text-decoration-line: underline; text-decoration-color: currentcolor; text-decoration-thickness: .1em; text-underline-offset: .16em; }
+.rich-text-surface blockquote, .correspondence-rich-text blockquote { position: relative; margin: .9em 0; padding: 12px 16px 12px 42px; border-left: 4px solid var(--rich-text-accent); border-radius: 0 8px 8px 0; background: color-mix(in srgb, var(--rich-text-accent) 7%, transparent); color: inherit; font-style: italic; }
+.rich-text-surface blockquote::before, .correspondence-rich-text blockquote::before { content: "“"; position: absolute; top: 2px; left: 12px; color: var(--rich-text-accent); font-family: Georgia, serif; font-size: 2rem; font-style: normal; font-weight: 700; line-height: 1; }
+.rich-text-surface ul, .correspondence-rich-text ul { margin: .65em 0 .9em; padding-left: 1.8em; list-style: disc outside; }
+.rich-text-surface ol, .correspondence-rich-text ol { margin: .65em 0 .9em; padding-left: 1.8em; list-style: decimal outside; }
+.rich-text-surface li, .correspondence-rich-text li { display: list-item; margin: .25em 0; padding-left: .2em; }
+.rich-text-surface li::marker, .correspondence-rich-text li::marker { color: var(--rich-text-accent); font-weight: 700; }
 .glass-shell .rich-text-toolbar { border-color: rgb(255 255 255 / .12); background: rgb(255 255 255 / .06); }
+.glass-shell .rich-text-editor, .glass-shell .correspondence-rich-text { --rich-text-accent: #f2a0b5; }
 .glass-shell .rich-text-toolbar button, .glass-shell .rich-text-surface { border-color: rgb(255 255 255 / .14); background: rgb(255 255 255 / .055); color: inherit; }
 
 @media (max-width: 560px) {
