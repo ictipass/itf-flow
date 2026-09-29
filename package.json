@@ -31,6 +31,7 @@
     "dotenv": "^17.4.2",
     "htmlparser2": "^10.1.0",
     "imapflow": "^1.6.5",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.544.0",
     "mailparser": "^3.9.14",
     "next": "16.2.12",

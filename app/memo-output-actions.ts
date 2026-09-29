@@ -14,6 +14,7 @@ import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
 import { itfLogoPng } from "@/lib/itf-branding";
 import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
 import { convertOfficeDocumentToPdf, OFFICE_CONVERSION_MIME_TYPES } from "@/lib/document-conversion";
+import { registryAuthorizationFor } from "@/lib/registry-access";
 
 export type MemoOutputState = { status: "idle" | "error" | "success"; message: string; outputId?: string; attempt: number };
 export type WorkingMemoPacketState = { status: "idle" | "error" | "success"; message: string; attempt: number };
@@ -48,14 +49,17 @@ export async function generateWorkingMemoPacketAction(previous: WorkingMemoPacke
       include: {
         workItems: { select: { assigneeId: true } },
         accessGroups: { include: { group: { include: { members: true } } } },
+        ultimateRecipient: true,
       },
     });
     if (!record || record.type !== CorrespondenceType.INTERNAL_MEMO) throw new Error("Only an internal memo can have an ITF working memo packet.");
     const delegatedPrincipalIds = (await activeDelegationsFor(user.id)).map((item) => item.principalId);
-    const broadRoles: UserRole[] = [UserRole.DG, UserRole.DG_SECRETARY, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
+    const registryAuthorization = await registryAuthorizationFor(user, record.classification);
+    const broadRoles: UserRole[] = [UserRole.DG, UserRole.DG_SECRETARY, UserRole.SYSTEM_ADMIN];
     const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId));
-    if (!broadRoles.includes(user.role) && !participant) throw new Error("You are not authorized to create this working memo packet.");
-    const access = await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+    if (!broadRoles.includes(user.role) && !registryAuthorization.allowed && !participant) throw new Error("You are not authorized to create this working memo packet.");
+    const access = registryAuthorization.allowed ? { allowed: true, needsStepUp: false } : await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+    if (registryAuthorization.needsStepUp) throw new Error("Complete the required access authentication before creating the working memo packet.");
     if (!access.allowed || access.needsStepUp) throw new Error("Complete the required access authentication before creating the working memo packet.");
     const result = await regenerateWorkingMemoPacket(correspondenceId);
     if (result.status === "not-applicable") throw new Error("The working memo packet could not be created.");
@@ -88,16 +92,19 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
         attachments: { where: { isIncluded: true, isMemoPacket: false }, orderBy: { createdAt: "asc" } },
         decisionRequests: { include: { decidedBy: true }, orderBy: { requestedAt: "asc" } },
         accessGroups: { include: { group: { include: { members: true } } } },
+        ultimateRecipient: true,
       },
     });
     if (!record || record.type !== CorrespondenceType.INTERNAL_MEMO || (record.status !== CorrespondenceStatus.RESOLVED && record.status !== CorrespondenceStatus.CLOSED)) {
       throw new Error("Only resolved internal memos can produce the governed memo output.");
     }
     const delegatedPrincipalIds = (await activeDelegationsFor(user.id)).map((item) => item.principalId);
-    const broadRoles: UserRole[] = [UserRole.DG, UserRole.DG_SECRETARY, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
+    const registryAuthorization = await registryAuthorizationFor(user, record.classification);
+    const broadRoles: UserRole[] = [UserRole.DG, UserRole.DG_SECRETARY, UserRole.SYSTEM_ADMIN];
     const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId));
-    if (!broadRoles.includes(user.role) && !participant) throw new Error("You are not authorized to generate this memo output.");
-    const access = await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+    if (!broadRoles.includes(user.role) && !registryAuthorization.allowed && !participant) throw new Error("You are not authorized to generate this memo output.");
+    const access = registryAuthorization.allowed ? { allowed: true, needsStepUp: false } : await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+    if (registryAuthorization.needsStepUp) throw new Error("Complete the required Secret step-up authentication before generating an output.");
     if (access.needsStepUp) throw new Error("Complete the required Secret step-up authentication before generating an output.");
     if (!access.allowed) throw new Error("You are not authorized to generate this memo output.");
     if (!record.createdBy || !record.revisions[0]) throw new Error("The memo originator has no active signature profile.");
@@ -131,7 +138,9 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
     const initialRecipientIds = record.events.map((event) => actionRecipientIds(event.metadata)).find((ids) => ids.length) ?? [];
     const actionItems = record.workItems.filter((item) => item.kind === RecipientKind.ACTION);
     const addressedItems = initialRecipientIds.length ? actionItems.filter((item) => initialRecipientIds.includes(item.assigneeId)) : actionItems.slice(0, 1);
-    const routingNames = [...new Set(addressedItems.map((item) => `${item.assignee.name}${item.assignee.position ? ` (${item.assignee.position})` : ""}`))];
+    const routingNames = record.ultimateRecipient
+      ? [`${record.ultimateRecipient.name}${record.ultimateRecipient.position ? ` (${record.ultimateRecipient.position})` : ""}`]
+      : [...new Set(addressedItems.map((item) => `${item.assignee.name}${item.assignee.position ? ` (${item.assignee.position})` : ""}`))];
     const bytes = await renderMemoOutput({
       outputId,
       referenceNumber: record.referenceNumber,
@@ -158,7 +167,7 @@ export async function generateMemoOutputAction(previous: MemoOutputState, formDa
       includedDocuments,
     });
     const safeReference = record.referenceNumber.replace(/[^a-zA-Z0-9._-]/g, "-");
-    const stored = await storeSystemGeneratedPdf({ correspondenceId, originalName: `${safeReference}-memo-output-v${version}.pdf`, bytes });
+    const stored = await storeSystemGeneratedPdf({ correspondenceId, recordFileId: record.recordFileId, originalName: `${safeReference}-memo-output-v${version}.pdf`, bytes });
     const payload = {
       schema: "ITF_FLOW_MEMO_OUTPUT_V1",
       outputId,

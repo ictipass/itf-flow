@@ -54,6 +54,7 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
                 <option value="TOP_LEFT">Top left</option>
                 <option value="BOTTOM_RIGHT">Bottom right</option>
                 <option value="BOTTOM_LEFT">Bottom left</option>
+                <option value="CUSTOM">Custom — use the draggable block</option>
               </select>
             </div>
             <div className="field">

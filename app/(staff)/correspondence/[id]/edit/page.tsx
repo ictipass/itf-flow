@@ -11,7 +11,7 @@ const personSelect = { id: true, name: true, email: true, staffNumber: true, dep
 export default async function EditDraftPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   const { id } = await params;
-  const draft = await db.correspondence.findFirst({ where: { id, createdById: user.id } });
+  const draft = await db.correspondence.findFirst({ where: { id, createdById: user.id }, include: { ultimateRecipient: { select: personSelect }, recordFile: { include: { subjectUser: { select: personSelect } } } } });
   if (!draft) notFound();
   if (draft.status !== CorrespondenceStatus.DRAFT) redirect(`/correspondence/${draft.id}`);
   const [actionRecipients, copyRecipients, categories] = await Promise.all([
@@ -22,11 +22,15 @@ export default async function EditDraftPage({ params }: { params: Promise<{ id: 
   return <>
     <span className="eyebrow">Private working copy</span><h1>Edit draft</h1>
     <p className="muted">Only you can see this draft. Changes autosave when you leave a field.</p>
-    <CorrespondenceComposer userName={user.name} isRegistrar={canRegister(user.role)} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} categories={categories} initial={{
+    <CorrespondenceComposer userName={user.name} defaultOrgUnitName={user.department ?? user.division ?? user.unit ?? user.office} isRegistrar={canRegister(user.role)} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} categories={categories} initial={{
       id: draft.id, type: draft.type, senderName: draft.senderName, subject: draft.subject,
       senderReference: draft.senderReference ?? "", dueAt: draft.dueAt?.toISOString().slice(0, 10) ?? "",
       classification: draft.classification, priority: draft.priority, summary: draft.summary,
       body: richTextHtml(draft.body), instruction: draft.draftInstruction ?? "", workPurpose: draft.draftWorkPurpose, actionRecipients, copyRecipients,
+      ultimateRecipient: draft.ultimateRecipient, ultimateRecipientName: draft.ultimateRecipientName ?? "",
+      recordCategory: draft.recordFile?.category, recordSubject: draft.recordFile?.subjectUser,
+      filePlanCode: draft.recordFile?.filePlanCode, retentionClass: draft.recordFile?.retentionClass,
+      ownerOrgUnitName: draft.recordFile?.ownerOrgUnitName ?? "",
     }} />
   </>;
 }

@@ -6,6 +6,7 @@ import {
   UserRole,
 } from "@/lib/generated/prisma/client";
 import { sensitiveRecordScope } from "@/lib/sensitive-access";
+import { registryListAuthorization } from "@/lib/registry-access";
 
 export type RegistryParams = {
   q?: string;
@@ -21,7 +22,7 @@ export type RegistryParams = {
 
 type RegistryUser = { id: string; role: UserRole };
 
-const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
+const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.SYSTEM_ADMIN];
 
 function enumValue<T extends Record<string, string>>(values: T, value?: string) {
   return value && Object.values(values).includes(value) ? value as T[keyof T] : undefined;
@@ -50,11 +51,16 @@ export async function registryWhere(user: RegistryUser, raw: RegistryParams): Pr
   const priority = enumValue(Priority, params.priority);
   const status = enumValue(CorrespondenceStatus, params.status);
   const now = new Date();
+  const registryAuthorization = await registryListAuthorization(user);
   const receivedAt = { gte: dateValue(params.from), lte: dateValue(params.to, true) };
-  const scope: Prisma.CorrespondenceWhereInput = broadRoles.includes(user.role)
+  const scope: Prisma.CorrespondenceWhereInput = broadRoles.includes(user.role) || Boolean(registryAuthorization.scope)
     ? {}
     : { OR: [{ createdById: user.id }, { workItems: { some: { assigneeId: user.id } } }, { workItems: { some: { assignee: { authorityDelegations: { some: { delegateId: user.id, status: "ACTIVE", startsAt: { lte: now }, endsAt: { gte: now } } } } } } }] };
-  const classificationScope = await sensitiveRecordScope(user);
+  const classificationScope: Prisma.CorrespondenceWhereInput = registryAuthorization.scope
+    ? registryAuthorization.allowed && registryAuthorization.scope === "SECRET"
+      ? {}
+      : { classification: { in: [Classification.PUBLIC, Classification.INTERNAL] } }
+    : await sensitiveRecordScope(user);
   const peopleFilter: Prisma.UserWhereInput = {
     ...(owner ? { OR: ["name", "email", "staffNumber"].map((field) => ({ [field]: { contains: owner, mode: "insensitive" as const } })) } : {}),
     ...(office ? { office: { contains: office, mode: "insensitive" } } : {}),

@@ -31,6 +31,7 @@ export async function regenerateWorkingMemoPacket(correspondenceId: string, opti
       workItems: { where: { kind: RecipientKind.ACTION }, include: { assignee: true }, orderBy: { assignedAt: "asc" } },
       events: { orderBy: { createdAt: "asc" } },
       attachments: { where: { isIncluded: true }, orderBy: { createdAt: "asc" } },
+      ultimateRecipient: true,
     },
   });
   if (!record || record.type !== CorrespondenceType.INTERNAL_MEMO || !record.createdBy || !richTextPlainText(record.body)) return { status: "not-applicable" as const };
@@ -73,7 +74,9 @@ export async function regenerateWorkingMemoPacket(correspondenceId: string, opti
   const addressedItems = initialRecipientIds.length
     ? record.workItems.filter((item) => initialRecipientIds.includes(item.assigneeId))
     : record.workItems.slice(0, 1);
-  const routingNames = [...new Set(addressedItems.map((item) => `${item.assignee.name}${item.assignee.position ? ` (${item.assignee.position})` : ""}`))];
+  const routingNames = record.ultimateRecipient
+    ? [`${record.ultimateRecipient.name}${record.ultimateRecipient.position ? ` (${record.ultimateRecipient.position})` : ""}`]
+    : [...new Set(addressedItems.map((item) => `${item.assignee.name}${item.assignee.position ? ` (${item.assignee.position})` : ""}`))];
   const signature = record.createdBy.signatureProfiles[0] ?? null;
   const generatedAt = new Date();
   const bytes = await renderMemoOutput({
@@ -105,6 +108,7 @@ export async function regenerateWorkingMemoPacket(correspondenceId: string, opti
   const safeReference = record.referenceNumber.replace(/[^a-zA-Z0-9._-]/g, "-");
   const stored = await storeSystemGeneratedPdf({
     correspondenceId: record.id,
+    recordFileId: record.recordFileId,
     originalName: `${safeReference}-working-memo.pdf`,
     bytes,
   });

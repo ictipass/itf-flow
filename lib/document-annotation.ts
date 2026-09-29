@@ -1,7 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
 export const ANNOTATABLE_DOCUMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"] as const;
-export type AnnotationPlacement = "TOP_LEFT" | "TOP_RIGHT" | "BOTTOM_LEFT" | "BOTTOM_RIGHT";
+export type AnnotationPlacement = "TOP_LEFT" | "TOP_RIGHT" | "BOTTOM_LEFT" | "BOTTOM_RIGHT" | "CUSTOM";
 
 export function isAnnotatableDocument(mimeType: string) {
   return ANNOTATABLE_DOCUMENT_TYPES.includes(mimeType as (typeof ANNOTATABLE_DOCUMENT_TYPES)[number]);
@@ -43,8 +43,13 @@ async function normalizedPdf(source: Buffer, mimeType: string) {
   return document;
 }
 
-function annotationPosition(page: PDFPage, boxWidth: number, boxHeight: number, placement: AnnotationPlacement) {
+function annotationPosition(page: PDFPage, boxWidth: number, boxHeight: number, placement: AnnotationPlacement, placementX?: number | null, placementY?: number | null) {
   const margin = 22;
+  if (placement === "CUSTOM") {
+    const normalizedX = Math.min(1, Math.max(0, placementX ?? .65));
+    const normalizedY = Math.min(1, Math.max(0, placementY ?? .08));
+    return { x: normalizedX * (page.getWidth() - boxWidth), y: (1 - normalizedY) * (page.getHeight() - boxHeight) };
+  }
   return {
     x: placement.endsWith("RIGHT") ? page.getWidth() - boxWidth - margin : margin,
     y: placement.startsWith("TOP") ? page.getHeight() - boxHeight - margin : margin,
@@ -56,6 +61,8 @@ export async function annotateDocument(input: {
   mimeType: string;
   pageNumber: number;
   placement: AnnotationPlacement;
+  placementX?: number | null;
+  placementY?: number | null;
   minuteText: string;
   inkPng?: Buffer | null;
   signerName: string;
@@ -87,7 +94,7 @@ export async function annotateDocument(input: {
     ? wrapText(`Acting for: ${input.authorityPrincipalName}`, regular, 7.5, innerWidth)
     : [];
   const height = Math.min(page.getHeight() - 44, 60 + lines.length * 12 + (identityLines.length + authorityLines.length) * 9);
-  const { x, y } = annotationPosition(page, width, height, input.placement);
+  const { x, y } = annotationPosition(page, width, height, input.placement, input.placementX, input.placementY);
   page.drawRectangle({ x, y, width, height, color: rgb(1, 0.98, 0.82), borderColor: rgb(0.42, 0.08, 0.14), borderWidth: 1.5, opacity: 0.94 });
   let cursor = y + height - 17;
   page.drawText("ITF FLOW AUTHENTICATED MINUTE", { x: x + 12, y: cursor, size: 8, font: bold, color: rgb(0.42, 0.02, 0.08) });

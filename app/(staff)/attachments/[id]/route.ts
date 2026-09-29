@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/session";
 import { activeDelegationsFor } from "@/lib/delegations";
 import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-access";
 import { verifyCanonicalSignature } from "@/lib/approval-signatures";
+import { registryAuthorizationFor } from "@/lib/registry-access";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
@@ -28,14 +29,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   ) {
     return new NextResponse("Not found", { status: 404 });
   }
-  const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
-  const broadAccess = broadRoles.includes(user.role);
+  const registryAuthorization = await registryAuthorizationFor(user, attachment.correspondence.classification);
+  if (registryAuthorization.needsStepUp) {
+    const requestUrl = new URL(_request.url);
+    const inline = requestUrl.searchParams.get("inline") === "1";
+    const returnTo = `/attachments/${attachment.id}${inline ? "?inline=1" : ""}`;
+    return NextResponse.redirect(new URL(`/step-up?returnTo=${encodeURIComponent(returnTo)}`, _request.url));
+  }
+  const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.SYSTEM_ADMIN];
+  const broadAccess = broadRoles.includes(user.role) || registryAuthorization.allowed;
   const delegatedPrincipalIds = (await activeDelegationsFor(user.id)).map((item) => item.principalId);
   const participant = attachment.correspondence.workItems.some((item) => item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId));
   if (!broadAccess && attachment.correspondence.createdById !== user.id && !participant) {
     return new NextResponse("Forbidden", { status: 403 });
   }
-  const policy = await canAccessSensitiveRecord({ user, classification: attachment.correspondence.classification, createdById: attachment.correspondence.createdById, hasAccessGroups: attachment.correspondence.accessGroups.length > 0, groupMemberIds: [...new Set(attachment.correspondence.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+  const policy = registryAuthorization.allowed ? { allowed: true, needsStepUp: false } : await canAccessSensitiveRecord({ user, classification: attachment.correspondence.classification, createdById: attachment.correspondence.createdById, hasAccessGroups: attachment.correspondence.accessGroups.length > 0, groupMemberIds: [...new Set(attachment.correspondence.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
   const requestUrl = new URL(_request.url);
   const inline = requestUrl.searchParams.get("inline") === "1";
   const returnTo = `/attachments/${attachment.id}${inline ? "?inline=1" : ""}`;

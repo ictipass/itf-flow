@@ -30,6 +30,7 @@ import { canAccessSensitiveRecord, logSensitiveAccess } from "@/lib/sensitive-ac
 import { verifyApprovalSignature, verifyCanonicalSignature } from "@/lib/approval-signatures";
 import { richTextHtml, richTextPlainText } from "@/lib/rich-text";
 import { memoPacketIncludedAttachmentIds } from "@/lib/memo-packet-metadata";
+import { registryAuthorizationFor } from "@/lib/registry-access";
 
 function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
@@ -65,6 +66,8 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       clarificationRequests: { include: { requestedBy: true, respondedByExternalAccount: true }, orderBy: { requestedAt: "desc" } },
       workflowCategory: true,
       workflowTemplateVersion: { include: { template: true } },
+      ultimateRecipient: true,
+      recordFile: { include: { subjectUser: true } },
       documentAnnotations: { include: { sourceAttachment: true, outputAttachment: true, signer: true }, orderBy: { version: "desc" } },
       memoOutputs: { include: { generatedBy: true, originator: true, signatureProfile: true }, orderBy: { version: "desc" } },
     },
@@ -82,11 +85,13 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     if (record.createdById === user.id) redirect(`/correspondence/${record.id}/edit`);
     notFound();
   }
-  const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN];
-  const broadAccess = broadRoles.includes(user.role);
+  const registryAuthorization = await registryAuthorizationFor(user, record.classification);
+  if (registryAuthorization.needsStepUp) redirect(`/step-up?returnTo=${encodeURIComponent(`/correspondence/${record.id}`)}`);
+  const broadRoles: UserRole[] = [UserRole.DG_SECRETARY, UserRole.DG, UserRole.SYSTEM_ADMIN];
+  const broadAccess = broadRoles.includes(user.role) || registryAuthorization.allowed;
   const participant = record.createdById === user.id || record.workItems.some((item) => item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId));
   if (!broadAccess && !participant) notFound();
-  const sensitivePolicy = await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
+  const sensitivePolicy = registryAuthorization.allowed ? { allowed: true, needsStepUp: false } : await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
   if (sensitivePolicy.needsStepUp) redirect(`/step-up?returnTo=${encodeURIComponent(`/correspondence/${record.id}`)}`);
   if (!sensitivePolicy.allowed) notFound();
   if (record.classification === "CONFIDENTIAL" || record.classification === "SECRET") await logSensitiveAccess({ correspondenceId: record.id, userId: user.id, type: "VIEW", detail: "Correspondence detail viewed" });
@@ -130,11 +135,12 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       <span className="eyebrow">{record.referenceNumber}</span>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "start" }}>
         <div><h1 style={{ maxWidth: 800 }}>{record.subject}</h1><p className="muted">From {record.senderName} · received {record.receivedAt.toLocaleString("en-NG")}</p></div>
-        <div className="actions" style={{ marginTop: 0 }}><span className={`badge ${record.classification === "SECRET" ? "secret" : ""}`}>{label(record.classification)}</span><span className="badge">{label(record.status)}</span></div>
+        <div className="actions" style={{ marginTop: 0 }}><a className="btn secondary compact" href={`/api/reports/correspondence/${record.id}/evidence-package`}>Download evidence package</a><span className={`badge ${record.classification === "SECRET" ? "secret" : ""}`}>{label(record.classification)}</span><span className="badge">{label(record.status)}</span></div>
       </div>
       {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
       {record.accessGroups.length ? <p className="notice">Need-to-know restriction: {record.accessGroups.map((item) => item.group.name).join(", ")}.</p> : null}
       {record.workflowCategory && record.workflowTemplateVersion ? <p className="notice">Workflow policy: <strong>{record.workflowCategory.name}</strong> · {record.workflowTemplateVersion.template.name} version {record.workflowTemplateVersion.version} · deadline {record.dueAt?.toLocaleDateString("en-NG") ?? "not set"}.</p> : null}
+      <section className="card" style={{ marginTop: 18 }}><div className="form-grid"><div><small className="muted">Ultimate recipient</small><strong style={{ display: "block", marginTop: 4 }}>{record.ultimateRecipient?.name ?? record.ultimateRecipientName ?? "Not assigned"}</strong><small className="muted">{record.ultimateRecipientOrgUnitName ?? record.ultimateRecipient?.department ?? record.ultimateRecipient?.office}</small></div><div><small className="muted">Official record file</small><strong style={{ display: "block", marginTop: 4 }}>{record.recordFile?.label ?? "Unfiled legacy record"}</strong><small className="muted">{record.recordFile ? `${label(record.recordFile.category)} · ${record.recordFile.retentionClass}${record.recordFile.subjectUser ? ` · Subject: ${record.recordFile.subjectUser.name}` : ""}` : "Assign through records governance before archival transfer."}</small></div></div></section>
       {activeDelegation ? <p className="notice">Acting authority: you are handling this item for <strong>{activeDelegation.principal.name}</strong> through the <strong>{activeDelegation.officeLabel}</strong> desk until {activeDelegation.endsAt.toLocaleString("en-NG")}.{activeDelegation.canApprove ? " Formal approval authority is enabled." : " Formal approval authority is not delegated."}</p> : null}
       {record.status === CorrespondenceStatus.SUBMITTED ? (
         <section className="handler-strip">

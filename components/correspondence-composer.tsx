@@ -5,6 +5,7 @@ import { autosaveDraftAction, registerCorrespondenceAction, saveDraftAction } fr
 import { DirectoryPerson, RecipientSelector } from "@/components/recipient-selector";
 import { categoriesForDocumentType, routingPurposeHelp, type WorkflowCategoryOption } from "@/lib/correspondence-form";
 import { RichTextEditor } from "@/components/rich-text-editor";
+import { SingleStaffPicker } from "@/components/single-staff-picker";
 
 type InitialDraft = {
   id: string;
@@ -21,18 +22,27 @@ type InitialDraft = {
   workPurpose: string;
   actionRecipients: DirectoryPerson[];
   copyRecipients: DirectoryPerson[];
+  ultimateRecipient?: DirectoryPerson | null;
+  ultimateRecipientName?: string;
+  recordCategory?: string;
+  recordSubject?: DirectoryPerson | null;
+  filePlanCode?: string;
+  retentionClass?: string;
+  ownerOrgUnitName?: string;
 };
 
 export function CorrespondenceComposer({
   userName,
   isRegistrar,
   canReferToPeers,
+  defaultOrgUnitName,
   initial,
   categories = [],
 }: {
   userName: string;
   isRegistrar: boolean;
   canReferToPeers: boolean;
+  defaultOrgUnitName: string;
   initial?: InitialDraft;
   categories?: WorkflowCategoryOption[];
 }) {
@@ -43,6 +53,7 @@ export function CorrespondenceComposer({
   const [documentType, setDocumentType] = useState(initial?.type ?? (isRegistrar ? "INCOMING_LETTER" : "INTERNAL_MEMO"));
   const [categoryCode, setCategoryCode] = useState("");
   const [routingPurpose, setRoutingPurpose] = useState(initial?.workPurpose ?? "ACTION");
+  const [recordCategory, setRecordCategory] = useState(initial?.recordCategory ?? "OFFICE");
   const compatibleCategories = categoriesForDocumentType(categories, documentType);
 
   function autosave() {
@@ -76,6 +87,13 @@ export function CorrespondenceComposer({
       <div className="field"><label>Due date</label><input name="dueAt" defaultValue={initial?.dueAt} type="date" aria-label="Required response or action date" /></div>
       <div className="field"><label>Classification</label><select name="classification" defaultValue={initial?.classification ?? "INTERNAL"}><option>PUBLIC</option><option>INTERNAL</option><option>CONFIDENTIAL</option><option>SECRET</option></select></div>
       <div className="field"><label>Priority</label><select name="priority" defaultValue={initial?.priority ?? "ROUTINE"}><option>ROUTINE</option><option>URGENT</option><option>IMMEDIATE</option></select></div>
+      <div className="field span-2"><h2 style={{ marginBottom: 0 }}>Intended endpoint and official filing</h2><small className="muted">The ultimate recipient remains constant while action ownership moves through intermediate desks. Filing identifies the official record owner; it does not grant access by Blob path.</small></div>
+      {documentType === "INTERNAL_MEMO" ? <div className="field span-2"><SingleStaffPicker fieldName="ultimateRecipientUserId" label="Ultimate recipient" hint="Select the staff member for whom the correspondence is finally intended, even when it must first pass through reviewers or approving officers." required initial={initial?.ultimateRecipient} onSelectionChange={() => setDirty(true)} /></div> : <div className="field span-2"><label>{documentType === "INCOMING_LETTER" ? "Ultimate destination office *" : "Ultimate external recipient *"}</label><input name="ultimateRecipientName" defaultValue={initial?.ultimateRecipientName ?? (documentType === "INCOMING_LETTER" ? "Director-General's Office" : "")} required minLength={2} placeholder={documentType === "INCOMING_LETTER" ? "Destination office or organizational unit" : "Person or external organization"} /></div>}
+      <div className="field"><label>Official record category</label><select name="recordCategory" value={recordCategory} onChange={(event) => { setRecordCategory(event.target.value); setDirty(true); }}><option value="OFFICE">Office / departmental record</option><option value="PERSONNEL">Personnel record</option><option value="CORPORATE">Corporate record</option><option value="EXTERNAL_CASE">External case file</option></select></div>
+      <div className="field"><label>File-plan code *</label><input name="filePlanCode" defaultValue={initial?.filePlanCode ?? "GENERAL-CORRESPONDENCE"} required pattern="[A-Za-z0-9._/-]{3,80}" placeholder="e.g. HR/PERSONNEL/QUERY" /><small className="muted">Use an approved functional classification code, not a Blob folder name.</small></div>
+      <div className="field"><label>Retention class *</label><input name="retentionClass" defaultValue={initial?.retentionClass ?? "GENERAL-7Y"} required pattern="[A-Za-z0-9._/-]{3,80}" placeholder="e.g. PERSONNEL-EMPLOYMENT" /></div>
+      {recordCategory === "PERSONNEL" ? <div className="field span-2"><SingleStaffPicker fieldName="recordSubjectUserId" label="Personnel-file subject" hint="The official personnel file belongs to this staff member. The creator and ultimate recipient may be different people." required initial={initial?.recordSubject} onSelectionChange={() => setDirty(true)} /></div> : null}
+      {recordCategory !== "PERSONNEL" ? <div className="field"><label>Owning office/unit *</label><input name="ownerOrgUnitName" defaultValue={initial?.ownerOrgUnitName ?? defaultOrgUnitName} required minLength={2} placeholder="Department, division, unit or corporate registry" /></div> : null}
       <div className="field span-2"><label>Summary *</label><textarea name="summary" defaultValue={initial?.summary} placeholder="Summarize the request, decision required, and important context" required minLength={10} /></div>
       <div className="field span-2"><label>Compose memo / transcribe letter</label><RichTextEditor initialHtml={initial?.body} onDirty={() => setDirty(true)} /></div>
       <div className="field span-2"><RecipientSelector

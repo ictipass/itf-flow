@@ -8,7 +8,7 @@ export type StaffNavigationItem = {
   notificationCount?: number;
 };
 
-export function getStaffNavigation(role: UserRole, unreadNotifications: number): StaffNavigationItem[] {
+export function getStaffNavigation(role: UserRole, unreadNotifications: number, hasRecordsAccess = false): StaffNavigationItem[] {
   const items: Array<StaffNavigationItem | false> = [
     { href: "/dashboard", label: "Overview", shortLabel: "Home" },
     ([UserRole.DG_SECRETARY, UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN] as UserRole[]).includes(role) &&
@@ -17,6 +17,7 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number):
     { href: "/notifications", label: "Notifications", shortLabel: "Alerts", notificationCount: unreadNotifications },
     { href: "/drafts", label: "My drafts", shortLabel: "Drafts" },
     { href: "/correspondence", label: "All correspondence", shortLabel: "Registry" },
+    hasRecordsAccess && { href: "/records", label: "Official records", shortLabel: "Records" },
     canDispatch(role) && { href: "/dispatch", label: "Dispatch registry", shortLabel: "Dispatch" },
     { href: "/correspondence/new", label: "Raise correspondence", shortLabel: "Create" },
     { href: "/broadcasts", label: "Announcements", shortLabel: "News" },
@@ -30,6 +31,7 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number):
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/delegations", label: "Delegations and acting", shortLabel: "Acting" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/access-groups", label: "Need-to-know access", shortLabel: "Access" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/documents", label: "Document security", shortLabel: "Documents" },
+    role === UserRole.SYSTEM_ADMIN && { href: "/admin/records", label: "Records governance", shortLabel: "Records admin" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/signatures", label: "Signature governance", shortLabel: "Signatures" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/workflows", label: "Workflow policies", shortLabel: "Workflow" },
     role === UserRole.SYSTEM_ADMIN && { href: "/admin/assurance", label: "Production assurance", shortLabel: "Assurance" },

@@ -8,14 +8,16 @@ import { ModernStaffShell } from "@/components/staff-shell/modern-staff-shell";
 import { SoftUiStaffShell } from "@/components/staff-shell/soft-ui-staff-shell";
 import { GlassStaffShell } from "@/components/staff-shell/glass-staff-shell";
 import { clearStaffUiPreviewAction } from "@/app/appearance-actions";
+import { activeRegistryScope } from "@/lib/registry-access";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [unreadNotifications, appearance] = await Promise.all([
+  const [unreadNotifications, appearance, registryScope] = await Promise.all([
     db.notification.count({ where: { userId: user.id, readAt: null } }),
     getStaffAppearance(user.role),
+    activeRegistryScope(user),
   ]);
-  const navigation = getStaffNavigation(user.role, unreadNotifications);
+  const navigation = getStaffNavigation(user.role, unreadNotifications, Boolean(registryScope));
   const Shell = appearance.mode === StaffUiMode.MODERN
     ? ModernStaffShell
     : appearance.mode === StaffUiMode.SOFT_UI

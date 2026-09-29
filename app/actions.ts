@@ -20,8 +20,10 @@ import {
   MalwareScanStatus,
   NotificationType,
   Priority,
+  RecordCategory,
   RecipientKind,
   UserRole,
+  UltimateRecipientType,
   WorkPurpose,
   WorkItemStatus,
 } from "@/lib/generated/prisma/client";
@@ -44,6 +46,7 @@ import { resolveAutomaticDepartmentSecretaries, routingClassification, validateC
 import { routingFeedbackMessage } from "@/lib/routing-feedback";
 import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
 import { normalizeRichTextForStorage } from "@/lib/rich-text";
+import { parseFilingInput, resolveRecordFile, resolveUltimateRecipient } from "@/lib/records-governance";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -118,13 +121,14 @@ function mailFailureReason(error: unknown) {
   return "unknown";
 }
 
-async function persistAttachment(file: File, correspondenceId: string) {
+async function persistAttachment(file: File, correspondenceId: string, recordFileId?: string | null) {
   if (!file.size) return null;
   if (file.size > 10 * 1024 * 1024) {
     throw new Error("Portal attachments cannot exceed 10 MB.");
   }
   return storeDocument({
     correspondenceId,
+    recordFileId,
     originalName: file.name,
     mimeType: file.type,
     bytes: Buffer.from(await file.arrayBuffer()),
@@ -296,6 +300,8 @@ export async function registerCorrespondenceAction(formData: FormData) {
   ) {
     throw new Error("Select at least one valid recipient.");
   }
+  const ultimateRecipient = await resolveUltimateRecipient(formData, parsed.type);
+  const filingInput = parseFilingInput(formData, user);
 
   validateConfidentialRoute({ actorRole: user.role, classification: parsed.classification, actionRecipientRoles: actionRecipients.map((recipient) => recipient.role), explicitCopyCount: copyRecipientIds.length });
   const automaticSecretaries = isSecretariatIntake ? [] : await resolveAutomaticDepartmentSecretaries({ actorRole: user.role, classification: parsed.classification, actionRecipients });
@@ -336,6 +342,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
   if (draftId && !existingDraft) throw new Error("This draft cannot be submitted.");
   const context = await requestContext();
   const record = await db.$transaction(async (tx) => {
+    const recordFile = await resolveRecordFile(tx, filingInput!);
     const workflow = await resolveWorkflowPolicy(tx, { type: parsed.type, priority: parsed.priority, requestedDueAt: parsed.dueAt ? new Date(parsed.dueAt) : null, categoryCode: String(formData.get("categoryCode") ?? "") || null });
     if (!workflow.rules.allowedPurposes.includes(purpose)) throw new Error(`${purpose} is disabled by the active workflow policy.`);
     if (routingPolicy.isPeerReferral && !workflow.rules.allowPeerReferral) throw new Error("Peer referral is disabled by the active workflow policy.");
@@ -351,6 +358,8 @@ export async function registerCorrespondenceAction(formData: FormData) {
         requiresApproval: workflow.requiresApproval || purpose === WorkPurpose.APPROVAL || existingDraft?.requiresApproval === true,
         status: destinationStatus,
         currentOwnerId: actionRecipients[0].id,
+        ...ultimateRecipient,
+        recordFileId: recordFile.id,
     };
     const created = existingDraft
       ? await tx.correspondence.update({
@@ -431,7 +440,7 @@ export async function registerCorrespondenceAction(formData: FormData) {
   });
   const file = formData.get("attachment");
   if (file instanceof File && file.size) {
-    const stored = await persistAttachment(file, record.id);
+    const stored = await persistAttachment(file, record.id, record.recordFileId);
     if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Staff upload") } } });
   }
   if (record.type === CorrespondenceType.INTERNAL_MEMO) await regenerateWorkingMemoPacket(record.id);
@@ -448,6 +457,12 @@ async function persistDraft(formData: FormData) {
   const user = await requireUser();
   if (!canOriginate(user.role)) throw new Error("You cannot create correspondence drafts.");
   const parsed = draftData(formData);
+  const filingInput = parseFilingInput(formData, user, false);
+  const recordFile = filingInput ? await db.$transaction((tx) => resolveRecordFile(tx, filingInput)) : null;
+  const hasUltimateRecipient = parsed.type === CorrespondenceType.INTERNAL_MEMO
+    ? Boolean(String(formData.get("ultimateRecipientUserId") ?? ""))
+    : Boolean(String(formData.get("ultimateRecipientName") ?? "").trim());
+  const ultimateRecipient = hasUltimateRecipient ? await resolveUltimateRecipient(formData, parsed.type) : {};
   const draftId = String(formData.get("draftId") ?? "");
   const data = {
     ...parsed,
@@ -457,6 +472,8 @@ async function persistDraft(formData: FormData) {
     draftCopyRecipientIds: formData.getAll("copyRecipientIds").map(String).filter(Boolean),
     draftInstruction: String(formData.get("instruction") ?? "").trim() || null,
     draftWorkPurpose: workPurpose(formData),
+    ...ultimateRecipient,
+    ...(recordFile ? { recordFileId: recordFile.id } : {}),
   };
   if (draftId) {
     const draft = await db.correspondence.findFirst({
@@ -510,7 +527,8 @@ export async function saveDraftAction(formData: FormData) {
   const draftId = await persistDraft(formData);
   const file = formData.get("attachment");
   if (file instanceof File && file.size) {
-    const stored = await persistAttachment(file, draftId);
+    const draft = await db.correspondence.findUnique({ where: { id: draftId }, select: { recordFileId: true } });
+    const stored = await persistAttachment(file, draftId, draft?.recordFileId);
     if (stored) await db.attachment.create({ data: { correspondenceId: draftId, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Draft upload") } } });
   }
   redirect(`/correspondence/${draftId}/edit?saved=1`);
@@ -542,9 +560,17 @@ export async function acceptExternalSubmissionAction(formData: FormData) {
   }
   const context = await requestContext();
   await db.$transaction(async (tx) => {
+    const recordFile = await resolveRecordFile(tx, {
+      category: RecordCategory.CORPORATE,
+      filePlanCode: "EXTERNAL-INCOMING",
+      retentionClass: "GENERAL-7Y",
+      subjectUserId: null,
+      ownerOrgUnitKey: "name:director-generals-office",
+      ownerOrgUnitName: "Director-General's Office",
+    });
     await tx.correspondence.update({
       where: { id: correspondenceId },
-      data: { status: CorrespondenceStatus.WITH_DG, currentOwnerId: dg.id },
+      data: { status: CorrespondenceStatus.WITH_DG, currentOwnerId: dg.id, ultimateRecipientType: UltimateRecipientType.STAFF, ultimateRecipientUserId: dg.id, ultimateRecipientName: dg.name, ultimateRecipientOrgUnitName: dg.office, recordFileId: recordFile.id },
     });
     const item = await tx.workItem.create({
       data: { correspondenceId, assigneeId: dg.id, kind: RecipientKind.ACTION },

@@ -4,6 +4,7 @@ import { copyFile, mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { initialDocumentSecurityState, malwareScannerMode } from "@/lib/document-security";
 import { detectDocumentMime } from "@/lib/document-validation";
+import { recordStorageSegment } from "@/lib/records-governance";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -30,6 +31,7 @@ export type StoredDocument = {
 
 type DocumentInput = {
   correspondenceId: string;
+  recordFileId?: string | null;
   originalName: string;
   mimeType: string;
   bytes: Buffer;
@@ -50,8 +52,9 @@ function resolved(key: string) {
 
 const safeName = (value: string) => value.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-180) || "document";
 
-function storageKey(input: Pick<DocumentInput, "correspondenceId" | "originalName">) {
-  return `quarantine/${input.correspondenceId}/${randomUUID()}-${safeName(input.originalName)}`;
+function storageKey(input: Pick<DocumentInput, "correspondenceId" | "originalName" | "recordFileId">) {
+  const filing = recordStorageSegment(input.recordFileId);
+  return `quarantine/${filing}/${input.correspondenceId}/${randomUUID()}-${safeName(input.originalName)}`;
 }
 
 function blobToken() {

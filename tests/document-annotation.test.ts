@@ -71,6 +71,24 @@ test("stylus ink is embedded into the selected PDF page", async () => {
   assert.equal((await PDFDocument.load(result.bytes)).getPageCount(), 2);
 });
 
+test("authenticated minute block supports bounded custom drag placement", async () => {
+  const source = await twoPagePdf();
+  const result = await annotateDocument({
+    source,
+    mimeType: "application/pdf",
+    pageNumber: 1,
+    placement: "CUSTOM",
+    placementX: .42,
+    placementY: .36,
+    minuteText: "Placed through the advanced drag control.",
+    signerName: "Director Test",
+    signerRole: "DIRECTOR",
+    signedAt: new Date("2026-09-29T09:00:00.000Z"),
+  });
+  assert.notDeepEqual(result.bytes, source);
+  assert.equal((await PDFDocument.load(result.bytes)).getPageCount(), 2);
+});
+
 test("annotation input accepts typed text, stylus ink, or both and rejects an empty submission", () => {
   const dataUrl = `data:image/png;base64,${onePixelPng.toString("base64")}`;
   const ink = parseAnnotationInk(dataUrl);
