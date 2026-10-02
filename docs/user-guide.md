@@ -6,6 +6,8 @@ ITF Flow is the auditable correspondence workflow for receiving, originating, ro
 tracking and dispatching official ITF correspondence. This guide can be used for user training or as
 the facilitator script for a stakeholder demonstration.
 
+For the field-by-field memo process, inbox custody model, records roles and auditor retrieval procedure, use the canonical [`memo-lifecycle-movement-retrieval-guide.md`](memo-lifecycle-movement-retrieval-guide.md).
+
 ## Before a demonstration
 
 1. Run the documented environment check, migrations and seed process.
