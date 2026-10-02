@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import { NextResponse } from "next/server";
-import { CorrespondenceStatus, DocumentEventType, UserRole } from "@/lib/generated/prisma/client";
+import { CorrespondenceStatus, DocumentEventType, RecipientKind, UserRole, WorkItemStatus } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { readStoredDocument } from "@/lib/document-storage";
 import { attachmentPassesDocumentSecurityGate } from "@/lib/document-security";
@@ -49,6 +49,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const returnTo = `/attachments/${attachment.id}${inline ? "?inline=1" : ""}`;
   if (policy.needsStepUp) return NextResponse.redirect(new URL(`/step-up?returnTo=${encodeURIComponent(returnTo)}`, _request.url));
   if (!policy.allowed) return new NextResponse("Forbidden", { status: 403 });
+  const unacknowledgedAction = attachment.correspondence.workItems.some((item) =>
+    item.kind === RecipientKind.ACTION &&
+    item.status === WorkItemStatus.OPEN &&
+    (item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId)),
+  );
+  if (unacknowledgedAction) return new NextResponse("Acknowledge receipt before opening this document.", { status: 428 });
   const preservedAnnotationSource = attachment.sourceAnnotations.length > 0;
   if ((!attachment.isIncluded && !preservedAnnotationSource) || !attachmentPassesDocumentSecurityGate(attachment)) return new NextResponse("Attachment has not passed the document security gate", { status: 423 });
   if (attachment.annotationOutput && !verifyCanonicalSignature(attachment.annotationOutput)) return new NextResponse("The document annotation signature could not be verified", { status: 409 });

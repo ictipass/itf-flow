@@ -1,4 +1,4 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
+import { degrees, PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import { richTextBlocks, type RichTextRun } from "@/lib/rich-text";
 
 export const MEMO_TEMPLATE_VERSION = "ITF_MEMO_V2";
@@ -33,6 +33,7 @@ export type MemoOutputInput = {
   logoPng?: Buffer | null;
   includedDocuments?: MemoPacketDocument[];
   includeLifecycleEvidence?: boolean;
+  draftPreview?: boolean;
 };
 
 const PAGE_WIDTH = 595.28;
@@ -276,6 +277,7 @@ export async function renderMemoOutput(input: MemoOutputInput) {
 
   const pages = document.getPages();
   pages.forEach((item, index) => {
+    if (input.draftPreview) item.drawText("DRAFT PREVIEW", { x: 105, y: 375, size: 54, font: bold, color: rgb(0.7, 0.7, 0.7), rotate: degrees(35), opacity: 0.22 });
     item.drawLine({ start: { x: MARGIN, y: 44 }, end: { x: PAGE_WIDTH - MARGIN, y: 44 }, thickness: 0.5, color: rgb(0.65, 0.65, 0.65) });
     item.drawText(`ITF Flow controlled output | ${input.classification} | ${input.referenceNumber} | Page ${index + 1}/${pages.length}`, { x: MARGIN, y: 29, size: 6.5, font: regular, color: rgb(0.35, 0.35, 0.35) });
   });

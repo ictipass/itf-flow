@@ -103,17 +103,18 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       activeStatuses.includes(item.status),
   );
   const activeDelegation = activeActionItem ? delegationByPrincipal.get(activeActionItem.assigneeId) : undefined;
+  const requiresAcknowledgement = activeActionItem?.status === WorkItemStatus.OPEN;
   const authorityRole = activeDelegation?.principal.role ?? user.role;
   const pendingDecision = activeActionItem?.decisionRequest?.outcome === null ? activeActionItem.decisionRequest : null;
   const mayDecide = !pendingDecision || pendingDecision.purpose !== WorkPurpose.APPROVAL || !activeDelegation || activeDelegation.canApprove;
-  const canRoute = Boolean(activeActionItem && !pendingDecision && canMinute(authorityRole));
-  const canAnnotate = Boolean(activeActionItem && canMinute(authorityRole));
+  const canRoute = Boolean(activeActionItem && !requiresAcknowledgement && !pendingDecision && canMinute(authorityRole));
+  const canAnnotate = Boolean(activeActionItem && !requiresAcknowledgement && canMinute(authorityRole));
   const canReferToPeers = authorityRole === UserRole.DIRECTOR || authorityRole === UserRole.DIVISION_HEAD;
   const canHandleIntake =
     record.status === CorrespondenceStatus.SUBMITTED &&
     canRegister(user.role) &&
     record.claimedById === user.id;
-  const canReturnToInitiator = Boolean(activeActionItem && !pendingDecision && record.createdById && record.createdById !== user.id);
+  const canReturnToInitiator = Boolean(activeActionItem && !requiresAcknowledgement && !pendingDecision && record.createdById && record.createdById !== user.id);
   const latestReturnDecision = record.events.find((event) => event.type === EventType.RETURNED || event.type === EventType.DECISION_RECORDED);
   const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id && latestReturnDecision?.type === EventType.RETURNED;
   const currentApproval = record.decisionRequests.some((request) => request.purpose === WorkPurpose.APPROVAL && request.outcome === DecisionOutcome.APPROVED && !request.supersededAt);
@@ -166,14 +167,15 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       <div className="grid" style={{ gridTemplateColumns: "minmax(0, 1.3fr) minmax(320px, .7fr)", marginTop: 22 }}>
         <div className="grid">
           <section className="card">
-            <h2>Correspondence</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><h2>Correspondence</h2>{requiresAcknowledgement ? <form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary compact" type="submit">Acknowledge receipt</button></form> : null}</div>
+            {requiresAcknowledgement ? <p className="notice">Acknowledge receipt to establish custody before opening, annotating or treating the document.</p> : null}
             {record.type === CorrespondenceType.INTERNAL_MEMO && hasComposedMemo ? <p className="notice">The current ITF memo packet appears first below. Open it in the in-app renderer to read, minute, sign or annotate the memo. Attachments successfully converted into packet pages are hidden from this list to avoid duplication; security-pending or unconverted files remain separately visible.</p> : null}
             {record.type === CorrespondenceType.INTERNAL_MEMO && hasComposedMemo && !hasCurrentMemoPacket ? <GenerateWorkingMemoPacketForm correspondenceId={record.id} /> : null}
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div className="correspondence-rich-text" style={{ lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }} dangerouslySetInnerHTML={{ __html: richTextHtml(record.body) }} /> : null}
             {displayedAttachments.length ? <div className="attachment-list"><strong>{record.type === CorrespondenceType.INTERNAL_MEMO ? "Document package" : "Attachments"}</strong>{displayedAttachments.map((file) => {
               const preservedSource = annotationSourceIds.has(file.id);
-              const canOpen = attachmentPassesDocumentSecurityGate(file) && (file.isIncluded || preservedSource);
+              const canOpen = !requiresAcknowledgement && attachmentPassesDocumentSecurityGate(file) && (file.isIncluded || preservedSource);
               const guidance = preservedSource ? "Preserved immutable source for a later annotated version." : attachmentGuidance(file);
               return <div className="attachment-item" key={file.id}>
                 <p>{file.isMemoPacket ? <span className="badge">ITF memo packet</span> : null} {canOpen ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : preservedSource ? "Preserved original" : "Excluded"} · {label(file.malwareScanStatus)})</small></p>
@@ -228,14 +230,13 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
           {canHandleIntake ? (
             <section className="card"><h2>Secretariat intake</h2><p className="muted">Verify this external submission, register it, and place it in the DG’s inbox.</p><form action={acceptExternalSubmissionAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn" type="submit">Register and send to DG</button></form></section>
           ) : null}
-          {activeActionItem?.status === WorkItemStatus.OPEN ? <section className="card"><form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary" type="submit">Acknowledge receipt</button></form></section> : null}
-          {record.submittedByExternalAccountId && activeActionItem ? <section className="card">
+          {record.submittedByExternalAccountId && activeActionItem && !requiresAcknowledgement ? <section className="card">
             <span className="eyebrow">Stakeholder portal</span><h2>Secure clarification</h2>
             <p className="muted">The question is visible only to verified members of the submitting organization. Internal minutes and case details remain private.</p>
             <form action={requestStakeholderClarificationAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Question for stakeholder</label><textarea name="question" required minLength={10} maxLength={4000} /></div><button className="btn">Request clarification</button></form>
             {record.clarificationRequests.map((clarification) => <div key={clarification.id} className="handler-strip"><div><strong>{clarification.status} · {clarification.question}</strong><small>Requested by {clarification.requestedBy.name} · {clarification.requestedAt.toLocaleString("en-NG")}{clarification.response ? ` · Response: ${clarification.response}` : " · Awaiting response"}</small></div>{clarification.status === "RESPONDED" ? <form action={closeStakeholderClarificationAction}><input type="hidden" name="clarificationId" value={clarification.id} /><button className="btn secondary compact">Close</button></form> : null}</div>)}
           </section> : null}
-          {pendingDecision && mayDecide ? (
+          {pendingDecision && mayDecide && !requiresAcknowledgement ? (
             <section className="card">
               <span className="eyebrow">Decision required</span><h2>{label(pendingDecision.purpose)}</h2>
               <p className="muted">Requested by {pendingDecision.requestedBy.name}. Record the formal decision before forwarding or resolving this correspondence.</p>
@@ -261,7 +262,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               <RouteCorrespondenceForm correspondenceId={record.id} currentClassification={record.classification} authorityRole={authorityRole} canReferToPeers={canReferToPeers} hasCurrentActorAnnotation={hasCurrentActorAnnotation} />
             </section>
           ) : null}
-          {activeActionItem && !pendingDecision ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
+          {activeActionItem && !requiresAcknowledgement && !pendingDecision ? <section className="card"><h2>Resolve</h2><form action={resolveAction} className="grid"><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Resolution note</label><textarea name="minute" placeholder="Describe the action taken, outcome, and any remaining follow-up…" required /></div><button className="btn secondary" type="submit">Mark resolved</button></form></section> : null}
           {canReturnToInitiator ? (
             <section className="card">
               <h2>Return for correction</h2>

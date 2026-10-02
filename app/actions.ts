@@ -255,7 +255,7 @@ export async function externalSubmitAction(formData: FormData) {
   redirect(`/submitted?reference=${encodeURIComponent(correspondence.referenceNumber)}`);
 }
 
-export async function registerCorrespondenceAction(formData: FormData) {
+async function performRegisterCorrespondence(formData: FormData) {
   const user = await requireUser();
   if (!canOriginate(user.role)) throw new Error("You cannot raise correspondence.");
   const parsed = correspondenceSchema.parse({
@@ -450,7 +450,41 @@ export async function registerCorrespondenceAction(formData: FormData) {
     user.id,
     existingDraft ? "Draft finalized and submitted." : "Initial submitted version.",
   ));
-  redirect(`/correspondence/${record.id}`);
+  return record.id;
+}
+
+export type RegisterCorrespondenceState = {
+  status: "idle" | "error";
+  message: string;
+  attempt: number;
+};
+
+export async function registerCorrespondenceAction(
+  previous: RegisterCorrespondenceState,
+  formData: FormData,
+): Promise<RegisterCorrespondenceState> {
+  let correspondenceId: string;
+  try {
+    correspondenceId = await performRegisterCorrespondence(formData);
+  } catch (error) {
+    const routedMessage = routingFeedbackMessage(error);
+    const message = error instanceof Error ? error.message : "";
+    const expected = new Set([
+      "You cannot raise correspondence.",
+      "Your role cannot originate Secret correspondence.",
+      "Select at least one valid recipient.",
+      "New correspondence must follow an authorized hierarchy or peer-referral path.",
+      "A peer referral requires a clear purpose of at least 10 characters.",
+      "This draft cannot be submitted.",
+    ]);
+    if (!routedMessage && !expected.has(message)) console.error("Correspondence submission failed unexpectedly.", error);
+    return {
+      status: "error",
+      message: routedMessage ?? (expected.has(message) ? message : "The correspondence could not be submitted. Your entries were retained; review them and try again."),
+      attempt: previous.attempt + 1,
+    };
+  }
+  redirect(`/correspondence/${correspondenceId}`);
 }
 
 async function persistDraft(formData: FormData) {
@@ -661,7 +695,7 @@ export async function returnToInitiatorAction(formData: FormData) {
   const reason = String(formData.get("reason") ?? "").trim();
   if (reason.length < 5) throw new Error("Give a clear reason for returning the correspondence.");
   const [record, authority] = await Promise.all([db.correspondence.findUnique({ where: { id: correspondenceId } }), workAuthority({ correspondenceId, actor: user })]);
-  if (!record?.createdById || !authority) {
+  if (!record?.createdById || !authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED) {
     throw new Error("Only the current action recipient can return staff-originated correspondence.");
   }
   const context = await requestContext();
@@ -884,7 +918,7 @@ async function performRouteCorrespondence(formData: FormData) {
     throw new Error("A minute and at least one action recipient are required.");
   }
   const authority = await workAuthority({ correspondenceId, actor: user });
-  if (!authority || !canMinute(authority.principal.role)) throw new Error("You do not hold current authority to route this correspondence.");
+  if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED || !canMinute(authority.principal.role)) throw new Error("Acknowledge receipt before routing this correspondence.");
   const [record, actionRecipients, explicitCopyRecipients] = await Promise.all([
     db.correspondence.findUnique({
       where: { id: correspondenceId },
@@ -1247,13 +1281,13 @@ export async function recordDecisionAction(formData: FormData) {
       id: decisionRequestId,
       correspondenceId,
       outcome: null,
-      workItem: { kind: RecipientKind.ACTION, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
+      workItem: { kind: RecipientKind.ACTION, status: WorkItemStatus.ACKNOWLEDGED },
     },
     include: { correspondence: true, workItem: true },
   });
   if (!request) throw new Error("This decision request is unavailable or has already been decided.");
   const authority = await workAuthority({ correspondenceId, actor: user, requireApproval: approvalRequired(request.purpose) });
-  if (!authority || authority.item.id !== request.workItemId) throw new Error("You do not hold the required authority for this decision.");
+  if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED || authority.item.id !== request.workItemId) throw new Error("Acknowledge receipt before recording this decision.");
 
   const allowed: Record<WorkPurpose, DecisionOutcome[]> = {
     [WorkPurpose.ACTION]: [],
@@ -1397,7 +1431,7 @@ export async function resolveAction(formData: FormData) {
   const minute = String(formData.get("minute") ?? "").trim();
   if (minute.length < 3) throw new Error("A resolution note is required.");
   const [record, authority] = await Promise.all([db.correspondence.findUnique({ where: { id: correspondenceId } }), workAuthority({ correspondenceId, actor: user })]);
-  if (!record || !authority) {
+  if (!record || !authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED) {
     throw new Error("Only a current action recipient can resolve correspondence.");
   }
   await db.$transaction([

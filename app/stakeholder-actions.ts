@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { ActorType, ClarificationStatus, EventType } from "@/lib/generated/prisma/client";
+import { ActorType, ClarificationStatus, EventType, WorkItemStatus } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { authorityMetadata, workAuthority } from "@/lib/delegations";
 import { requireUser } from "@/lib/session";
@@ -15,7 +15,7 @@ export async function requestStakeholderClarificationAction(formData: FormData) 
     db.correspondence.findUnique({ where: { id: correspondenceId }, include: { externalOrganization: { include: { memberships: { include: { account: true } } } } } }),
     workAuthority({ correspondenceId, actor: user }),
   ]);
-  if (!record?.submittedByExternalAccountId || !record.externalOrganization || !authority) throw new Error("You are not authorized to request clarification for this portal submission.");
+  if (!record?.submittedByExternalAccountId || !record.externalOrganization || !authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED) throw new Error("Acknowledge receipt before requesting stakeholder clarification.");
   const recipients = record.externalOrganization.memberships.map((membership) => membership.account).filter((account) => account.isActive && account.verifiedAt);
   if (!recipients.length) throw new Error("The stakeholder organization has no verified portal recipient.");
   await db.$transaction(async (tx) => {
@@ -32,7 +32,7 @@ export async function closeStakeholderClarificationAction(formData: FormData) {
   const request = await db.clarificationRequest.findUnique({ where: { id: clarificationId } });
   if (!request || request.status !== ClarificationStatus.RESPONDED) throw new Error("Only a responded clarification can be closed.");
   const authority = await workAuthority({ correspondenceId: request.correspondenceId, actor: user });
-  if (!authority) throw new Error("You are not authorized to close this clarification.");
+  if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED) throw new Error("Acknowledge receipt before closing this clarification.");
   await db.$transaction([
     db.clarificationRequest.update({ where: { id: clarificationId }, data: { status: ClarificationStatus.CLOSED, closedAt: new Date() } }),
     db.correspondenceEvent.create({ data: { correspondenceId: request.correspondenceId, actorId: user.id, actorType: ActorType.STAFF, type: EventType.COMMENTED, minute: "External stakeholder clarification reviewed and closed.", metadata: { clarificationId, ...authorityMetadata(authority) } } }),

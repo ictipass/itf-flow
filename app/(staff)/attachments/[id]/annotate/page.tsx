@@ -10,6 +10,7 @@ import { hasActiveEnterpriseMfa, requireUser } from "@/lib/session";
 import { label } from "@/lib/reference";
 import { annotationAuthenticationPolicyFor } from "@/lib/annotation-policy";
 import { DocumentInkCanvas } from "@/components/document-ink-canvas";
+import { WorkItemStatus } from "@/lib/generated/prisma/client";
 
 export default async function AnnotateAttachmentPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -20,7 +21,7 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
   });
   if (!attachment || !attachmentPassesDocumentSecurityGate(attachment) || !isAnnotatableDocument(attachment.mimeType)) notFound();
   const authority = await workAuthority({ correspondenceId: attachment.correspondenceId, actor: user });
-  if (!authority || !canMinute(authority.principal.role)) notFound();
+  if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED || !canMinute(authority.principal.role)) notFound();
   const authenticationPolicy = await annotationAuthenticationPolicyFor(authority.principal.role);
   const enterpriseMfaActive = authenticationPolicy.required ? await hasActiveEnterpriseMfa() : false;
   const annotationFormId = "document-annotation-form";

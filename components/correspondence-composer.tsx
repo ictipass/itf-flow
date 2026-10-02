@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
-import { autosaveDraftAction, registerCorrespondenceAction, saveDraftAction } from "@/app/actions";
+import { useActionState, useRef, useState, useTransition } from "react";
+import { autosaveDraftAction, registerCorrespondenceAction, saveDraftAction, type RegisterCorrespondenceState } from "@/app/actions";
 import { DirectoryPerson, RecipientSelector } from "@/components/recipient-selector";
 import { categoriesForDocumentType, routingPurposeHelp, type WorkflowCategoryOption } from "@/lib/correspondence-form";
 import { RichTextEditor } from "@/components/rich-text-editor";
@@ -46,6 +46,8 @@ export function CorrespondenceComposer({
   initial?: InitialDraft;
   categories?: WorkflowCategoryOption[];
 }) {
+  const initialSubmitState: RegisterCorrespondenceState = { status: "idle", message: "", attempt: 0 };
+  const [submitState, submitAction, submitting] = useActionState(registerCorrespondenceAction, initialSubmitState);
   const formRef = useRef<HTMLFormElement>(null);
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -54,6 +56,8 @@ export function CorrespondenceComposer({
   const [categoryCode, setCategoryCode] = useState("");
   const [routingPurpose, setRoutingPurpose] = useState(initial?.workPurpose ?? "ACTION");
   const [recordCategory, setRecordCategory] = useState(initial?.recordCategory ?? "OFFICE");
+  const [previewing, setPreviewing] = useState(false);
+  const [previewError, setPreviewError] = useState("");
   const compatibleCategories = categoriesForDocumentType(categories, documentType);
 
   function autosave() {
@@ -68,10 +72,30 @@ export function CorrespondenceComposer({
     });
   }
 
+  async function previewMemo() {
+    if (!formRef.current) return;
+    setPreviewError("");
+    setPreviewing(true);
+    const previewWindow = window.open("", "_blank");
+    try {
+      const response = await fetch("/api/memo-preview", { method: "POST", body: new FormData(formRef.current) });
+      if (!response.ok) throw new Error((await response.text()) || "Memo preview could not be generated.");
+      const url = URL.createObjectURL(await response.blob());
+      if (previewWindow) previewWindow.location.href = url;
+      else window.open(url, "_blank");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (error) {
+      previewWindow?.close();
+      setPreviewError(error instanceof Error ? error.message : "Memo preview could not be generated.");
+    } finally {
+      setPreviewing(false);
+    }
+  }
+
   return (
     <form
       ref={formRef}
-      action={registerCorrespondenceAction}
+      action={submitAction}
       className="card form-grid"
       onChange={() => setDirty(true)}
       onBlur={autosave}
@@ -109,13 +133,16 @@ export function CorrespondenceComposer({
       <div className="field"><label>Routing purpose</label><select name="workPurpose" value={routingPurpose} onChange={(event) => setRoutingPurpose(event.target.value)}>
         <option value="ACTION">Action / treatment</option><option value="REVIEW">Review and recommendation</option><option value="CONCURRENCE">Concurrence</option><option value="APPROVAL">Formal approval</option>
       </select><small className="muted">{routingPurposeHelp[routingPurpose]}</small></div>
-      <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /><small className="muted">For a sequential path A → B → C → Z, A selects only B as the action recipient. Each accountable holder minutes it to the next person. Select D as a copy recipient only when D is being informed, not asked to act.</small></div>
+      <div className="field span-2"><label>Routing minute / referral purpose</label><textarea name="instruction" defaultValue={initial?.instruction} required={routingPurpose !== "ACTION"} minLength={routingPurpose !== "ACTION" ? 10 : undefined} placeholder="State the action required, referral purpose, expected outcome, and deadline…" /><small className="muted">For a sequential path A → B → C → Z, A selects only B as the action recipient. Each accountable holder minutes it to the next person. Select D as a copy recipient only when D is being informed, not asked to act.</small></div>
       <div className="field span-2"><label>Supporting document</label><input name="attachment" type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" /><small className="muted">PDF and images are normalized into the memo packet. DOCX/XLSX are converted when the governed converter is enabled.</small></div>
       <div className="actions span-2">
         <button className="btn secondary" type="submit" formAction={saveDraftAction} formNoValidate>Save draft</button>
-        <button className="btn" type="submit">Submit through reporting line</button>
+        {documentType === "INTERNAL_MEMO" ? <button className="btn secondary" type="button" onClick={previewMemo} disabled={previewing}>{previewing ? "Preparing preview…" : "Preview memo PDF"}</button> : null}
+        <button className="btn" type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Submit through reporting line"}</button>
         {initial ? <span className="muted" aria-live="polite">{saving ? "Saving…" : savedAt ? `Autosaved ${new Date(savedAt).toLocaleTimeString("en-NG")}` : dirty ? "Unsaved changes" : "Draft saved"}</span> : null}
       </div>
+      {previewError ? <div className="notice error span-2" role="alert">{previewError}</div> : null}
+      {submitState.status === "error" ? <div className="route-error-toast" role="alert" aria-live="assertive"><div><strong>Correspondence was not sent</strong><span>{submitState.message}</span></div></div> : null}
     </form>
   );
 }

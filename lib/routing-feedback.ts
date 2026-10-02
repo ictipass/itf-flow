@@ -2,6 +2,7 @@ const safeRoutingErrors = new Set([
   "A minute and at least one action recipient are required.",
   "Enter a minute or annotate the current document before routing.",
   "You do not hold current authority to route this correspondence.",
+  "Acknowledge receipt before routing this correspondence.",
   "Invalid routing request.",
   "Give a classification reason of at least 10 characters.",
   "Confidential and Secret routing cannot include copy recipients.",

@@ -2,7 +2,7 @@ const guides = [
   {
     title: "All staff and originators",
     steps: [
-      ["Raise or save", "Create correspondence and format the memo body. Select the ultimate recipient separately from the next action desk, then choose the official filing category, file-plan code, retention class and personnel subject/owning unit."],
+      ["Raise, preview or save", "Create correspondence and format the memo body. Select the ultimate recipient separately from the next action desk, then use Preview memo PDF to inspect the ITF layout before submission or save a private draft."],
       ["Monitor", "Use My inbox for assigned work, Notifications for alerts, and the correspondence register to search matters you are permitted to see."],
       ["Annotate a document", "While you own the Action item, use pen/eraser, stroke undo/redo, custom draggable minute placement and typed text. Flow preserves the source and creates a signed PDF version."],
       ["Register your signature", "Open Signature profile and submit your own PNG signature. Your authenticated submission activates immediately and can appear on new ITF memo outputs."],
@@ -45,9 +45,9 @@ const guides = [
 ];
 
 const endToEndSteps = [
-  ["Compose, file and route", "The sender selects the stable ultimate recipient and logical official file, then selects the next action recipient, adds copies only for awareness, records a clear instruction, and submits."],
+  ["Compose, preview, file and route", "The sender selects the stable ultimate recipient and logical official file, previews the draft ITF PDF, then selects the next action recipient, adds copies only for awareness, records a clear instruction, and submits."],
   ["Secure the document", "With scanning enabled, an attachment is quarantined until validation and malware scanning mark it Available and Clean. Under the explicit temporary bypass, a signature-valid upload is immediately Available and Bypassed, with the exception retained in its audit history."],
-  ["Receive and acknowledge", "Each action recipient sees the item in My inbox and acknowledges it to establish custody. Copy recipients can follow it but do not own treatment."],
+  ["Receive and acknowledge", "Each action recipient sees the item in the personal inbox, or an acting appointee sees the substantive desk's item in the Acting office inbox. Acknowledgement establishes custody and is required before the document can be opened or treated. Copy recipients can follow it but do not own treatment."],
   ["Treat or decide", "The action owner performs the required work and records any requested review, concurrence, approval, recommendation, or clarification."],
   ["Annotate where needed", "An internal memo is automatically stored as an ITF template working packet. Available PDF, JPEG and PNG attachments follow its memo pages. The owner can select any packet page and write with a stylus, touch, or mouse and/or add typed text; saving preserves the source and creates a new authenticated PDF version."],
   ["Minute and move", "If further action is required, the owner records a minute and routes to an authorized supervisor, direct report, or permitted peer. If that owner just annotated the current document, the saved annotation can supply the routing minute. Sequential work is sent to the next desk only."],

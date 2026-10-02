@@ -11,6 +11,7 @@ import {
   DocumentAnnotationPlacement,
   DocumentEventType,
   EventType,
+  WorkItemStatus,
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { annotateDocument, isAnnotatableDocument } from "@/lib/document-annotation";
@@ -67,8 +68,8 @@ export async function annotateAttachmentAction(formData: FormData) {
     throw new Error("Only PDF, JPEG and PNG documents can be annotated in this slice.");
   }
   const authority = await workAuthority({ correspondenceId: source.correspondenceId, actor: user });
-  if (!authority || !canMinute(authority.principal.role)) {
-    throw new Error("Only the current action holder or an authorized delegate can minute and sign this document.");
+  if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED || !canMinute(authority.principal.role)) {
+    throw new Error("Acknowledge receipt before minuting and signing this document.");
   }
 
   const authenticationPolicy = await annotationAuthenticationPolicyFor(authority.principal.role);
