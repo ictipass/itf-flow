@@ -54,6 +54,8 @@ This contract applies to JavaScript, .NET, Java, Python, PHP, low-code, and lega
 - Routing records accountable owner, copies, originating desk and receiving desk.
 - Audit events use UTC, immutable IDs and cross-application correlation IDs.
 - Impersonation, delegation, reassignment and reversals are explicitly visible.
+- Every Directorate has an approved, distinct Director, first next-in-line and second next-in-line chain; successor approval authority is granted explicitly.
+- Availability changes, automatic handoffs, substantive authority and the human actor are separately auditable.
 - Audit access is separately authorized; retention and export policies are approved.
 
 ## Reliability, performance and operations
@@ -77,6 +79,13 @@ This contract applies to JavaScript, .NET, Java, Python, PHP, low-code, and lega
 - Role-permission matrix, workflow transition table and data-retention schedule are maintained.
 - Accessibility and supported-browser checks are completed.
 - A staged pilot and legacy-login retirement plan are approved.
+
+## ITF Flow take-off registers
+
+- Assign one active Department Secretary to every department that receives Public/Internal executive routing.
+- Configure every Directorate continuity chain in ITF Flow: Director, first next-in-line, second next-in-line and explicit approval grants.
+- Test Director unavailable, Director plus first successor unavailable, no eligible successor, restricted classification and approval routing.
+- Treat ITF Flow administration as the controlled interim source. Add the approved succession structure to the Workspace/HR directory contract before retiring local administration.
 
 ## SIWES-specific onboarding register
 

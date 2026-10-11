@@ -246,19 +246,21 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 1. Use **Provisioning admin** to inspect directory synchronization and active organizational assignments.
 2. Use **Department Secretaries** to assign one active Secretary per department. Replacements and deactivations
    require a reason and affect future movements only.
-3. Use **Appearance** to preview a UI privately, then activate Classic, Modern, Soft UI or Glass for staff
+3. Use **Directorate continuity** to assign the Director, first next-in-line and second next-in-line for every
+   Directorate. Grant successor approval authority only where the approved instrument allows it.
+4. Use **Appearance** to preview a UI privately, then activate Classic, Modern, Soft UI or Glass for staff
    with a recorded reason.
-4. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
+5. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
    DG, Directors and Division Heads independently. Give a reason for every change. Enforcement is the safe default;
    the audit trail records old/new role sets, administrator and time.
-5. Use **Signature governance** to audit submitted signatures and staff identity. Staff submissions activate
+6. Use **Signature governance** to audit submitted signatures and staff identity. Staff submissions activate
    immediately; revoke a signature with a reason when it must no longer be used. Replacement versions supersede the
    earlier active profile for future outputs while retaining its history.
-6. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
-7. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
-8. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
-9. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
-10. Use **Records governance** to appoint Open or Secret Registry staff, set expiry/revoke appointments with reasons,
+7. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
+8. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
+9. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
+10. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
+11. Use **Records governance** to appoint Open or Secret Registry staff, set expiry/revoke appointments with reasons,
     and enable or relax Secret Registry MFA. Open Registry is limited to Public/Internal; Secret Registry can retrieve
     all classifications. Blob credentials are never given to registry staff.
 
@@ -275,6 +277,23 @@ classification rules continue to apply to registry queries and exports.
 
 An acting officer's correspondence event shows who performed the action and the appointment under which it was
 performed. Delegation does not grant Secret access unless the acting officer's own role permits it.
+
+### Directorate availability and next-in-line routing
+
+1. The Director and both configured successors open **Availability and next-in-line** in their own portal.
+2. Each officer records only their own state, supplies a reason and may add an expected return time.
+3. When the Director is available, correspondence addressed to the Director remains with the Director.
+4. When the Director is unavailable, new action work goes to the first available, classification-eligible successor.
+   If the first successor is also unavailable, it goes to the second successor.
+5. The Director sees a read-only oversight item. An unavailable first successor receives neither action nor copy.
+6. Open work that has not been acknowledged moves automatically when its current handler becomes unavailable.
+   Acknowledged work remains in that officer's custody and requires formal treatment or reassignment.
+7. Approval work goes only to a successor whose continuity plan explicitly grants approval authority. If no eligible
+   successor exists, Flow refuses the route safely and tells the sender to contact the administrator.
+
+The personal inbox labels next-in-line action work with the substantive Director and succession rank. Audit events
+retain the human actor, substantive authority, continuity plan version and automatic handoff. This standing chain is
+different from a time-bound **Delegations and acting** appointment.
 
 ## Search, filters and exports
 

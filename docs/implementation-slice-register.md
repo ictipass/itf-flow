@@ -36,6 +36,7 @@ another developer without depending on unfinished work from a later slice.
 | S17 | Secretariat scanning metadata, physical location, duplicate review and reassignment | Implemented | `c35b86c` |
 | S18 | Full-text-style search, filters, registers and movement reports | Implemented | `3075aae`; see [`slices/S18-search-registers-reports.md`](slices/S18-search-registers-reports.md) |
 | S19 | Delegation, acting appointments and office/desk inboxes | Implemented | `0686162`; see [`slices/S19-delegation-acting-office-inboxes.md`](slices/S19-delegation-acting-office-inboxes.md) |
+| S19A | Availability-aware Directorate continuity | Implemented; migration/deployment pending | `a2edc89`; ranked Director/first/second chain, self-service availability, automatic open-work handoff, read-only Director oversight and authority snapshots; see [`slices/S19A-availability-aware-directorate-continuity.md`](slices/S19A-availability-aware-directorate-continuity.md) |
 | S20 | Confidentiality, need-to-know groups, watermarking and step-up access | Implemented | `3d276f8`; see [`slices/S20-sensitive-access-controls.md`](slices/S20-sensitive-access-controls.md) |
 | S21 | Digital signatures and stronger approval authentication | Implemented | `6505d7c`; see [`slices/S21-signed-approval-assertions.md`](slices/S21-signed-approval-assertions.md) |
 | S22 | Authenticated external stakeholder portal | Implemented | `b8b9e95`; see [`slices/S22-authenticated-stakeholder-portal.md`](slices/S22-authenticated-stakeholder-portal.md) |
@@ -120,6 +121,7 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S17 | Secretariat scanning metadata, physical location, duplicate review and reassignment | Extends shared intake |
 | S18 | Full-text search, filters, registers and movement reports | Requires classification-aware query policy |
 | S19 | Delegation, acting appointments and office/desk inboxes | Requires authoritative HR dates and approval policy |
+| S19A | Availability-aware Directorate continuity | Configure locally for take-off; make Workspace/HR the permanent authoritative source after its versioned succession contract is approved |
 | S20 | Confidentiality, need-to-know groups, watermarking and step-up access | Production security gate |
 | S21 | Digital signatures and stronger approval authentication | Depends on approved signature policy and PKI decision |
 | S22 | Authenticated external stakeholder portal | Requires identity, anti-abuse and privacy design |
