@@ -12,12 +12,13 @@ import { activeRegistryScope } from "@/lib/registry-access";
 
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [unreadNotifications, appearance, registryScope] = await Promise.all([
+  const [unreadNotifications, appearance, registryScope, continuityMemberships] = await Promise.all([
     db.notification.count({ where: { userId: user.id, readAt: null } }),
     getStaffAppearance(user.role),
     activeRegistryScope(user),
+    db.directorateContinuityPlan.count({ where: { isActive: true, OR: [{ directorId: user.id }, { firstSuccessorId: user.id }, { secondSuccessorId: user.id }] } }),
   ]);
-  const navigation = getStaffNavigation(user.role, unreadNotifications, Boolean(registryScope));
+  const navigation = getStaffNavigation(user.role, unreadNotifications, Boolean(registryScope), continuityMemberships > 0);
   const Shell = appearance.mode === StaffUiMode.MODERN
     ? ModernStaffShell
     : appearance.mode === StaffUiMode.SOFT_UI

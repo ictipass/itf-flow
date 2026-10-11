@@ -17,6 +17,10 @@ const safeRoutingErrors = new Set([
 
 export function routingFeedbackMessage(error: unknown) {
   const message = error instanceof Error ? error.message : "";
-  if (safeRoutingErrors.has(message) || /^Assign an active Department Secretary for .+ before routing\.$/.test(message)) return message;
+  if (
+    safeRoutingErrors.has(message) ||
+    /^Assign an active Department Secretary for .+ before routing\.$/.test(message) ||
+    /^No next-in-line officer is(?: available with approval authority| available) for .+\. Restore availability or update the continuity plan before routing\.$/.test(message)
+  ) return message;
   return null;
 }

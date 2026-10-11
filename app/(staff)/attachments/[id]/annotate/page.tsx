@@ -47,7 +47,7 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
         <section className="card annotation-form-card">
           <span className="eyebrow">Authenticated signing block</span>
           <h2>Add minute</h2>
-          <p className="muted">Signing as <strong>{user.name}</strong> · {label(authority.principal.role)}{authority.delegation ? ` · acting for ${authority.principal.name}` : ""}.</p>
+          <p className="muted">Signing as <strong>{user.name}</strong> · {label(authority.principal.role)}{authority.principal.id !== user.id ? ` · acting for ${authority.principal.name}` : ""}.</p>
           <form id={annotationFormId} action={annotateAttachmentAction} className="grid">
             <input type="hidden" name="attachmentId" value={attachment.id} />
             <div className="field">

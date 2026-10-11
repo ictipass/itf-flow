@@ -47,6 +47,7 @@ import { routingFeedbackMessage } from "@/lib/routing-feedback";
 import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
 import { normalizeRichTextForStorage } from "@/lib/rich-text";
 import { parseFilingInput, resolveRecordFile, resolveUltimateRecipient } from "@/lib/records-governance";
+import { resolveContinuityAssignments } from "@/lib/office-continuity";
 
 const correspondenceSchema = z.object({
   type: z.enum(CorrespondenceType),
@@ -333,6 +334,14 @@ async function performRegisterCorrespondence(formData: FormData) {
   if (purpose !== WorkPurpose.ACTION && actionRecipients.length !== 1) {
     throw new Error("Select exactly one decision recipient. Additional staff may be copied.");
   }
+  const continuity = await resolveContinuityAssignments({
+    intendedRecipients: actionRecipients,
+    classification: parsed.classification,
+    requireApproval: purpose === WorkPurpose.APPROVAL,
+  });
+  const effectiveActionIds = new Set(continuity.assignments.map((assignment) => assignment.assignee.id));
+  const oversightIds = new Set(continuity.oversightDirectors.map((director) => director.id));
+  const effectiveCopyRecipients = copyRecipients.filter((recipient) => !effectiveActionIds.has(recipient.id) && !oversightIds.has(recipient.id));
   const draftId = String(formData.get("draftId") ?? "");
   const existingDraft = draftId
     ? await db.correspondence.findFirst({
@@ -357,7 +366,7 @@ async function performRegisterCorrespondence(formData: FormData) {
         createdById: user.id,
         requiresApproval: workflow.requiresApproval || purpose === WorkPurpose.APPROVAL || existingDraft?.requiresApproval === true,
         status: destinationStatus,
-        currentOwnerId: actionRecipients[0].id,
+        currentOwnerId: continuity.assignments[0].assignee.id,
         ...ultimateRecipient,
         recordFileId: recordFile.id,
     };
@@ -369,19 +378,32 @@ async function performRegisterCorrespondence(formData: FormData) {
       : await tx.correspondence.create({
           data: { ...values, referenceNumber: await nextReference(tx) },
         });
-    const actionItems = await Promise.all(actionRecipients.map((recipient) =>
+    const actionItems = await Promise.all(continuity.assignments.map((assignment) =>
       tx.workItem.create({
         data: {
           correspondenceId: created.id,
-          assigneeId: recipient.id,
+          assigneeId: assignment.assignee.id,
           kind: RecipientKind.ACTION,
           purpose,
           instruction: instruction || "For attention and necessary action.",
           dueAt: created.dueAt,
+          authorityPrincipalId: assignment.authorityPrincipal?.id ?? null,
+          continuityPlanId: assignment.plan?.id ?? null,
+          continuityRank: assignment.rank,
+          continuityCanApprove: assignment.canApprove,
         },
       }),
     ));
-    const copyItems = await Promise.all(copyRecipients.map((recipient) => tx.workItem.create({
+    const oversightItems = await Promise.all(continuity.oversightDirectors.map((director) => tx.workItem.create({
+      data: {
+        correspondenceId: created.id,
+        assigneeId: director.id,
+        kind: RecipientKind.OVERSIGHT,
+        instruction: "Read-only oversight while your next-in-line officer handles this correspondence.",
+        dueAt: created.dueAt,
+      },
+    })));
+    const copyItems = await Promise.all(effectiveCopyRecipients.map((recipient) => tx.workItem.create({
       data: {
           correspondenceId: created.id,
           assigneeId: recipient.id,
@@ -407,6 +429,7 @@ async function performRegisterCorrespondence(formData: FormData) {
         sourceType: "WORK_ITEM", sourceId: item.id,
       })),
       ...copyItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: NotificationType.COPIED, title: "Copied on correspondence", message: `${created.referenceNumber} was shared with you for information.`, href: `/correspondence/${created.id}`, sourceType: "WORK_ITEM", sourceId: item.id })),
+      ...oversightItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: NotificationType.COPIED, title: "Director oversight copy", message: `${created.referenceNumber} is being handled by your available next-in-line officer. Your access is read-only.`, href: `/correspondence/${created.id}`, sourceType: "WORK_ITEM", sourceId: item.id })),
     ]);
     await tx.correspondenceEvent.create({
       data: {
@@ -426,8 +449,11 @@ async function performRegisterCorrespondence(formData: FormData) {
           ? "Registered by the DG Secretariat and submitted to the DG."
           : instruction || "Raised internally and routed through the formal hierarchy.",
         metadata: {
-          actionRecipientIds: actionRecipients.map((recipient) => recipient.id),
-          copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
+          intendedActionRecipientIds: actionRecipients.map((recipient) => recipient.id),
+          actionRecipientIds: continuity.assignments.map((assignment) => assignment.assignee.id),
+          copyRecipientIds: effectiveCopyRecipients.map((recipient) => recipient.id),
+          oversightRecipientIds: continuity.oversightDirectors.map((director) => director.id),
+          continuityAssignments: continuity.assignments.filter((assignment) => assignment.plan).map((assignment) => ({ planId: assignment.plan!.id, planVersion: assignment.plan!.version, directorId: assignment.intended.id, handlerId: assignment.assignee.id, rank: assignment.rank })),
           automaticDepartmentSecretaryIds: [...automaticSecretaryIds],
           departmentSecretaryAssignmentIds: automaticSecretaries.map((item) => item.assignmentId),
           routeKind: routingPolicy.isPeerReferral ? "PEER_REFERRAL" : "HIERARCHICAL",
@@ -970,6 +996,14 @@ async function performRouteCorrespondence(formData: FormData) {
   if (purpose !== WorkPurpose.ACTION && actionRecipients.length !== 1) {
     throw new Error("Select exactly one decision recipient. Additional staff may be copied.");
   }
+  const continuity = await resolveContinuityAssignments({
+    intendedRecipients: actionRecipients,
+    classification: effectiveClassification,
+    requireApproval: purpose === WorkPurpose.APPROVAL,
+  });
+  const effectiveActionIds = new Set(continuity.assignments.map((assignment) => assignment.assignee.id));
+  const oversightIds = new Set(continuity.oversightDirectors.map((director) => director.id));
+  const effectiveCopyRecipients = copyRecipients.filter((recipient) => !effectiveActionIds.has(recipient.id) && !oversightIds.has(recipient.id));
   const context = await requestContext();
   await db.$transaction(async (tx) => {
     let classificationRevisionVersion: number | null = null;
@@ -997,19 +1031,32 @@ async function performRouteCorrespondence(formData: FormData) {
       where: { correspondenceId, assigneeId: authority.item.assigneeId, status: { in: [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED] } },
       data: { status: WorkItemStatus.COMPLETED, completedAt: new Date() },
     });
-    const actionItems = await Promise.all(actionRecipients.map((recipient) =>
+    const actionItems = await Promise.all(continuity.assignments.map((assignment) =>
       tx.workItem.create({
         data: {
           correspondenceId,
-          assigneeId: recipient.id,
+          assigneeId: assignment.assignee.id,
           kind: RecipientKind.ACTION,
           purpose,
           instruction: minute,
           dueAt: record.dueAt,
+          authorityPrincipalId: assignment.authorityPrincipal?.id ?? null,
+          continuityPlanId: assignment.plan?.id ?? null,
+          continuityRank: assignment.rank,
+          continuityCanApprove: assignment.canApprove,
         },
       }),
     ));
-    const copyItems = await Promise.all(copyRecipients.map((recipient) => tx.workItem.create({
+    const oversightItems = await Promise.all(continuity.oversightDirectors.map((director) => tx.workItem.create({
+      data: {
+        correspondenceId,
+        assigneeId: director.id,
+        kind: RecipientKind.OVERSIGHT,
+        instruction: "Read-only oversight while your next-in-line officer handles this correspondence.",
+        dueAt: record.dueAt,
+      },
+    })));
+    const copyItems = await Promise.all(effectiveCopyRecipients.map((recipient) => tx.workItem.create({
       data: {
           correspondenceId,
           assigneeId: recipient.id,
@@ -1029,12 +1076,13 @@ async function performRouteCorrespondence(formData: FormData) {
     await enqueueNotifications(tx, [
       ...actionItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: purpose !== WorkPurpose.ACTION ? NotificationType.DECISION_REQUESTED : routingPolicy.isPeerReferral ? NotificationType.PEER_REFERRED : NotificationType.ASSIGNED, title: purpose !== WorkPurpose.ACTION ? `${purpose.toLowerCase()} requested` : routingPolicy.isPeerReferral ? "Peer referral received" : "Correspondence assigned", message: `${record.referenceNumber} requires your attention.`, href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: item.id })),
       ...copyItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: NotificationType.COPIED, title: "Copied on correspondence", message: `${record.referenceNumber} was shared with you for information.`, href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: item.id })),
+      ...oversightItems.map((item) => ({ userId: item.assigneeId, actorId: user.id, type: NotificationType.COPIED, title: "Director oversight copy", message: `${record.referenceNumber} is being handled by your available next-in-line officer. Your access is read-only.`, href: `/correspondence/${correspondenceId}`, sourceType: "WORK_ITEM", sourceId: item.id })),
     ]);
     await tx.correspondence.update({
       where: { id: correspondenceId },
       data: {
         status: CorrespondenceStatus.ASSIGNED,
-        currentOwnerId: actionRecipients[0].id,
+        currentOwnerId: continuity.assignments[0].assignee.id,
         classification: effectiveClassification,
         requiresApproval: purpose === WorkPurpose.APPROVAL ? true : record.requiresApproval,
       },
@@ -1053,8 +1101,11 @@ async function performRouteCorrespondence(formData: FormData) {
         toStatus: CorrespondenceStatus.ASSIGNED,
         minute,
         metadata: {
-          actionRecipientIds,
-          copyRecipientIds: copyRecipients.map((recipient) => recipient.id),
+          intendedActionRecipientIds: actionRecipientIds,
+          actionRecipientIds: continuity.assignments.map((assignment) => assignment.assignee.id),
+          copyRecipientIds: effectiveCopyRecipients.map((recipient) => recipient.id),
+          oversightRecipientIds: continuity.oversightDirectors.map((director) => director.id),
+          continuityAssignments: continuity.assignments.filter((assignment) => assignment.plan).map((assignment) => ({ planId: assignment.plan!.id, planVersion: assignment.plan!.version, directorId: assignment.intended.id, handlerId: assignment.assignee.id, rank: assignment.rank })),
           explicitCopyRecipientIds: copyRecipientIds,
           automaticDepartmentSecretaryIds: [...automaticSecretaryIds],
           departmentSecretaryAssignmentIds: automaticSecretaries.map((item) => item.assignmentId),
@@ -1329,8 +1380,8 @@ export async function recordDecisionAction(formData: FormData) {
         schema: "ITF_FLOW_APPROVAL_V1", decisionRequestId: request.id, correspondenceId,
         revisionId: latestRevision.id, revisionVersion: latestRevision.version, documentDigest,
         outcome, decisionNote: note, signerId: user.id, signerName: user.name, signerRole: user.role,
-        authorityPrincipalId: authority.delegation ? authority.principal.id : null,
-        authorityPrincipalName: authority.delegation ? authority.principal.name : null,
+        authorityPrincipalId: authority.principal.id !== user.id ? authority.principal.id : null,
+        authorityPrincipalName: authority.principal.id !== user.id ? authority.principal.name : null,
         delegationId: authority.delegation?.id ?? null, authenticationMethod: approvalAuthenticationMethod,
         signedAt: signedAt.toISOString(), algorithm: APPROVAL_SIGNATURE_ALGORITHM, keyId: APPROVAL_SIGNATURE_KEY_ID,
       };
@@ -1340,8 +1391,8 @@ export async function recordDecisionAction(formData: FormData) {
         signatureValue: signApprovalPayload(payload), algorithm: APPROVAL_SIGNATURE_ALGORITHM,
         keyId: APPROVAL_SIGNATURE_KEY_ID, authenticationMethod: approvalAuthenticationMethod,
         signerId: user.id, signerName: user.name, signerRole: user.role, signerPosition: user.position,
-        authorityPrincipalId: authority.delegation ? authority.principal.id : null,
-        authorityPrincipalName: authority.delegation ? authority.principal.name : null,
+        authorityPrincipalId: authority.principal.id !== user.id ? authority.principal.id : null,
+        authorityPrincipalName: authority.principal.id !== user.id ? authority.principal.name : null,
         delegationId: authority.delegation?.id ?? null, signedAt,
       } });
     }
@@ -1417,7 +1468,7 @@ export async function acknowledgeAction(formData: FormData) {
       actorId: user.id,
       actorType: ActorType.STAFF,
       type: EventType.ACKNOWLEDGED,
-      minute: authority.delegation ? `Receipt acknowledged by ${user.name} acting for ${authority.principal.name}.` : "Receipt acknowledged.",
+      minute: authority.principal.id !== user.id ? `Receipt acknowledged by ${user.name} acting for ${authority.principal.name}.` : "Receipt acknowledged.",
       metadata: authorityMetadata(authority),
       ...(await requestContext()),
     },

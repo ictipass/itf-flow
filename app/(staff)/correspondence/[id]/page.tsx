@@ -31,6 +31,7 @@ import { verifyApprovalSignature, verifyCanonicalSignature } from "@/lib/approva
 import { richTextHtml, richTextPlainText } from "@/lib/rich-text";
 import { memoPacketIncludedAttachmentIds } from "@/lib/memo-packet-metadata";
 import { registryAuthorizationFor } from "@/lib/registry-access";
+import { isCurrentlyAvailable } from "@/lib/office-continuity";
 
 function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
@@ -56,7 +57,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       claimedBy: true,
       emailMessage: true,
       attachments: { include: { documentEvents: { orderBy: { createdAt: "desc" } } }, orderBy: [{ isMemoPacket: "desc" }, { createdAt: "asc" }] },
-      workItems: { include: { assignee: true, decisionRequest: { include: { requestedBy: true, decidedBy: true, signature: { include: { revision: true } } } } }, orderBy: { assignedAt: "desc" } },
+      workItems: { include: { assignee: { include: { staffAvailability: true } }, authorityPrincipal: true, continuityPlan: true, decisionRequest: { include: { requestedBy: true, decidedBy: true, signature: { include: { revision: true } } } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
       dispatchRecords: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
@@ -100,13 +101,14 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
     (item) =>
       (item.assigneeId === user.id || delegatedPrincipalIds.includes(item.assigneeId)) &&
       item.kind === "ACTION" &&
+      (!item.continuityPlanId || isCurrentlyAvailable(item.assignee.staffAvailability)) &&
       activeStatuses.includes(item.status),
   );
   const activeDelegation = activeActionItem ? delegationByPrincipal.get(activeActionItem.assigneeId) : undefined;
   const requiresAcknowledgement = activeActionItem?.status === WorkItemStatus.OPEN;
-  const authorityRole = activeDelegation?.principal.role ?? user.role;
+  const authorityRole = activeActionItem?.authorityPrincipal?.role ?? activeDelegation?.principal.role ?? user.role;
   const pendingDecision = activeActionItem?.decisionRequest?.outcome === null ? activeActionItem.decisionRequest : null;
-  const mayDecide = !pendingDecision || pendingDecision.purpose !== WorkPurpose.APPROVAL || !activeDelegation || activeDelegation.canApprove;
+  const mayDecide = !pendingDecision || pendingDecision.purpose !== WorkPurpose.APPROVAL || (activeActionItem?.continuityPlanId ? activeActionItem.continuityCanApprove : !activeDelegation || activeDelegation.canApprove);
   const canRoute = Boolean(activeActionItem && !requiresAcknowledgement && !pendingDecision && canMinute(authorityRole));
   const canAnnotate = Boolean(activeActionItem && !requiresAcknowledgement && canMinute(authorityRole));
   const canReferToPeers = authorityRole === UserRole.DIRECTOR || authorityRole === UserRole.DIVISION_HEAD;
@@ -332,7 +334,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             </article>)}
           </div>
           <h3>Current recipients</h3>
-          {record.workItems.filter((item) => activeStatuses.includes(item.status)).map((item) => <p key={item.id}><span className="badge">{label(item.kind)}</span> {item.assignee.name} <small className="muted">· {label(item.purpose)}</small></p>)}
+          {record.workItems.filter((item) => activeStatuses.includes(item.status)).map((item) => <p key={item.id}><span className="badge">{item.kind === "OVERSIGHT" ? "Read-only oversight" : label(item.kind)}</span> {item.assignee.name} <small className="muted">· {label(item.purpose)}{item.authorityPrincipal ? ` · acting for ${item.authorityPrincipal.name} as ${item.continuityRank === 1 ? "first" : "second"} next-in-line` : ""}</small></p>)}
         </aside>
       </div>
     </>
