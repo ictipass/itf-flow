@@ -104,8 +104,9 @@ expanded custody/elapsed-time view and is collapsed by default; select its headi
 3. Inspect the in-app page renderer and use **Previous page** or **Next page** to select the target page. Write
    directly on it with a stylus, touch or mouse, enter searchable typed text, or use both. Choose the corner for the
    authenticated identity block. At least ink or typed text is required.
-4. Confirm signing intent. By default, a Workspace user uses recent enterprise MFA and a local/demo user re-confirms
-   the password. A system administrator may relax this extra annotation-authentication step independently for DG,
+4. Confirm signing intent. By default, a Workspace user uses recent enterprise MFA. If that evidence is stale, Flow
+   sends the user to Workspace to verify MFA and relaunch the app; a local/demo user instead re-confirms the Flow
+   password, which is password re-authentication rather than MFA. A system administrator may relax this extra annotation-authentication step independently for DG,
    Directors or Division Heads. A relaxed action remains session-authenticated and is recorded as an administrator
    policy exception; document authority, classification and integrity checks still apply.
 5. Select **Create signed PDF version**. Flow verifies the stored source hash, validates and hashes any ink drawing,

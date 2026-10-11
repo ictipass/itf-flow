@@ -72,7 +72,7 @@ When corrected, the initiator creates a new numbered revision and resubmits. Ear
 
 For an internal memo, the ultimate recipient is correctly selected from the synchronized staff directory. For an incoming letter, the current free-text ultimate destination is only a transitional control. The production design should select an authoritative Workspace organizational unit by immutable ID, while retaining its display-name snapshot. External outgoing recipients remain free text because they are outside the Workspace directory.
 
-File-plan code, retention class and owning office must not remain arbitrary production inputs. ITF Records Management must approve a versioned file-plan/retention catalogue. The intended next records-governance slice will:
+File-plan code, retention class and owning office must not remain arbitrary production inputs. ITF Records Management must approve a versioned file-plan/retention catalogue. The intended S29C records-governance slice will:
 
 1. let Records Administration maintain active file-plan entries and their descriptions;
 2. derive retention class from the selected entry instead of asking the originator to type it;
