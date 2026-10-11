@@ -44,6 +44,12 @@ function printable(value: string) {
   return value.normalize("NFKD").replace(/[^ -~]/g, "?");
 }
 
+export function memoOrganizationHeading(value: string) {
+  const heading = value.trim().replace(/\s+/g, " ").toUpperCase();
+  if (/\b(DEPARTMENT|DIRECTORATE)\b/.test(heading)) return heading;
+  return `${heading} DEPARTMENT`;
+}
+
 function wrap(value: string, font: PDFFont, size: number, width: number) {
   const lines: string[] = [];
   for (const paragraph of printable(value).split(/\r?\n/)) {
@@ -192,7 +198,7 @@ export async function renderMemoOutput(input: MemoOutputInput) {
   const titleSize = 22;
   page.drawText(title, { x: (PAGE_WIDTH - bold.widthOfTextAtSize(title, titleSize)) / 2, y: 760, size: titleSize, font: bold, color: rgb(0, 0, 0) });
   const rawDepartment = input.originator.department ?? input.originator.office;
-  const department = `${rawDepartment.toUpperCase()}${rawDepartment.toUpperCase().includes("DEPARTMENT") ? "" : " DEPARTMENT"}`;
+  const department = memoOrganizationHeading(rawDepartment);
   const departmentSize = 10;
   const departmentText = truncate(department, bold, departmentSize, PAGE_WIDTH - 120);
   page.drawText(departmentText, { x: (PAGE_WIDTH - bold.widthOfTextAtSize(departmentText, departmentSize)) / 2, y: 726, size: departmentSize, font: bold, color: rgb(0, 0, 0) });

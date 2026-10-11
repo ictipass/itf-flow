@@ -3,11 +3,17 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
-import { MEMO_TEMPLATE_VERSION, renderMemoOutput } from "../lib/memo-output";
+import { MEMO_TEMPLATE_VERSION, memoOrganizationHeading, renderMemoOutput } from "../lib/memo-output";
 import { assertSignatureImageDecodable, validateSignatureImage } from "../lib/signature-profile";
 import { itfLogoPng } from "../lib/itf-branding";
 
 const png = readFileSync(new URL("../public/itf-logo.png", import.meta.url));
+
+test("memo organization heading does not turn a Directorate into a Department", () => {
+  assert.equal(memoOrganizationHeading("Directorate"), "DIRECTORATE");
+  assert.equal(memoOrganizationHeading("Corporate Planning Directorate"), "CORPORATE PLANNING DIRECTORATE");
+  assert.equal(memoOrganizationHeading("Information Technology"), "INFORMATION TECHNOLOGY DEPARTMENT");
+});
 
 test("memo rendering uses a bundled PNG logo without runtime filesystem access", async () => {
   const bundled = await itfLogoPng();

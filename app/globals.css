@@ -12,6 +12,8 @@
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: Arial, Helvetica, sans-serif; }
 a { color: inherit; text-decoration: none; }
 button, input, select, textarea { font: inherit; }
+select { color: var(--ink); }
+select option, select optgroup { background: #fff; color: #171717; }
 .shell { min-height: 100vh; display: grid; grid-template-columns: 260px 1fr; }
 .sidebar { background: linear-gradient(180deg, var(--burgundy) 0%, var(--burgundy-dark) 100%); color: white; padding: 28px 20px; display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 12px; margin-bottom: 32px; }
@@ -541,6 +543,7 @@ button, input, select, textarea { font: inherit; }
 .glass-shell .muted, .glass-shell .field label, .glass-shell .table th, .glass-shell .recipient-picker-hint, .glass-shell .recipient-identity small, .glass-shell .appearance-option-copy > p { color: #aaa0a5; }
 .glass-shell .table th, .glass-shell .table td, .glass-shell .appearance-history-list article { border-color: rgb(255 255 255 / .08); }
 .glass-shell .field input, .glass-shell .field select, .glass-shell .field textarea, .glass-shell .recipient-search, .glass-shell .audience-row select, .glass-shell .appearance-activate-form textarea { border-color: rgb(255 255 255 / .12); background: rgb(0 0 0 / .28); color: white; box-shadow: inset 0 1px rgb(255 255 255 / .04); }
+.glass-shell select option, .glass-shell select optgroup { background: #fff; color: #171717; }
 .glass-shell .field input::placeholder, .glass-shell .field textarea::placeholder, .glass-shell .recipient-search::placeholder, .glass-shell .appearance-activate-form textarea::placeholder { color: #776e72; }
 .glass-shell .btn.secondary { background: rgb(255 255 255 / .09); color: #f2dbe1; }
 .glass-shell .appearance-option-copy li, .glass-shell .appearance-history-list p, .glass-shell .appearance-history-list small { color: #b3a8ad; }

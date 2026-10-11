@@ -24,6 +24,8 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
   if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED || !canMinute(authority.principal.role)) notFound();
   const authenticationPolicy = await annotationAuthenticationPolicyFor(authority.principal.role);
   const enterpriseMfaActive = authenticationPolicy.required ? await hasActiveEnterpriseMfa() : false;
+  const needsWorkspaceMfa = authenticationPolicy.required && !enterpriseMfaActive && !user.passwordHash;
+  const workspaceAppsUrl = `${(process.env.NEXT_PUBLIC_WORKSPACE_URL ?? "/").replace(/\/$/, "")}/dashboard/apps`;
   const annotationFormId = "document-annotation-form";
 
   return (
@@ -66,18 +68,24 @@ export default async function AnnotateAttachmentPage({ params }: { params: Promi
               <p className="notice">The administrator has relaxed annotation re-authentication for the {label(authority.principal.role)} role. This exception and policy version will be recorded with the annotation.</p>
             ) : enterpriseMfaActive ? (
               <p className="notice success">Your recent Workspace MFA will authenticate this signing action.</p>
-            ) : (
+            ) : user.passwordHash ? (
               <div className="field">
-                <label>Re-confirm password</label>
+                <label>ITF Flow password</label>
                 <input name="signaturePassword" type="password" autoComplete="current-password" required />
-                <small className="muted">Strong re-authentication is required before the signed version is created.</small>
+                <small className="muted">Local/demo fallback: re-enter your Flow password to authenticate this annotation. This password check is not MFA.</small>
+              </div>
+            ) : (
+              <div className="notice error">
+                <strong>Fresh Workspace MFA is required</strong>
+                <p>Your synchronized account has no Flow password. Authenticate in ITF Workspace, then relaunch ITF Flow and return to this document.</p>
+                <a className="btn secondary compact" href={workspaceAppsUrl}>Authenticate with Workspace MFA</a>
               </div>
             )}
             <label className="check-field">
               <input type="checkbox" name="confirmSignature" value="CONFIRM" required />
               <span>I confirm this minute is mine and authorize ITF Flow to apply my authenticated name, role and timestamp to the new PDF version.</span>
             </label>
-            <button className="btn" type="submit">Create signed PDF version</button>
+            <button className="btn" type="submit" disabled={needsWorkspaceMfa}>{needsWorkspaceMfa ? "Workspace MFA required" : "Create signed PDF version"}</button>
           </form>
         </section>
       </div>
