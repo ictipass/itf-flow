@@ -3,6 +3,8 @@ import { CorrespondenceType, SignatureProfileStatus } from "@/lib/generated/pris
 import { db } from "@/lib/db";
 import { itfLogoPng } from "@/lib/itf-branding";
 import { renderMemoOutput } from "@/lib/memo-output";
+import { activeDepartmentCorrespondenceProfile } from "@/lib/department-correspondence";
+import { renderOutgoingLetter } from "@/lib/outgoing-letter-output";
 import { normalizeRichTextForStorage, richTextPlainText } from "@/lib/rich-text";
 import { getCurrentUser } from "@/lib/session";
 
@@ -15,14 +17,39 @@ export async function POST(request: Request) {
   if (!user) return new Response("Sign in to preview a memo.", { status: 401 });
   try {
     const formData = await request.formData();
-    if (text(formData, "type", 40) !== CorrespondenceType.INTERNAL_MEMO) {
-      return new Response("Preview is currently available for internal memos.", { status: 400 });
-    }
+    const type = text(formData, "type", 40);
+    if (type !== CorrespondenceType.INTERNAL_MEMO && type !== CorrespondenceType.OUTGOING_LETTER) return new Response("Preview is available for internal memos and outgoing letters.", { status: 400 });
     const subject = text(formData, "subject", 300);
     const summary = text(formData, "summary", 4000);
     const body = normalizeRichTextForStorage(formData.get("body"));
     if (subject.length < 5 || summary.length < 10 || !richTextPlainText(body)) {
       return new Response("Enter the subject, summary and memo body before previewing.", { status: 400 });
+    }
+    if (type === CorrespondenceType.OUTGOING_LETTER) {
+      const recipientName = text(formData, "ultimateRecipientName", 200);
+      const recipientEmail = text(formData, "ultimateRecipientEmail", 254);
+      const recipientAddress = text(formData, "ultimateRecipientAddress", 1000);
+      if (!recipientName || !recipientEmail.includes("@") || recipientAddress.length < 5) return new Response("Enter the external recipient's name, email and delivery address before previewing.", { status: 400 });
+      const { profile } = await activeDepartmentCorrespondenceProfile(user);
+      const plan = await db.directorateContinuityPlan.findFirst({ where: { departmentKey: profile.departmentKey, isActive: true }, include: { director: true } });
+      const generatedAt = new Date();
+      const bytes = await renderOutgoingLetter({
+        referenceNumber: text(formData, "senderReference", 200) || "DRAFT-PREVIEW",
+        classification: text(formData, "classification", 30) || "INTERNAL",
+        subject,
+        summary,
+        body: body ?? null,
+        letterDate: generatedAt,
+        departmentName: profile.departmentName,
+        departmentEmail: profile.emailAddress,
+        addressLines: profile.addressLines,
+        recipient: { name: recipientName, organization: text(formData, "ultimateRecipientOrganization", 200) || null, email: recipientEmail, address: recipientAddress },
+        director: plan ? { name: plan.director.name } : null,
+        generatedAt,
+        logoPng: await itfLogoPng(),
+        draftPreview: true,
+      });
+      return new Response(new Uint8Array(bytes), { headers: { "Content-Type": "application/pdf", "Content-Disposition": "inline; filename=ITF-outgoing-letter-draft-preview.pdf", "Cache-Control": "private, no-store" } });
     }
     const recipientId = text(formData, "ultimateRecipientUserId", 100);
     const recipient = recipientId ? await db.user.findFirst({ where: { id: recipientId, isActive: true } }) : null;
@@ -67,6 +94,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Memo preview generation failed.", error);
-    return new Response("Memo preview could not be generated. Review the memo fields and try again.", { status: 400 });
+    const message = error instanceof Error ? error.message : "";
+    const expected = message.startsWith("The system administrator must configure the outgoing-letter profile for ") || message === "Your synchronized staff profile does not identify a department.";
+    return new Response(expected ? message : "Document preview could not be generated. Review the required fields and try again.", { status: 400 });
   }
 }

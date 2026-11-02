@@ -4,7 +4,6 @@ import {
   acceptExternalSubmissionAction,
   acknowledgeAction,
   claimIntakeAction,
-  prepareDispatchAction,
   releaseIntakeAction,
   recordDecisionAction,
   resubmitReturnedAction,
@@ -18,6 +17,7 @@ import { RouteCorrespondenceForm } from "@/components/route-correspondence-form"
 import { CorrespondencePassage } from "@/components/correspondence-passage";
 import { GenerateMemoOutputForm } from "@/components/generate-memo-output-form";
 import { GenerateWorkingMemoPacketForm } from "@/components/generate-working-memo-packet-form";
+import { FinalizeOutgoingLetterForm } from "@/components/finalize-outgoing-letter-form";
 import { CorrespondenceStatus, CorrespondenceType, DecisionOutcome, DispatchChannel, DispatchStatus, EventType, SignatureProfileStatus, UserRole, WorkItemStatus, WorkPurpose } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { activeDelegationsFor } from "@/lib/delegations";
@@ -33,9 +33,11 @@ import { memoPacketIncludedAttachmentIds } from "@/lib/memo-packet-metadata";
 import { registryAuthorizationFor } from "@/lib/registry-access";
 import { isCurrentlyAvailable } from "@/lib/office-continuity";
 
-function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; processingStatus: string; malwareScanStatus: string }) {
+function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; isOutgoingLetterPreview: boolean; isOutgoingLetterFinal: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
   if (file.isMemoPacket && file.processingStatus === "AVAILABLE") return "System-generated from the memo data and security-cleared source documents; stored through the configured document provider and available for annotation.";
+  if (file.isOutgoingLetterPreview && file.processingStatus === "AVAILABLE") return "Working departmental letterhead preview. It is visible to the correspondence line but is not valid for external dispatch.";
+  if (file.isOutgoingLetterFinal && file.processingStatus === "AVAILABLE") return "Final departmental letterhead output released under the Director's authority and attached to the official outgoing email.";
   if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "CLEAN") return null;
   if (file.processingStatus === "AVAILABLE" && file.malwareScanStatus === "BYPASSED") return "Available under an explicit malware-scanner bypass. This document was not malware-scanned.";
   if (file.processingStatus === "QUARANTINED" && file.malwareScanStatus === "PENDING") return "Stored securely in quarantine. The document security worker has not completed malware validation, so viewing and download remain blocked.";
@@ -56,7 +58,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       createdBy: { include: { signatureProfiles: { where: { status: SignatureProfileStatus.APPROVED }, orderBy: { version: "desc" }, take: 1 } } },
       claimedBy: true,
       emailMessage: true,
-      attachments: { include: { documentEvents: { orderBy: { createdAt: "desc" } } }, orderBy: [{ isMemoPacket: "desc" }, { createdAt: "asc" }] },
+      attachments: { include: { documentEvents: { orderBy: { createdAt: "desc" } } }, orderBy: [{ isOutgoingLetterFinal: "desc" }, { isOutgoingLetterPreview: "desc" }, { isMemoPacket: "desc" }, { createdAt: "asc" }] },
       workItems: { include: { assignee: { include: { staffAvailability: true } }, authorityPrincipal: true, continuityPlan: true, decisionRequest: { include: { requestedBy: true, decidedBy: true, signature: { include: { revision: true } } } } }, orderBy: { assignedAt: "desc" } },
       events: { include: { actor: true }, orderBy: { createdAt: "desc" } },
       revisions: { include: { createdBy: true }, orderBy: { version: "desc" } },
@@ -120,7 +122,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const latestReturnDecision = record.events.find((event) => event.type === EventType.RETURNED || event.type === EventType.DECISION_RECORDED);
   const canResubmit = record.status === CorrespondenceStatus.RETURNED && record.createdById === user.id && latestReturnDecision?.type === EventType.RETURNED;
   const currentApproval = record.decisionRequests.some((request) => request.purpose === WorkPurpose.APPROVAL && request.outcome === DecisionOutcome.APPROVED && !request.supersededAt);
-  const canPrepareDispatch = canDispatch(user.role) && record.type === CorrespondenceType.OUTGOING_LETTER && (!record.requiresApproval || currentApproval) && record.status !== CorrespondenceStatus.CLOSED;
+  const canPrepareDispatch = Boolean(activeActionItem && !requiresAcknowledgement && !pendingDecision && authorityRole === UserRole.DIRECTOR && record.type === CorrespondenceType.OUTGOING_LETTER && (!record.requiresApproval || currentApproval) && !record.dispatchRecords.length && record.status !== CorrespondenceStatus.CLOSED);
   const annotationSourceIds = new Set(record.documentAnnotations.map((annotation) => annotation.sourceAttachmentId));
   const hasCurrentActorAnnotation = record.documentAnnotations.some(
     (annotation) => annotation.signerId === user.id && annotation.outputAttachment.isIncluded,
@@ -143,7 +145,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
       {record.accessGroups.length ? <p className="notice">Need-to-know restriction: {record.accessGroups.map((item) => item.group.name).join(", ")}.</p> : null}
       {record.workflowCategory && record.workflowTemplateVersion ? <p className="notice">Workflow policy: <strong>{record.workflowCategory.name}</strong> · {record.workflowTemplateVersion.template.name} version {record.workflowTemplateVersion.version} · deadline {record.dueAt?.toLocaleDateString("en-NG") ?? "not set"}.</p> : null}
-      <section className="card" style={{ marginTop: 18 }}><div className="form-grid"><div><small className="muted">Ultimate recipient</small><strong style={{ display: "block", marginTop: 4 }}>{record.ultimateRecipient?.name ?? record.ultimateRecipientName ?? "Not assigned"}</strong><small className="muted">{record.ultimateRecipientOrgUnitName ?? record.ultimateRecipient?.department ?? record.ultimateRecipient?.office}</small></div><div><small className="muted">Official record file</small><strong style={{ display: "block", marginTop: 4 }}>{record.recordFile?.label ?? "Unfiled legacy record"}</strong><small className="muted">{record.recordFile ? `${label(record.recordFile.category)} · ${record.recordFile.retentionClass}${record.recordFile.subjectUser ? ` · Subject: ${record.recordFile.subjectUser.name}` : ""}` : "Assign through records governance before archival transfer."}</small></div></div></section>
+      <section className="card" style={{ marginTop: 18 }}><div className="form-grid"><div><small className="muted">Ultimate recipient</small><strong style={{ display: "block", marginTop: 4 }}>{record.ultimateRecipient?.name ?? record.ultimateRecipientName ?? "Not assigned"}</strong><small className="muted">{record.ultimateRecipientOrganization ?? record.ultimateRecipientOrgUnitName ?? record.ultimateRecipient?.department ?? record.ultimateRecipient?.office}</small>{record.ultimateRecipientEmail ? <small className="registry-secondary">{record.ultimateRecipientEmail}</small> : null}{record.ultimateRecipientAddress ? <small className="registry-secondary">{record.ultimateRecipientAddress}</small> : null}</div><div><small className="muted">Official record file</small><strong style={{ display: "block", marginTop: 4 }}>{record.recordFile?.label ?? "Unfiled legacy record"}</strong><small className="muted">{record.recordFile ? `${label(record.recordFile.category)} · ${record.recordFile.retentionClass}${record.recordFile.subjectUser ? ` · Subject: ${record.recordFile.subjectUser.name}` : ""}` : "Assign through records governance before archival transfer."}</small></div></div></section>
       {activeDelegation ? <p className="notice">Acting authority: you are handling this item for <strong>{activeDelegation.principal.name}</strong> through the <strong>{activeDelegation.officeLabel}</strong> desk until {activeDelegation.endsAt.toLocaleString("en-NG")}.{activeDelegation.canApprove ? " Formal approval authority is enabled." : " Formal approval authority is not delegated."}</p> : null}
       {record.status === CorrespondenceStatus.SUBMITTED ? (
         <section className="handler-strip">
@@ -172,6 +174,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}><h2>Correspondence</h2>{requiresAcknowledgement ? <form action={acknowledgeAction}><input type="hidden" name="correspondenceId" value={record.id} /><button className="btn secondary compact" type="submit">Acknowledge receipt</button></form> : null}</div>
             {requiresAcknowledgement ? <p className="notice">Acknowledge receipt to establish custody before opening, annotating or treating the document.</p> : null}
             {record.type === CorrespondenceType.INTERNAL_MEMO && hasComposedMemo ? <p className="notice">The current ITF memo packet appears first below. Open it in the in-app renderer to read, minute, sign or annotate the memo. Attachments successfully converted into packet pages are hidden from this list to avoid duplication; security-pending or unconverted files remain separately visible.</p> : null}
+            {record.type === CorrespondenceType.OUTGOING_LETTER ? <p className="notice">The working letterhead preview is visible to every authorized person in this route. It remains marked “not dispatched” until the Director&apos;s desk finalizes the letter; the DG is not part of the departmental outgoing route.</p> : null}
             {record.type === CorrespondenceType.INTERNAL_MEMO && hasComposedMemo && !hasCurrentMemoPacket ? <GenerateWorkingMemoPacketForm correspondenceId={record.id} /> : null}
             <p style={{ lineHeight: 1.7 }}>{record.summary}</p>
             {record.body ? <div className="correspondence-rich-text" style={{ lineHeight: 1.75, borderTop: "1px solid #ece9e0", paddingTop: 18 }} dangerouslySetInnerHTML={{ __html: richTextHtml(record.body) }} /> : null}
@@ -180,9 +183,9 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               const canOpen = !requiresAcknowledgement && attachmentPassesDocumentSecurityGate(file) && (file.isIncluded || preservedSource);
               const guidance = preservedSource ? "Preserved immutable source for a later annotated version." : attachmentGuidance(file);
               return <div className="attachment-item" key={file.id}>
-                <p>{file.isMemoPacket ? <span className="badge">ITF memo packet</span> : null} {canOpen ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : preservedSource ? "Preserved original" : "Excluded"} · {label(file.malwareScanStatus)})</small></p>
+                <p>{file.isMemoPacket ? <span className="badge">ITF memo packet</span> : null}{file.isOutgoingLetterPreview ? <span className="badge">Letterhead preview</span> : null}{file.isOutgoingLetterFinal ? <span className="badge">Official outgoing letter</span> : null} {canOpen ? <a className="eyebrow" href={`/attachments/${file.id}`}>{file.originalName} · View or download</a> : <span className="eyebrow">{file.originalName}</span>} <small className="muted">({Math.ceil(file.sizeBytes / 1024)} KB · {file.isIncluded ? label(file.processingStatus) : preservedSource ? "Preserved original" : "Excluded"} · {label(file.malwareScanStatus)})</small></p>
                 {guidance ? <small className="attachment-help">{guidance}</small> : null}
-                {canAnnotate && file.isIncluded && canOpen && isAnnotatableDocument(file.mimeType) ? <div className="actions"><Link className="btn secondary compact" href={`/attachments/${file.id}/annotate`}>{file.isMemoPacket ? "Open memo package to minute and sign" : "Minute and sign on document"}</Link></div> : null}
+                {canAnnotate && !file.isOutgoingLetterFinal && file.isIncluded && canOpen && isAnnotatableDocument(file.mimeType) ? <div className="actions"><Link className="btn secondary compact" href={`/attachments/${file.id}/annotate`}>{file.isMemoPacket ? "Open memo package to minute and sign" : file.isOutgoingLetterPreview ? "Open letter preview to minute and sign" : "Minute and sign on document"}</Link></div> : null}
               </div>;
             })}</div> : null}
             {record.documentAnnotations.length ? <details className="annotation-history">
@@ -287,13 +290,7 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
               </form>
             </section>
           ) : null}
-          {canPrepareDispatch ? <section className="card"><span className="eyebrow">Outgoing delivery</span><h2>Prepare dispatch</h2><p className="muted">Official email dispatch is recorded here; automated SMTP delivery will be connected in the email-delivery slice.</p><form action={prepareDispatchAction} className="form-grid"><input type="hidden" name="correspondenceId" value={record.id} />
-            <div className="field"><label>Delivery channel</label><select name="channel" defaultValue="OFFICIAL_EMAIL"><option value="OFFICIAL_EMAIL">Official email</option><option value="PHYSICAL_DELIVERY">Physical delivery</option><option value="COURIER">Courier</option><option value="STAKEHOLDER_PORTAL">Stakeholder portal</option></select></div>
-            <div className="field"><label>Recipient name</label><input name="recipientName" required minLength={2} placeholder="Full name of the receiving person or office" /></div>
-            <div className="field"><label>Organization</label><input name="recipientOrganization" placeholder="Recipient organization or agency" /></div><div className="field"><label>Email</label><input name="recipientEmail" type="email" placeholder="recipient@example.org" /></div>
-            <div className="field span-2"><label>Delivery address</label><textarea name="recipientAddress" placeholder="Physical, courier, or portal delivery address" /></div><div className="field"><label>Tracking number</label><input name="trackingNumber" placeholder="Courier, registry, or portal tracking number" /></div>
-            <div className="field span-2"><label>Dispatch note</label><textarea name="dispatchNote" placeholder="State delivery instructions or handling notes" /></div><button className="btn span-2" type="submit">Create dispatch record</button>
-          </form></section> : null}
+          {canPrepareDispatch ? <section className="card"><span className="eyebrow">Director&apos;s final routing desk</span><h2>Finalize and send outgoing letter</h2><p className="muted">This creates the signed departmental letterhead PDF, completes the internal route, emails it to the governed ultimate-recipient address and sends a separately labelled copy to the department mailbox. The recipient cannot be changed here.</p><FinalizeOutgoingLetterForm correspondenceId={record.id} recipientName={record.ultimateRecipientName ?? ""} recipientEmail={record.ultimateRecipientEmail ?? ""} recipientAddress={record.ultimateRecipientAddress ?? ""} /></section> : null}
         </div>
         <aside className="card">
           {record.dispatchRecords.length ? <><h2>Dispatch records</h2>{record.dispatchRecords.map((dispatch) => { const emailItem = dispatchEmailById.get(dispatch.id); return <div key={dispatch.id} style={{ borderBottom: "1px solid #ece9e0", paddingBottom: 12, marginBottom: 12 }}><strong>{dispatch.outgoingReference}</strong> <span className="badge">{label(dispatch.status)}</span><p>{label(dispatch.channel)} · {dispatch.recipientName}{dispatch.recipientOrganization ? ` · ${dispatch.recipientOrganization}` : ""}</p><small className="muted">Prepared by {dispatch.createdBy.name} · {dispatch.createdAt.toLocaleString("en-NG")}</small>{emailItem ? <p><span className="badge">Email {label(emailItem.status)}</span> <small className="muted">{emailItem.attemptCount} attempt{emailItem.attemptCount === 1 ? "" : "s"}{emailItem.lastErrorCode ? ` · ${emailItem.lastErrorCode}` : ""}</small></p> : null}

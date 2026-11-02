@@ -78,7 +78,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     generatedAt: generatedAt.toISOString(),
     generatedBy: { id: user.id, name: user.name, staffNumber: user.staffNumber, role: user.role },
     correspondence: { id: record.id, referenceNumber: record.referenceNumber, subject: record.subject, type: record.type, classification: record.classification, status: record.status, createdAt: record.createdAt, updatedAt: record.updatedAt },
-    ultimateRecipient: { type: record.ultimateRecipientType, userId: record.ultimateRecipientUserId, name: record.ultimateRecipient?.name ?? record.ultimateRecipientName, organizationalUnit: record.ultimateRecipientOrgUnitName },
+    ultimateRecipient: { type: record.ultimateRecipientType, userId: record.ultimateRecipientUserId, name: record.ultimateRecipient?.name ?? record.ultimateRecipientName, organizationalUnit: record.ultimateRecipientOrgUnitName, organization: record.ultimateRecipientOrganization, email: record.ultimateRecipientEmail, address: record.ultimateRecipientAddress },
+    sendingDepartment: { key: record.sendingDepartmentKey, name: record.sendingDepartmentName, email: record.sendingDepartmentEmail, addressLines: record.sendingDepartmentAddressLines, profileId: record.departmentCorrespondenceProfileId, profileVersion: record.departmentCorrespondenceProfileVersion },
     officialFile: record.recordFile ? { id: record.recordFile.id, fileKey: record.recordFile.fileKey, category: record.recordFile.category, label: record.recordFile.label, filePlanCode: record.recordFile.filePlanCode, retentionClass: record.recordFile.retentionClass, subject: record.recordFile.subjectUser ? { id: record.recordFile.subjectUser.id, staffNumber: record.recordFile.subjectUser.staffNumber, name: record.recordFile.subjectUser.name } : null } : null,
     files: fileManifest,
   };

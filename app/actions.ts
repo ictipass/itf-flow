@@ -28,7 +28,7 @@ import {
   WorkItemStatus,
 } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
-import { storeDocument } from "@/lib/document-storage";
+import { storeDocument, storeSystemGeneratedPdf } from "@/lib/document-storage";
 import { attachmentPassesDocumentSecurityGate, initialDocumentEvent } from "@/lib/document-security";
 import { createReferenceNumber } from "@/lib/reference";
 import { captureRevision } from "@/lib/revisions";
@@ -45,7 +45,10 @@ import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls"
 import { resolveAutomaticDepartmentSecretaries, routingClassification, validateConfidentialRoute } from "@/lib/department-secretaries";
 import { routingFeedbackMessage } from "@/lib/routing-feedback";
 import { regenerateWorkingMemoPacket } from "@/lib/memo-packet";
-import { normalizeRichTextForStorage } from "@/lib/rich-text";
+import { activeDepartmentCorrespondenceProfile, activeDirectorSignature, regenerateWorkingOutgoingLetter } from "@/lib/department-correspondence";
+import { itfLogoPng } from "@/lib/itf-branding";
+import { renderOutgoingLetter } from "@/lib/outgoing-letter-output";
+import { normalizeRichTextForStorage, richTextPlainText } from "@/lib/rich-text";
 import { parseFilingInput, resolveRecordFile, resolveUltimateRecipient } from "@/lib/records-governance";
 import { resolveContinuityAssignments } from "@/lib/office-continuity";
 
@@ -271,6 +274,7 @@ async function performRegisterCorrespondence(formData: FormData) {
     dueAt: formData.get("dueAt") || undefined,
   });
   if (!canReadClassification(user.role, parsed.classification)) throw new Error("Your role cannot originate Secret correspondence.");
+  if (parsed.type === CorrespondenceType.OUTGOING_LETTER && !richTextPlainText(parsed.body)) throw new Error("Compose the outgoing letter before submitting it.");
   const isSecretariatIntake =
     canRegister(user.role) && parsed.type === CorrespondenceType.INCOMING_LETTER;
   const actionRecipientIds = formData
@@ -302,7 +306,14 @@ async function performRegisterCorrespondence(formData: FormData) {
     throw new Error("Select at least one valid recipient.");
   }
   const ultimateRecipient = await resolveUltimateRecipient(formData, parsed.type);
+  const outgoingProfile = parsed.type === CorrespondenceType.OUTGOING_LETTER
+    ? await activeDepartmentCorrespondenceProfile(user)
+    : null;
   const filingInput = parseFilingInput(formData, user);
+
+  if (parsed.type === CorrespondenceType.OUTGOING_LETTER && actionRecipients.some((recipient) => recipient.role === UserRole.DG)) {
+    throw new Error("Outgoing departmental letters must end at the Director's desk, not the DG's desk.");
+  }
 
   validateConfidentialRoute({ actorRole: user.role, classification: parsed.classification, actionRecipientRoles: actionRecipients.map((recipient) => recipient.role), explicitCopyCount: copyRecipientIds.length });
   const automaticSecretaries = isSecretariatIntake ? [] : await resolveAutomaticDepartmentSecretaries({ actorRole: user.role, classification: parsed.classification, actionRecipients });
@@ -368,6 +379,14 @@ async function performRegisterCorrespondence(formData: FormData) {
         status: destinationStatus,
         currentOwnerId: continuity.assignments[0].assignee.id,
         ...ultimateRecipient,
+        ...(outgoingProfile ? {
+          sendingDepartmentKey: outgoingProfile.identity.key,
+          sendingDepartmentName: outgoingProfile.profile.departmentName,
+          sendingDepartmentEmail: outgoingProfile.profile.emailAddress,
+          sendingDepartmentAddressLines: outgoingProfile.profile.addressLines,
+          departmentCorrespondenceProfileId: outgoingProfile.profile.id,
+          departmentCorrespondenceProfileVersion: outgoingProfile.profile.version,
+        } : {}),
         recordFileId: recordFile.id,
     };
     const created = existingDraft
@@ -470,6 +489,7 @@ async function performRegisterCorrespondence(formData: FormData) {
     if (stored) await db.attachment.create({ data: { correspondenceId: record.id, ...stored, documentEvents: { create: initialDocumentEvent(stored.malwareScanStatus === MalwareScanStatus.BYPASSED ? "DISABLED" : "ENABLED", "Staff upload") } } });
   }
   if (record.type === CorrespondenceType.INTERNAL_MEMO) await regenerateWorkingMemoPacket(record.id);
+  if (record.type === CorrespondenceType.OUTGOING_LETTER) await regenerateWorkingOutgoingLetter(record.id);
   await db.$transaction((tx) => captureRevision(
     tx,
     record.id,
@@ -502,11 +522,19 @@ export async function registerCorrespondenceAction(
       "New correspondence must follow an authorized hierarchy or peer-referral path.",
       "A peer referral requires a clear purpose of at least 10 characters.",
       "This draft cannot be submitted.",
+      "Outgoing departmental letters must end at the Director's desk, not the DG's desk.",
+      "Enter a valid email address for the ultimate external recipient.",
+      "Enter the external recipient's delivery address for the outgoing letter.",
+      "Compose the outgoing letter before submitting it.",
     ]);
-    if (!routedMessage && !expected.has(message)) console.error("Correspondence submission failed unexpectedly.", error);
+    const expectedPrefix = [
+      "The system administrator must configure the outgoing-letter profile for ",
+      "Your synchronized staff profile does not identify a department.",
+    ].some((prefix) => message.startsWith(prefix));
+    if (!routedMessage && !expected.has(message) && !expectedPrefix) console.error("Correspondence submission failed unexpectedly.", error);
     return {
       status: "error",
-      message: routedMessage ?? (expected.has(message) ? message : "The correspondence could not be submitted. Your entries were retained; review them and try again."),
+      message: routedMessage ?? (expected.has(message) || expectedPrefix ? message : "The correspondence could not be submitted. Your entries were retained; review them and try again."),
       attempt: previous.attempt + 1,
     };
   }
@@ -521,8 +549,20 @@ async function persistDraft(formData: FormData) {
   const recordFile = filingInput ? await db.$transaction((tx) => resolveRecordFile(tx, filingInput)) : null;
   const hasUltimateRecipient = parsed.type === CorrespondenceType.INTERNAL_MEMO
     ? Boolean(String(formData.get("ultimateRecipientUserId") ?? ""))
-    : Boolean(String(formData.get("ultimateRecipientName") ?? "").trim());
-  const ultimateRecipient = hasUltimateRecipient ? await resolveUltimateRecipient(formData, parsed.type) : {};
+    : parsed.type === CorrespondenceType.OUTGOING_LETTER
+      ? Boolean(String(formData.get("ultimateRecipientName") ?? "").trim() && String(formData.get("ultimateRecipientEmail") ?? "").trim() && String(formData.get("ultimateRecipientAddress") ?? "").trim())
+      : Boolean(String(formData.get("ultimateRecipientName") ?? "").trim());
+  const ultimateRecipient = hasUltimateRecipient
+    ? await resolveUltimateRecipient(formData, parsed.type)
+    : parsed.type === CorrespondenceType.OUTGOING_LETTER
+      ? {
+          ultimateRecipientType: UltimateRecipientType.EXTERNAL_PARTY,
+          ultimateRecipientName: String(formData.get("ultimateRecipientName") ?? "").trim().slice(0, 200) || null,
+          ultimateRecipientOrganization: String(formData.get("ultimateRecipientOrganization") ?? "").trim().slice(0, 200) || null,
+          ultimateRecipientEmail: String(formData.get("ultimateRecipientEmail") ?? "").trim().slice(0, 254) || null,
+          ultimateRecipientAddress: String(formData.get("ultimateRecipientAddress") ?? "").trim().slice(0, 1000) || null,
+        }
+      : {};
   const draftId = String(formData.get("draftId") ?? "");
   const data = {
     ...parsed,
@@ -921,6 +961,9 @@ export async function reviseReturnedCorrespondenceAction(formData: FormData) {
   if (parsed.type === CorrespondenceType.INTERNAL_MEMO) {
     await regenerateWorkingMemoPacket(correspondenceId, { replaceAnnotated: true });
   }
+  if (parsed.type === CorrespondenceType.OUTGOING_LETTER) {
+    await regenerateWorkingOutgoingLetter(correspondenceId, { replaceAnnotated: true });
+  }
   revalidatePath(`/correspondence/${correspondenceId}`);
   redirect(`/correspondence/${correspondenceId}?revision=${revision.version}`);
 }
@@ -965,6 +1008,9 @@ async function performRouteCorrespondence(formData: FormData) {
     explicitCopyRecipients.length !== new Set(copyRecipientIds).size
   ) {
     throw new Error("Invalid routing request.");
+  }
+  if (record.type === CorrespondenceType.OUTGOING_LETTER && actionRecipients.some((recipient) => recipient.role === UserRole.DG)) {
+    throw new Error("Outgoing departmental letters must end at the Director's desk, not the DG's desk.");
   }
   const minute = submittedMinute || record.documentAnnotations[0]?.minuteText?.trim() || "";
   if (minute.length < 3) throw new Error("Enter a minute or annotate the current document before routing.");
@@ -1145,21 +1191,17 @@ export async function routeCorrespondenceAction(previous: RouteCorrespondenceSta
   redirect(`/correspondence/${correspondenceId}`);
 }
 
-const dispatchSchema = z.object({
-  channel: z.enum(DispatchChannel),
-  recipientName: z.string().trim().min(2).max(200),
-  recipientOrganization: z.string().trim().max(200).optional(),
-  recipientEmail: z.string().trim().max(254).optional(),
-  recipientAddress: z.string().trim().max(1000).optional(),
-  trackingNumber: z.string().trim().max(150).optional(),
-  dispatchNote: z.string().trim().max(2000).optional(),
-});
-
-async function assertDispatchable(correspondenceId: string) {
+async function assertDispatchable(correspondenceId: string, actor: Awaited<ReturnType<typeof requireUser>>) {
+  const authority = await workAuthority({ correspondenceId, actor });
+  if (!authority || authority.item.status !== WorkItemStatus.ACKNOWLEDGED || authority.principal.role !== UserRole.DIRECTOR) {
+    throw new Error("Only the acknowledged Director's desk or its active next-in-line officer can finalize this outgoing letter.");
+  }
   const record = await db.correspondence.findUnique({
     where: { id: correspondenceId },
     include: {
       attachments: true,
+      departmentCorrespondenceProfile: true,
+      dispatchRecords: { take: 1 },
       decisionRequests: {
         where: { purpose: WorkPurpose.APPROVAL, outcome: DecisionOutcome.APPROVED, supersededAt: null },
         include: { signature: { include: { revision: true } } },
@@ -1170,61 +1212,113 @@ async function assertDispatchable(correspondenceId: string) {
   if (!record || record.type !== CorrespondenceType.OUTGOING_LETTER) {
     throw new Error("Only outgoing correspondence can be dispatched.");
   }
+  if (record.dispatchRecords.length) throw new Error("This outgoing letter already has a dispatch record.");
+  if (!record.departmentCorrespondenceProfile?.isActive || !record.sendingDepartmentKey) throw new Error("The sending department's outgoing-letter profile is missing or inactive.");
+  if (!record.ultimateRecipientName || !record.ultimateRecipientEmail || !record.ultimateRecipientAddress) throw new Error("The external recipient name, email and delivery address must be completed before dispatch.");
   if (record.requiresApproval && !record.decisionRequests.length) {
     throw new Error("This correspondence requires a current approval before dispatch.");
   }
   if (record.attachments.some((attachment) => attachment.isIncluded && !attachmentPassesDocumentSecurityGate(attachment))) throw new Error("Dispatch is blocked until every included attachment passes document security processing or has an explicitly recorded scanner bypass.");
   if (record.decisionRequests[0]?.signature && !verifyApprovalSignature(record.decisionRequests[0].signature)) throw new Error("The current approval signature could not be verified; dispatch is blocked.");
-  return record;
+  const signatory = await activeDirectorSignature(record.sendingDepartmentKey);
+  if (signatory.director.id !== authority.principal.id) throw new Error("The active Director authority does not match the sending department's continuity plan.");
+  return { record, authority, signatory };
 }
 
-export async function prepareDispatchAction(formData: FormData) {
+async function performPrepareDispatch(formData: FormData) {
   const user = await requireUser();
-  if (!canDispatch(user.role)) throw new Error("You are not authorized to prepare dispatch records.");
   const correspondenceId = String(formData.get("correspondenceId") ?? "");
-  const parsed = dispatchSchema.parse({
-    channel: formData.get("channel"),
-    recipientName: formData.get("recipientName"),
-    recipientOrganization: formData.get("recipientOrganization") || undefined,
-    recipientEmail: formData.get("recipientEmail") || undefined,
-    recipientAddress: formData.get("recipientAddress") || undefined,
-    trackingNumber: formData.get("trackingNumber") || undefined,
-    dispatchNote: formData.get("dispatchNote") || undefined,
+  const dispatchNote = String(formData.get("dispatchNote") ?? "").trim().slice(0, 2000) || null;
+  const { record, authority, signatory } = await assertDispatchable(correspondenceId, user);
+  const generatedAt = new Date();
+  const bytes = await renderOutgoingLetter({
+    referenceNumber: record.referenceNumber,
+    classification: record.classification,
+    subject: record.subject,
+    body: record.body,
+    summary: record.summary,
+    letterDate: record.dateOnDocument ?? record.receivedAt,
+    departmentName: record.sendingDepartmentName ?? record.departmentCorrespondenceProfile!.departmentName,
+    departmentEmail: record.sendingDepartmentEmail ?? record.departmentCorrespondenceProfile!.emailAddress,
+    addressLines: record.sendingDepartmentAddressLines.length ? record.sendingDepartmentAddressLines : record.departmentCorrespondenceProfile!.addressLines,
+    recipient: {
+      name: record.ultimateRecipientName!,
+      organization: record.ultimateRecipientOrganization,
+      email: record.ultimateRecipientEmail!,
+      address: record.ultimateRecipientAddress!,
+    },
+    director: { name: signatory.director.name, signaturePng: Buffer.from(signatory.signature.imageBytes) },
+    finalizedBy: user.name,
+    generatedAt,
+    logoPng: await itfLogoPng(),
   });
-  const record = await assertDispatchable(correspondenceId);
-  if (parsed.channel === DispatchChannel.OFFICIAL_EMAIL && !z.email().safeParse(parsed.recipientEmail).success) {
-    throw new Error("A valid recipient email is required for official email dispatch.");
-  }
-  if (
-    (parsed.channel === DispatchChannel.PHYSICAL_DELIVERY || parsed.channel === DispatchChannel.COURIER) &&
-    !parsed.recipientAddress
-  ) {
-    throw new Error("A recipient address is required for physical or courier dispatch.");
-  }
+  const safeReference = record.referenceNumber.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const stored = await storeSystemGeneratedPdf({
+    correspondenceId,
+    recordFileId: record.recordFileId,
+    originalName: `${safeReference}-official-outgoing-letter.pdf`,
+    bytes,
+  });
   const context = await requestContext();
   await db.$transaction(async (tx) => {
     const year = new Date().getFullYear();
     const count = await tx.dispatchRecord.count({ where: { outgoingReference: { startsWith: `ITF/OUT/${year}/` } } });
     const outgoingReference = `ITF/OUT/${year}/${String(count + 1).padStart(6, "0")}`;
+    await tx.attachment.updateMany({ where: { correspondenceId, isOutgoingLetterPreview: true, isIncluded: true }, data: { isIncluded: false } });
+    const officialLetter = await tx.attachment.create({ data: {
+      correspondenceId,
+      ...stored,
+      isOutgoingLetterFinal: true,
+      processingStatus: DocumentProcessingStatus.AVAILABLE,
+      malwareScanStatus: MalwareScanStatus.BYPASSED,
+      detectedMimeType: "application/pdf",
+      processedAt: generatedAt,
+      documentEvents: { create: {
+        type: "RELEASED",
+        detail: "Final departmental letterhead output signed under the Director's authority and released for official email dispatch.",
+        metadata: { directorId: signatory.director.id, directorName: signatory.director.name, signatureProfileId: signatory.signature.id, signatureProfileVersion: signatory.signature.version, finalizedById: user.id, departmentProfileVersion: record.departmentCorrespondenceProfileVersion, ...authorityMetadata(authority) },
+      } },
+    } });
     const dispatch = await tx.dispatchRecord.create({
-      data: { correspondenceId, outgoingReference, createdById: user.id, ...parsed },
+      data: {
+        correspondenceId,
+        outgoingReference,
+        createdById: user.id,
+        channel: DispatchChannel.OFFICIAL_EMAIL,
+        recipientName: record.ultimateRecipientName!,
+        recipientOrganization: record.ultimateRecipientOrganization,
+        recipientEmail: record.ultimateRecipientEmail!,
+        recipientAddress: record.ultimateRecipientAddress!,
+        dispatchNote,
+      },
     });
-    if (parsed.channel === DispatchChannel.OFFICIAL_EMAIL && parsed.recipientEmail) {
-      const sensitive = record.classification === Classification.CONFIDENTIAL || record.classification === Classification.SECRET;
-      await tx.emailOutbox.create({ data: {
+    const sensitive = record.classification === Classification.CONFIDENTIAL || record.classification === Classification.SECRET;
+    await tx.emailOutbox.createMany({ data: [{
         idempotencyKey: `official-email-dispatch:${dispatch.id}`,
-        toAddress: parsed.recipientEmail,
+        toAddress: record.ultimateRecipientEmail!,
         subject: sensitive ? `Official ITF correspondence ${outgoingReference}` : `${outgoingReference}: ${record.subject}`,
         textBody: [
-          `An official correspondence has been prepared for ${parsed.recipientName}.`,
+          `An official correspondence is attached for ${record.ultimateRecipientName}.`,
           `Reference: ${outgoingReference}`,
-          sensitive ? "The subject and document content are omitted from email because of their classification." : `Subject: ${record.subject}`,
-          "Please contact the Industrial Training Fund through the official channel for the controlled document and delivery confirmation.",
-          "Attachments are not included until the production malware-scanning and document-release gate is operational.",
+          sensitive ? "The subject is omitted from the email message because of its classification." : `Subject: ${record.subject}`,
+          `Sent officially by ${record.sendingDepartmentName ?? record.departmentCorrespondenceProfile!.departmentName}, Industrial Training Fund.`,
         ].join("\n\n"),
-        sourceType: "OFFICIAL_EMAIL_DISPATCH", sourceId: dispatch.id,
-      } });
-    }
+        sourceType: "OFFICIAL_EMAIL_DISPATCH", sourceId: dispatch.id, attachmentId: officialLetter.id,
+      }, {
+        idempotencyKey: `official-email-department-copy:${dispatch.id}`,
+        toAddress: record.sendingDepartmentEmail ?? record.departmentCorrespondenceProfile!.emailAddress,
+        subject: sensitive ? `COPY - Official ITF correspondence ${outgoingReference}` : `COPY - ${outgoingReference}: ${record.subject}`,
+        textBody: [
+          "DEPARTMENTAL COPY - NO ACTION REQUIRED.",
+          `This is the official record copy of an outgoing letter sent to ${record.ultimateRecipientName}${record.ultimateRecipientOrganization ? ` at ${record.ultimateRecipientOrganization}` : ""}.`,
+          `External recipient email: ${record.ultimateRecipientEmail}`,
+          `Reference: ${outgoingReference}`,
+          "The finalized letter is attached for the department's controlled record.",
+        ].join("\n\n"),
+        sourceType: "OFFICIAL_EMAIL_DEPARTMENT_COPY", sourceId: dispatch.id, attachmentId: officialLetter.id,
+      }] });
+    await tx.workItem.update({ where: { id: authority.item.id }, data: { status: WorkItemStatus.COMPLETED, completedAt: generatedAt } });
+    await tx.correspondence.update({ where: { id: correspondenceId }, data: { status: CorrespondenceStatus.RESOLVED, currentOwnerId: null } });
     await tx.correspondenceEvent.create({
       data: {
         correspondenceId,
@@ -1232,15 +1326,41 @@ export async function prepareDispatchAction(formData: FormData) {
         actorType: ActorType.STAFF,
         type: EventType.DISPATCH_PREPARED,
         fromStatus: record.status,
-        toStatus: record.status,
-        minute: parsed.dispatchNote || `Dispatch prepared for ${parsed.recipientName}.`,
-        metadata: { dispatchId: dispatch.id, outgoingReference, channel: parsed.channel },
+        toStatus: CorrespondenceStatus.RESOLVED,
+        minute: dispatchNote || `Finalized under the Director's authority and queued for official email delivery to ${record.ultimateRecipientName}.`,
+        metadata: { dispatchId: dispatch.id, outgoingReference, channel: DispatchChannel.OFFICIAL_EMAIL, officialLetterAttachmentId: officialLetter.id, departmentCopyAddress: record.sendingDepartmentEmail ?? record.departmentCorrespondenceProfile!.emailAddress, directorId: signatory.director.id, finalizedById: user.id, ...authorityMetadata(authority) },
         ...context,
       },
     });
   });
   revalidatePath("/dispatch");
   revalidatePath(`/correspondence/${correspondenceId}`);
+  return correspondenceId;
+}
+
+export type PrepareDispatchState = { status: "idle" | "error"; message: string; attempt: number };
+
+export async function prepareDispatchAction(previous: PrepareDispatchState, formData: FormData): Promise<PrepareDispatchState> {
+  let correspondenceId = String(formData.get("correspondenceId") ?? "");
+  try {
+    correspondenceId = await performPrepareDispatch(formData);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const safe = [
+      "Only the acknowledged Director's desk",
+      "Only outgoing correspondence",
+      "This outgoing letter already",
+      "The sending department's outgoing-letter profile",
+      "The external recipient name",
+      "This correspondence requires a current approval",
+      "Dispatch is blocked until",
+      "The current approval signature",
+      "Configure the department's Director",
+      "The active Director authority",
+    ].some((prefix) => message.startsWith(prefix)) || message.includes("must add an active transparent PNG signature profile");
+    if (!safe) console.error("Outgoing-letter finalization failed unexpectedly.", error);
+    return { status: "error", message: safe ? message : "The outgoing letter could not be finalized. Your record was not dispatched; reload and try again or contact the system administrator.", attempt: previous.attempt + 1 };
+  }
   redirect(`/correspondence/${correspondenceId}`);
 }
 

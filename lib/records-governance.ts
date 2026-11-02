@@ -1,4 +1,5 @@
 import { createHash } from "crypto";
+import { z } from "zod";
 import { CorrespondenceType, RecordCategory, RegistryScope, UltimateRecipientType, type Prisma, type User } from "@/lib/generated/prisma/client";
 
 type FilingActor = Pick<User, "id" | "name" | "department" | "office" | "workspaceDepartmentId" | "staffNumber">;
@@ -80,7 +81,22 @@ export async function resolveUltimateRecipient(formData: FormData, type: Corresp
   const name = bounded(formData.get("ultimateRecipientName"), 200);
   if (!name) throw new Error("Identify the ultimate external recipient or destination office.");
   const organizational = type === CorrespondenceType.INCOMING_LETTER;
-  return { ultimateRecipientType: organizational ? UltimateRecipientType.ORGANIZATIONAL_UNIT : UltimateRecipientType.EXTERNAL_PARTY, ultimateRecipientUserId: null, ultimateRecipientName: name, ultimateRecipientOrgUnitKey: organizational ? `name:${keyPart(name)}` : null, ultimateRecipientOrgUnitName: organizational ? name : null };
+  if (organizational) return { ultimateRecipientType: UltimateRecipientType.ORGANIZATIONAL_UNIT, ultimateRecipientUserId: null, ultimateRecipientName: name, ultimateRecipientOrgUnitKey: `name:${keyPart(name)}`, ultimateRecipientOrgUnitName: name };
+  const organization = bounded(formData.get("ultimateRecipientOrganization"), 200) || null;
+  const email = bounded(formData.get("ultimateRecipientEmail"), 254);
+  const address = bounded(formData.get("ultimateRecipientAddress"), 1000);
+  if (!z.email().safeParse(email).success) throw new Error("Enter a valid email address for the ultimate external recipient.");
+  if (address.length < 5) throw new Error("Enter the external recipient's delivery address for the outgoing letter.");
+  return {
+    ultimateRecipientType: UltimateRecipientType.EXTERNAL_PARTY,
+    ultimateRecipientUserId: null,
+    ultimateRecipientName: name,
+    ultimateRecipientOrgUnitKey: null,
+    ultimateRecipientOrgUnitName: null,
+    ultimateRecipientOrganization: organization,
+    ultimateRecipientEmail: email,
+    ultimateRecipientAddress: address,
+  };
 }
 
 export function recordStorageSegment(recordFileId: string | null | undefined) {

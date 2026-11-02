@@ -398,6 +398,7 @@ model User {
   firstContinuityPlans             DirectorateContinuityPlan[]     @relation("ContinuityFirstSuccessor")
   secondContinuityPlans            DirectorateContinuityPlan[]     @relation("ContinuitySecondSuccessor")
   configuredContinuityPlans        DirectorateContinuityPlan[]     @relation("ContinuityConfigurer")
+  configuredDepartmentProfiles     DepartmentCorrespondenceProfile[] @relation("DepartmentCorrespondenceProfileConfigurer")
   staffAvailability                StaffAvailability?              @relation("AvailabilityOwner")
   changedAvailability              StaffAvailability[]             @relation("AvailabilityChanger")
   availabilityEvents               StaffAvailabilityEvent[]        @relation("AvailabilityEventOwner")
@@ -453,6 +454,24 @@ model DirectorateContinuityPlan {
   @@index([isActive, departmentName])
   @@index([firstSuccessorId, isActive])
   @@index([secondSuccessorId, isActive])
+}
+
+model DepartmentCorrespondenceProfile {
+  id             String   @id @default(cuid())
+  departmentKey  String   @unique
+  departmentName String
+  emailAddress   String
+  addressLines   String[] @default(["Headquarters Office Complex", "Miango Road", "P.M.B. 2199", "Jos, Plateau State", "NIGERIA"])
+  isActive       Boolean  @default(true)
+  version        Int      @default(1)
+  reason         String
+  configuredById String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  configuredBy   User     @relation("DepartmentCorrespondenceProfileConfigurer", fields: [configuredById], references: [id], onDelete: Restrict)
+  correspondence Correspondence[]
+
+  @@index([isActive, departmentName])
 }
 
 model StaffAvailability {
@@ -926,6 +945,15 @@ model Correspondence {
   ultimateRecipientName        String?
   ultimateRecipientOrgUnitKey  String?
   ultimateRecipientOrgUnitName String?
+  ultimateRecipientOrganization String?
+  ultimateRecipientEmail        String?
+  ultimateRecipientAddress      String?
+  sendingDepartmentKey          String?
+  sendingDepartmentName         String?
+  sendingDepartmentEmail        String?
+  sendingDepartmentAddressLines String[] @default([])
+  departmentCorrespondenceProfileId String?
+  departmentCorrespondenceProfileVersion Int?
   recordFileId                 String?
   createdAt                    DateTime               @default(now())
   updatedAt                    DateTime               @updatedAt
@@ -937,6 +965,7 @@ model Correspondence {
   workflowTemplateVersion    WorkflowTemplateVersion?    @relation(fields: [workflowTemplateVersionId], references: [id], onDelete: SetNull)
   workflowCategory           WorkflowCategory?           @relation(fields: [workflowCategoryId], references: [id], onDelete: SetNull)
   ultimateRecipient          User?                       @relation("UltimateRecipient", fields: [ultimateRecipientUserId], references: [id], onDelete: SetNull)
+  departmentCorrespondenceProfile DepartmentCorrespondenceProfile? @relation(fields: [departmentCorrespondenceProfileId], references: [id], onDelete: SetNull)
   recordFile                 RecordFile?                 @relation(fields: [recordFileId], references: [id], onDelete: SetNull)
   attachments                Attachment[]
   workItems                  WorkItem[]
@@ -961,6 +990,7 @@ model Correspondence {
   @@index([classification])
   @@index([workflowCategoryId, status])
   @@index([ultimateRecipientUserId, status])
+  @@index([departmentCorrespondenceProfileId, status])
   @@index([recordFileId, status])
 }
 
@@ -1143,14 +1173,19 @@ model Attachment {
   processingError    String?
   isIncluded         Boolean                  @default(true)
   isMemoPacket       Boolean                  @default(false)
+  isOutgoingLetterPreview Boolean             @default(false)
+  isOutgoingLetterFinal Boolean               @default(false)
   createdAt          DateTime                 @default(now())
   correspondence     Correspondence           @relation(fields: [correspondenceId], references: [id], onDelete: Cascade)
   documentEvents     DocumentEvent[]
   sourceAnnotations  DocumentAnnotation[]     @relation("DocumentAnnotationSource")
   annotationOutput   DocumentAnnotation?      @relation("DocumentAnnotationOutput")
+  emailOutbox        EmailOutbox[]
 
   @@index([correspondenceId])
   @@index([correspondenceId, isMemoPacket, isIncluded])
+  @@index([correspondenceId, isOutgoingLetterPreview, isIncluded])
+  @@index([correspondenceId, isOutgoingLetterFinal, isIncluded])
   @@index([processingStatus, nextProcessingAt])
   @@index([malwareScanStatus, processingStatus])
 }
@@ -1470,12 +1505,15 @@ model EmailOutbox {
   lastErrorCode  String?
   sourceType     String
   sourceId       String
+  attachmentId   String?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
   attempts       EmailDeliveryAttempt[]
+  attachment     Attachment?             @relation(fields: [attachmentId], references: [id], onDelete: SetNull)
 
   @@index([status, nextAttemptAt])
   @@index([sourceType, sourceId])
+  @@index([attachmentId])
 }
 
 model EmailDeliveryAttempt {

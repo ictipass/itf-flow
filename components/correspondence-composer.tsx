@@ -24,6 +24,9 @@ type InitialDraft = {
   copyRecipients: DirectoryPerson[];
   ultimateRecipient?: DirectoryPerson | null;
   ultimateRecipientName?: string;
+  ultimateRecipientOrganization?: string;
+  ultimateRecipientEmail?: string;
+  ultimateRecipientAddress?: string;
   recordCategory?: string;
   recordSubject?: DirectoryPerson | null;
   filePlanCode?: string;
@@ -72,21 +75,21 @@ export function CorrespondenceComposer({
     });
   }
 
-  async function previewMemo() {
+  async function previewDocument() {
     if (!formRef.current) return;
     setPreviewError("");
     setPreviewing(true);
     const previewWindow = window.open("", "_blank");
     try {
       const response = await fetch("/api/memo-preview", { method: "POST", body: new FormData(formRef.current) });
-      if (!response.ok) throw new Error((await response.text()) || "Memo preview could not be generated.");
+      if (!response.ok) throw new Error((await response.text()) || "Document preview could not be generated.");
       const url = URL.createObjectURL(await response.blob());
       if (previewWindow) previewWindow.location.href = url;
       else window.open(url, "_blank");
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error) {
       previewWindow?.close();
-      setPreviewError(error instanceof Error ? error.message : "Memo preview could not be generated.");
+      setPreviewError(error instanceof Error ? error.message : "Document preview could not be generated.");
     } finally {
       setPreviewing(false);
     }
@@ -112,14 +115,19 @@ export function CorrespondenceComposer({
       <div className="field"><label>Classification</label><select name="classification" defaultValue={initial?.classification ?? "INTERNAL"}><option value="PUBLIC">Public</option><option value="INTERNAL">Internal</option><option value="CONFIDENTIAL">Confidential</option><option value="SECRET">Secret</option></select></div>
       <div className="field"><label>Priority</label><select name="priority" defaultValue={initial?.priority ?? "ROUTINE"}><option value="ROUTINE">Routine</option><option value="URGENT">Urgent</option><option value="IMMEDIATE">Immediate</option></select></div>
       <div className="field span-2"><h2 style={{ marginBottom: 0 }}>Intended endpoint and official filing</h2><small className="muted">The ultimate recipient remains constant while action ownership moves through intermediate desks. Filing identifies the official record owner; it does not grant access by Blob path.</small></div>
-      {documentType === "INTERNAL_MEMO" ? <div className="field span-2"><SingleStaffPicker fieldName="ultimateRecipientUserId" label="Ultimate recipient" hint="Select the staff member for whom the correspondence is finally intended, even when it must first pass through reviewers or approving officers." required initial={initial?.ultimateRecipient} onSelectionChange={() => setDirty(true)} /></div> : <div className="field span-2"><label>{documentType === "INCOMING_LETTER" ? "Ultimate destination office *" : "Ultimate external recipient *"}</label><input name="ultimateRecipientName" defaultValue={initial?.ultimateRecipientName ?? (documentType === "INCOMING_LETTER" ? "Director-General's Office" : "")} required minLength={2} placeholder={documentType === "INCOMING_LETTER" ? "Destination office or organizational unit" : "Person or external organization"} /></div>}
+      {documentType === "INTERNAL_MEMO" ? <div className="field span-2"><SingleStaffPicker fieldName="ultimateRecipientUserId" label="Ultimate recipient" hint="Select the staff member for whom the correspondence is finally intended, even when it must first pass through reviewers or approving officers." required initial={initial?.ultimateRecipient} onSelectionChange={() => setDirty(true)} /></div> : <div className="field span-2"><label>{documentType === "INCOMING_LETTER" ? "Ultimate destination office *" : "Ultimate external recipient *"}</label><input name="ultimateRecipientName" defaultValue={initial?.ultimateRecipientName ?? (documentType === "INCOMING_LETTER" ? "Director-General's Office" : "")} required minLength={2} placeholder={documentType === "INCOMING_LETTER" ? "Destination office or organizational unit" : "Name of the receiving person or office"} /></div>}
+      {documentType === "OUTGOING_LETTER" ? <>
+        <div className="field"><label>Recipient organization</label><input name="ultimateRecipientOrganization" defaultValue={initial?.ultimateRecipientOrganization} placeholder="Organization, agency or company" /></div>
+        <div className="field"><label>Recipient email *</label><input name="ultimateRecipientEmail" type="email" defaultValue={initial?.ultimateRecipientEmail} required placeholder="recipient@example.org" /><small className="muted">This governed external delivery address cannot be replaced at final dispatch.</small></div>
+        <div className="field span-2"><label>Recipient postal / office address *</label><textarea name="ultimateRecipientAddress" defaultValue={initial?.ultimateRecipientAddress} required minLength={5} placeholder="Full address printed on the outgoing letter" /></div>
+      </> : null}
       <div className="field"><label>Official record category</label><select name="recordCategory" value={recordCategory} onChange={(event) => { setRecordCategory(event.target.value); setDirty(true); }}><option value="OFFICE">Office / departmental record</option><option value="PERSONNEL">Personnel record</option><option value="CORPORATE">Corporate record</option><option value="EXTERNAL_CASE">External case file</option></select></div>
       <div className="field"><label>File-plan code *</label><input name="filePlanCode" defaultValue={initial?.filePlanCode ?? "GENERAL-CORRESPONDENCE"} required pattern="[A-Za-z0-9._/-]{3,80}" placeholder="e.g. HR/PERSONNEL/QUERY" /><small className="muted">Use an approved functional classification code, not a Blob folder name.</small></div>
       <div className="field"><label>Retention class *</label><input name="retentionClass" defaultValue={initial?.retentionClass ?? "GENERAL-7Y"} required pattern="[A-Za-z0-9._/-]{3,80}" placeholder="e.g. PERSONNEL-EMPLOYMENT" /></div>
       {recordCategory === "PERSONNEL" ? <div className="field span-2"><SingleStaffPicker fieldName="recordSubjectUserId" label="Personnel-file subject" hint="The official personnel file belongs to this staff member. The creator and ultimate recipient may be different people." required initial={initial?.recordSubject} onSelectionChange={() => setDirty(true)} /></div> : null}
       {recordCategory !== "PERSONNEL" ? <div className="field"><label>Owning office/unit *</label><input name="ownerOrgUnitName" defaultValue={initial?.ownerOrgUnitName ?? defaultOrgUnitName} required minLength={2} placeholder="Department, division, unit or corporate registry" /></div> : null}
       <div className="field span-2"><label>Summary *</label><textarea name="summary" defaultValue={initial?.summary} placeholder="Summarize the request, decision required, and important context" required minLength={10} /></div>
-      <div className="field span-2"><label>Compose memo / transcribe letter</label><RichTextEditor initialHtml={initial?.body} onDirty={() => setDirty(true)} /></div>
+      <div className="field span-2"><label>{documentType === "OUTGOING_LETTER" ? "Compose outgoing letter" : "Compose memo / transcribe letter"}</label><RichTextEditor initialHtml={initial?.body} onDirty={() => setDirty(true)} /></div>
       <div className="field span-2"><RecipientSelector
         initialActionRecipients={initial?.actionRecipients}
         initialCopyRecipients={initial?.copyRecipients}
@@ -137,7 +145,7 @@ export function CorrespondenceComposer({
       <div className="field span-2"><label>Supporting document</label><input name="attachment" type="file" accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png" /><small className="muted">PDF and images are normalized into the memo packet. DOCX/XLSX are converted when the governed converter is enabled.</small></div>
       <div className="actions span-2">
         <button className="btn secondary" type="submit" formAction={saveDraftAction} formNoValidate>Save draft</button>
-        {documentType === "INTERNAL_MEMO" ? <button className="btn secondary" type="button" onClick={previewMemo} disabled={previewing}>{previewing ? "Preparing preview…" : "Preview memo PDF"}</button> : null}
+        {documentType === "INTERNAL_MEMO" || documentType === "OUTGOING_LETTER" ? <button className="btn secondary" type="button" onClick={previewDocument} disabled={previewing}>{previewing ? "Preparing preview…" : documentType === "OUTGOING_LETTER" ? "Preview letterhead PDF" : "Preview memo PDF"}</button> : null}
         <button className="btn" type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Submit through reporting line"}</button>
         {initial ? <span className="muted" aria-live="polite">{saving ? "Saving…" : savedAt ? `Autosaved ${new Date(savedAt).toLocaleTimeString("en-NG")}` : dirty ? "Unsaved changes" : "Draft saved"}</span> : null}
       </div>

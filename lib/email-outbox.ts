@@ -1,7 +1,9 @@
 import nodemailer from "nodemailer";
+import { createHash } from "crypto";
 import { ActorType, DispatchStatus, EmailOutboxStatus, EventType } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
 import { getMailConfiguration, isMailEnabled } from "@/lib/mail-config";
+import { readStoredDocument } from "@/lib/document-storage";
 
 function errorCode(error: unknown) {
   if (!error || typeof error !== "object") return "UNKNOWN";
@@ -22,6 +24,7 @@ export async function processEmailOutbox(limit = 20) {
       { status: { in: [EmailOutboxStatus.QUEUED, EmailOutboxStatus.FAILED] }, nextAttemptAt: { lte: new Date() } },
       { status: EmailOutboxStatus.PROCESSING, lockedAt: { lt: new Date(Date.now() - 10 * 60_000) } },
     ] },
+    include: { attachment: true },
     orderBy: { createdAt: "asc" }, take: Math.min(Math.max(limit, 1), 100),
   });
   let sent = 0;
@@ -34,7 +37,19 @@ export async function processEmailOutbox(limit = 20) {
     if (claimed.count !== 1) continue;
     const attempt = candidate.attemptCount + 1;
     try {
-      await transport.sendMail({ from: config.username, to: candidate.toAddress, subject: candidate.subject, text: candidate.textBody });
+      const document = candidate.attachment
+        ? await readStoredDocument(candidate.attachment.storageKey, candidate.attachment.storageProvider)
+        : null;
+      if (document && createHash("sha256").update(document).digest("hex") !== candidate.attachment!.sha256) {
+        throw Object.assign(new Error("The queued email attachment failed integrity verification."), { code: "ATTACHMENT_INTEGRITY_FAILED" });
+      }
+      await transport.sendMail({
+        from: config.username,
+        to: candidate.toAddress,
+        subject: candidate.subject,
+        text: candidate.textBody,
+        attachments: document ? [{ filename: candidate.attachment!.originalName, content: document, contentType: candidate.attachment!.mimeType }] : undefined,
+      });
       const acceptedAt = new Date();
       await db.$transaction(async (tx) => {
         await tx.emailOutbox.update({ where: { id: candidate.id }, data: { status: EmailOutboxStatus.SENT, sentAt: acceptedAt, lockedAt: null, lastErrorCode: null } });

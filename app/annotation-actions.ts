@@ -133,6 +133,8 @@ export async function annotateAttachmentAction(formData: FormData) {
         correspondenceId: source.correspondenceId,
         ...stored,
         isMemoPacket: source.isMemoPacket,
+        isOutgoingLetterPreview: source.isOutgoingLetterPreview,
+        isOutgoingLetterFinal: source.isOutgoingLetterFinal,
         documentEvents: {
           create: {
             type: DocumentEventType.ANNOTATED,

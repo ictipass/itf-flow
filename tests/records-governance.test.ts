@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { Classification, RecordCategory, RegistryScope } from "../lib/generated/prisma/client";
-import { parseFilingInput, recordStorageSegment, registryCanRead } from "../lib/records-governance";
+import { Classification, CorrespondenceType, RecordCategory, RegistryScope, UltimateRecipientType } from "../lib/generated/prisma/client";
+import { parseFilingInput, recordStorageSegment, registryCanRead, resolveUltimateRecipient } from "../lib/records-governance";
 
 const actor = { id: "staff-1", name: "Staff One", department: "ICT", office: "Headquarters", workspaceDepartmentId: "dept-ict", staffNumber: "06579" };
 
@@ -25,6 +25,26 @@ test("official filing separates personnel subject from creator and organizationa
 test("Blob record-file segment uses an immutable internal identifier", () => {
   assert.equal(recordStorageSegment("cm-file-123"), "file-cm-file-123");
   assert.equal(recordStorageSegment(null), "unfiled");
+});
+
+test("outgoing letters require a governed external email and printed address", async () => {
+  const form = new FormData();
+  form.set("ultimateRecipientName", "The Managing Director");
+  form.set("ultimateRecipientOrganization", "Example Limited");
+  form.set("ultimateRecipientEmail", "md@example.org");
+  form.set("ultimateRecipientAddress", "1 Example Road, Abuja");
+  assert.deepEqual(await resolveUltimateRecipient(form, CorrespondenceType.OUTGOING_LETTER), {
+    ultimateRecipientType: UltimateRecipientType.EXTERNAL_PARTY,
+    ultimateRecipientUserId: null,
+    ultimateRecipientName: "The Managing Director",
+    ultimateRecipientOrgUnitKey: null,
+    ultimateRecipientOrgUnitName: null,
+    ultimateRecipientOrganization: "Example Limited",
+    ultimateRecipientEmail: "md@example.org",
+    ultimateRecipientAddress: "1 Example Road, Abuja",
+  });
+  form.set("ultimateRecipientEmail", "not-an-email");
+  await assert.rejects(() => resolveUltimateRecipient(form, CorrespondenceType.OUTGOING_LETTER), /valid email address/);
 });
 
 test("Open Registry excludes Confidential and Secret while Secret Registry permits all", () => {
