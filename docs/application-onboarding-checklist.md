@@ -84,6 +84,9 @@ This contract applies to JavaScript, .NET, Java, Python, PHP, low-code, and lega
 
 - Assign one active Department Secretary to every department that receives Public/Internal executive routing.
 - Configure every Directorate continuity chain in ITF Flow: Director, first next-in-line, second next-in-line and explicit approval grants.
+- Configure every department's **Department letterheads** profile: official department email, printed address, reason and active continuity plan.
+- Confirm every substantive Director who signs outgoing letters has an active transparent PNG signature profile.
+- Test the external-recipient and departmental-copy SMTP deliveries with the final PDF attachment before production activation.
 - Test Director unavailable, Director plus first successor unavailable, no eligible successor, restricted classification and approval routing.
 - Treat ITF Flow administration as the controlled interim source. Add the approved succession structure to the Workspace/HR directory contract before retiring local administration.
 

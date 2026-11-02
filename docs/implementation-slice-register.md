@@ -63,6 +63,7 @@ another developer without depending on unfinished work from a later slice.
 | S31A1 | Annotation authentication policy and safe routing feedback | Implemented; migration/deployment pending | `e093018`; safe-default per-role DG/Director/Division Head policy with audited administrative relaxation; retained-form routing error toast for classification reason, missing Department Secretary and restricted copies; corrected DG labels; 57 assurance tests/full verification passed. See [`slices/S31A1-annotation-policy-routing-feedback.md`](slices/S31A1-annotation-policy-routing-feedback.md) |
 | S31A2 | Stylus annotation, reliable in-app rendering and routing-minute reuse | Implemented; migration/deployment pending | `904d7d3`; PDF.js canvas removes self-frame failure, stylus/touch/mouse ink is embedded and hashed, typed text is optional with ink, and a current actor's included annotation can supply the next routing minute; 59 assurance tests/full verification passed. See [`slices/S31A2-stylus-annotation-routing-reuse.md`](slices/S31A2-stylus-annotation-routing-reuse.md) |
 | S31A3 | Advanced annotation controls | Implemented; migration/deployment pending | `d2189ab`; pen/eraser, stroke undo/redo and draggable bounded custom minute-block placement with signed normalized coordinates. Combined verification: 71 assurance tests and full 48-route build. See [`slices/S31A3-advanced-annotation-controls.md`](slices/S31A3-advanced-annotation-controls.md) |
+| S33 | Departmental outgoing-letterhead and Director-finalized dispatch | Implemented; migration/deployment pending | `334dd56`; external ultimate-recipient name/email/address, administrator-controlled department letterhead/copy mailbox, working preview, DG bypass, continuity-aware Director finalization, substantive Director visual signature, `For: Director-General/CE`, attached official email and clearly labelled departmental copy. See [`slices/S33-departmental-outgoing-letterhead-dispatch.md`](slices/S33-departmental-outgoing-letterhead-dispatch.md) |
 
 The working tree and `git log` remain the final authority if a commit shown here is later superseded.
 
@@ -141,6 +142,7 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S30 | Approved visual-signature profile and memo output | Implemented locally; staging policy/template acceptance and migration pending |
 | S31B | Certificate-backed PDF signing | Policy-gated; do not implement before Legal/management approve CA, timestamp, key custody, revocation and archival validation. See [`slices/S31B-certificate-backed-signing-policy-gate.md`](slices/S31B-certificate-backed-signing-policy-gate.md) |
 | S32 | Installable PWA baseline and notification readiness | Priority 1; push delivery requires approved service-worker and subscription operations |
+| S33 | Departmental outgoing-letterhead and Director-finalized dispatch | Implemented in `334dd56`; requires migration, department-profile setup and live SMTP acceptance |
 
 ## Readiness tracks that remain active across all slices
 

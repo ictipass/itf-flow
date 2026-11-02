@@ -77,8 +77,15 @@ Announcements, Raise correspondence and How it works. Additional operational lin
    versions, minutes and superseded decisions remain auditable.
 8. **Resolve:** the final action owner records what was done and selects **Mark resolved**. Incoming letters and
    internal memos normally finish in `RESOLVED` status.
-9. **Dispatch and close:** an approved outgoing letter proceeds to the Dispatch registry. Secretariat or Records
-   records its channel and delivery outcome; confirmed delivery changes the correspondence to `CLOSED`.
+9. **Finalize an outgoing letter:** outgoing letters use the department letterhead, not the internal memo template.
+   The originator supplies the external ultimate recipient's name, email and printed address, previews the PDF and
+   routes the working copy up the department. The DG is not in this route. The acknowledged Director's desk—or the
+   available next-in-line acting under the configured continuity plan—creates the final signed PDF and queues it to
+   the governed recipient address. The final signature block identifies the substantive Director and ends with
+   `For: Director-General/CE`.
+10. **Send the departmental copy and close:** the same final PDF is queued separately to the administrator-configured
+    department mailbox with `DEPARTMENTAL COPY - NO ACTION REQUIRED`. SMTP acceptance updates the external dispatch;
+    Records/dispatch staff monitor delivery, retry/failure and final confirmation.
 10. **Retain evidence:** the movement register, detailed passage, revisions, decisions, attachment events and any
    physical-file history remain available subject to role and classification controls.
 
@@ -236,8 +243,9 @@ Expected control: DG access includes Secret correspondence, but every action rem
 4. Review suggested duplicates. Confirming a duplicate prevents it being registered as a new DG submission;
    clearing it records the decision and reason.
 5. Print the QR file label. On each physical transfer, record the new location and a meaningful reason.
-6. For outgoing correspondence, open **Dispatch registry**, prepare the authorized delivery channel and
-   recipient, then record dispatched, delivered or failed status.
+6. For outgoing correspondence, monitor **Dispatch registry** after the Director's desk has finalized the signed
+   letter. The external recipient was already governed at origination; dispatch/Records staff monitor queued,
+   dispatched, delivered or failed status rather than replacing the destination.
 
 Expected control: approval-controlled outgoing correspondence cannot use a missing or superseded approval.
 
@@ -248,19 +256,23 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
    require a reason and affect future movements only.
 3. Use **Directorate continuity** to assign the Director, first next-in-line and second next-in-line for every
    Directorate. Grant successor approval authority only where the approved instrument allows it.
-4. Use **Appearance** to preview a UI privately, then activate Classic, Modern, Soft UI or Glass for staff
+4. Use **Department letterheads** to configure each department's official email and printed address. That mailbox
+   receives a clearly labelled record copy of every official outgoing email from the department.
+5. Confirm each substantive Director has an active transparent PNG **Signature profile**. If a next-in-line officer
+   finalizes a letter, Flow uses the substantive Director's name/signature and records both identities.
+6. Use **Appearance** to preview a UI privately, then activate Classic, Modern, Soft UI or Glass for staff
    with a recorded reason.
-5. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
+7. Use **Document security → Annotation security policy** to require or relax strong annotation authentication for
    DG, Directors and Division Heads independently. Give a reason for every change. Enforcement is the safe default;
    the audit trail records old/new role sets, administrator and time.
-6. Use **Signature governance** to audit submitted signatures and staff identity. Staff submissions activate
+8. Use **Signature governance** to audit submitted signatures and staff identity. Staff submissions activate
    immediately; revoke a signature with a reason when it must no longer be used. Replacement versions supersede the
    earlier active profile for future outputs while retaining its history.
-7. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
-8. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
-9. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
-10. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
-11. Use **Records governance** to appoint Open or Secret Registry staff, set expiry/revoke appointments with reasons,
+9. Use **Reminder automation** to configure due-soon and escalation timing and inspect run results.
+10. Use **Email outbox** to process queued messages, retry failures and inspect dead-letter delivery.
+11. Keep worker secrets, mail credentials, session secrets and Workspace signing keys outside source control.
+12. Use **Production assurance** to record evidence references and verify that unresolved or expired gates prevent a production-ready decision.
+13. Use **Records governance** to appoint Open or Secret Registry staff, set expiry/revoke appointments with reasons,
     and enable or relax Secret Registry MFA. Open Registry is limited to Public/Internal; Secret Registry can retrieve
     all classifications. Blob credentials are never given to registry staff.
 
