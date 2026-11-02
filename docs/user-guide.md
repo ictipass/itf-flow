@@ -251,6 +251,11 @@ Expected control: approval-controlled outgoing correspondence cannot use a missi
 
 ## System administrator
 
+Before enabling staff use, complete the authoritative
+[`system-administrator-onboarding-checklist.md`](system-administrator-onboarding-checklist.md). It orders Workspace,
+infrastructure, organizational routing, records, workers and acceptance configuration so dependent controls are not
+enabled prematurely.
+
 1. Use **Provisioning admin** to inspect directory synchronization and active organizational assignments.
 2. Use **Department Secretaries** to assign one active Secretary per department. Replacements and deactivations
    require a reason and affect future movements only.

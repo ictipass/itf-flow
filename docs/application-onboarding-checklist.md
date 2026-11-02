@@ -82,6 +82,8 @@ This contract applies to JavaScript, .NET, Java, Python, PHP, low-code, and lega
 
 ## ITF Flow take-off registers
 
+- Complete the dependency-ordered [`system-administrator-onboarding-checklist.md`](system-administrator-onboarding-checklist.md)
+  for each environment and retain its evidence in the approved release/assurance record.
 - Assign one active Department Secretary to every department that receives Public/Internal executive routing.
 - Configure every Directorate continuity chain in ITF Flow: Director, first next-in-line, second next-in-line and explicit approval grants.
 - Configure every department's **Department letterheads** profile: official department email, printed address, reason and active continuity plan.

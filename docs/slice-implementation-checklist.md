@@ -177,6 +177,8 @@ reason; it is not a substitute for checking the item.
 - [ ] Update `.env.example` and environment doctor.
 - [ ] Update cross-machine handover for new services, data or secrets.
 - [ ] Update operator/admin runbooks.
+- [ ] Review and update `docs/system-administrator-onboarding-checklist.md` whenever the slice changes environment
+  variables, administrator pages, roles, workers, services, policy choices or take-off dependencies.
 - [ ] Update stakeholder capabilities and honest MVP boundaries.
 - [ ] Update live-demo steps, seeded roles and expected outcomes.
 - [ ] Update "do not claim" statements.
