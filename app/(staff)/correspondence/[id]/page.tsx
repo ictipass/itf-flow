@@ -32,6 +32,9 @@ import { richTextHtml, richTextPlainText } from "@/lib/rich-text";
 import { memoPacketIncludedAttachmentIds } from "@/lib/memo-packet-metadata";
 import { registryAuthorizationFor } from "@/lib/registry-access";
 import { isCurrentlyAvailable } from "@/lib/office-continuity";
+import { refileCorrespondenceAction } from "@/app/records-catalogue-actions";
+import { activeOrganizationUnitOptions, activeRecordSeriesOptions, canManageRecordsCatalogue } from "@/lib/records-catalogue";
+import { SingleStaffPicker } from "@/components/single-staff-picker";
 
 function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; isOutgoingLetterPreview: boolean; isOutgoingLetterFinal: boolean; processingStatus: string; malwareScanStatus: string }) {
   if (!file.isIncluded) return "This document was excluded from the controlled correspondence package.";
@@ -47,10 +50,11 @@ function attachmentGuidance(file: { isIncluded: boolean; isMemoPacket: boolean; 
   return "The document is not yet available. Viewing and download are enabled only after it is marked Available and Clean, or Available with an explicit bypass.";
 }
 
-export default async function DetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
   const enterpriseMfaActive = await hasActiveEnterpriseMfa();
   const { id } = await params;
+  const query = await searchParams;
   const record = await db.correspondence.findUnique({
     where: { id },
     include: {
@@ -70,7 +74,13 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       workflowCategory: true,
       workflowTemplateVersion: { include: { template: true } },
       ultimateRecipient: true,
-      recordFile: { include: { subjectUser: true } },
+      recordFile: {
+        include: {
+          recordSeries: true,
+          retentionPolicy: true,
+          subjectUser: { include: { legacyPersonnelFiles: { where: { isActive: true }, orderBy: [{ legacyUnit: "asc" }, { boxNumber: "asc" }] } } },
+        },
+      },
       documentAnnotations: { include: { sourceAttachment: true, outputAttachment: true, signer: true }, orderBy: { version: "desc" } },
       memoOutputs: { include: { generatedBy: true, originator: true, signatureProfile: true }, orderBy: { version: "desc" } },
     },
@@ -97,6 +107,10 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
   const sensitivePolicy = registryAuthorization.allowed ? { allowed: true, needsStepUp: false } : await canAccessSensitiveRecord({ user, classification: record.classification, createdById: record.createdById, hasAccessGroups: record.accessGroups.length > 0, groupMemberIds: [...new Set(record.accessGroups.flatMap((item) => item.group.isActive ? item.group.members.map((member) => member.userId) : []))] });
   if (sensitivePolicy.needsStepUp) redirect(`/step-up?returnTo=${encodeURIComponent(`/correspondence/${record.id}`)}`);
   if (!sensitivePolicy.allowed) notFound();
+  const mayRefile = canManageRecordsCatalogue(user.role) && (user.role === UserRole.SYSTEM_ADMIN || registryAuthorization.allowed);
+  const [recordSeriesOptions, organizationUnits] = mayRefile
+    ? await Promise.all([activeRecordSeriesOptions(), activeOrganizationUnitOptions()])
+    : [[], []];
   if (record.classification === "CONFIDENTIAL" || record.classification === "SECRET") await logSensitiveAccess({ correspondenceId: record.id, userId: user.id, type: "VIEW", detail: "Correspondence detail viewed" });
   const activeStatuses: WorkItemStatus[] = [WorkItemStatus.OPEN, WorkItemStatus.ACKNOWLEDGED];
   const activeActionItem = record.workItems.find(
@@ -145,7 +159,25 @@ export default async function DetailPage({ params }: { params: Promise<{ id: str
       {record.emailMessage ? <p className="notice">Imported from email. External content and attachments are untrusted until production malware scanning is enabled.</p> : null}
       {record.accessGroups.length ? <p className="notice">Need-to-know restriction: {record.accessGroups.map((item) => item.group.name).join(", ")}.</p> : null}
       {record.workflowCategory && record.workflowTemplateVersion ? <p className="notice">Workflow policy: <strong>{record.workflowCategory.name}</strong> · {record.workflowTemplateVersion.template.name} version {record.workflowTemplateVersion.version} · deadline {record.dueAt?.toLocaleDateString("en-NG") ?? "not set"}.</p> : null}
-      <section className="card" style={{ marginTop: 18 }}><div className="form-grid"><div><small className="muted">Ultimate recipient</small><strong style={{ display: "block", marginTop: 4 }}>{record.ultimateRecipient?.name ?? record.ultimateRecipientName ?? "Not assigned"}</strong><small className="muted">{record.ultimateRecipientOrganization ?? record.ultimateRecipientOrgUnitName ?? record.ultimateRecipient?.department ?? record.ultimateRecipient?.office}</small>{record.ultimateRecipientEmail ? <small className="registry-secondary">{record.ultimateRecipientEmail}</small> : null}{record.ultimateRecipientAddress ? <small className="registry-secondary">{record.ultimateRecipientAddress}</small> : null}</div><div><small className="muted">Official record file</small><strong style={{ display: "block", marginTop: 4 }}>{record.recordFile?.label ?? "Unfiled legacy record"}</strong><small className="muted">{record.recordFile ? `${label(record.recordFile.category)} · ${record.recordFile.retentionClass}${record.recordFile.subjectUser ? ` · Subject: ${record.recordFile.subjectUser.name}` : ""}` : "Assign through records governance before archival transfer."}</small></div></div></section>
+      {query.refiled ? <p className="notice success">The official filing was corrected. The previous and new file identifiers, catalogue version and reason were added to the audit trail.</p> : null}
+      {query.refileError ? <p className="notice error">The filing was not changed. Select a different active series/owner combination and provide every field required by that category.</p> : null}
+      <section className="card" style={{ marginTop: 18 }}>
+        <div className="form-grid">
+          <div><small className="muted">Ultimate recipient</small><strong style={{ display: "block", marginTop: 4 }}>{record.ultimateRecipient?.name ?? record.ultimateRecipientName ?? "Not assigned"}</strong><small className="muted">{record.ultimateRecipientOrganization ?? record.ultimateRecipientOrgUnitName ?? record.ultimateRecipient?.department ?? record.ultimateRecipient?.office}</small>{record.ultimateRecipientEmail ? <small className="registry-secondary">{record.ultimateRecipientEmail}</small> : null}{record.ultimateRecipientAddress ? <small className="registry-secondary">{record.ultimateRecipientAddress}</small> : null}</div>
+          <div>
+            <small className="muted">Official record file</small>
+            <strong style={{ display: "block", marginTop: 4 }}>{record.recordFile?.label ?? "Unfiled legacy record"}</strong>
+            {record.recordFile ? <>
+              <small className="registry-secondary">{label(record.recordFile.category)} · {record.recordFile.recordSeries?.title ?? record.recordFile.filePlanCode} · series v{record.recordFile.recordSeriesVersion ?? "legacy"}</small>
+              <small className="registry-secondary">Retention: {record.recordFile.retentionPolicy?.name ?? record.recordFile.retentionClass}{record.recordFile.retentionPolicyVersion ? ` · policy v${record.recordFile.retentionPolicyVersion}` : ""}</small>
+              <small className="registry-secondary">Records owner: {record.recordFile.ownerOrgUnitName ?? "Not recorded"}</small>
+              {record.recordFile.subjectUser ? <small className="registry-secondary">Subject: {record.recordFile.subjectUser.name} · {record.recordFile.subjectUser.staffNumber ?? record.recordFile.subjectUser.email}</small> : null}
+              {record.recordFile.subjectUser?.legacyPersonnelFiles.length ? <details style={{ marginTop: 8 }}><summary>Legacy personnel boxes ({record.recordFile.subjectUser.legacyPersonnelFiles.length})</summary>{record.recordFile.subjectUser.legacyPersonnelFiles.map((legacyFile) => <small className="registry-secondary" key={legacyFile.id}>{legacyFile.legacyUnit} / {legacyFile.boxCategory} / {legacyFile.boxNumber}{legacyFile.fileVolume ? ` / ${legacyFile.fileVolume}` : ""} · ref {legacyFile.legacyRefId}</small>)}</details> : null}
+            </> : <small className="muted">Assign through records governance before archival transfer.</small>}
+          </div>
+        </div>
+      </section>
+      {mayRefile ? <details className="card" style={{ marginTop: 14 }}><summary><strong>Correct official filing</strong></summary><p className="muted">Records Administration may correct a wrong category, series, owner or personnel subject. This changes the filing link only; it does not rewrite correspondence history or move legacy EDMS objects.</p><form action={refileCorrespondenceAction} className="form-grid" style={{ marginTop: 14 }}><input type="hidden" name="correspondenceId" value={record.id} /><div className="field"><label>Approved record series</label><select name="recordSeriesId" required defaultValue=""><option value="">Select active series…</option>{recordSeriesOptions.map((series) => <option key={series.id} value={series.id}>{series.category.replaceAll("_", " ")} · {series.title} · {series.code} v{series.version}</option>)}</select></div><div className="field"><label>Records-owning office/unit</label><select name="ownerOrgUnitKey" required defaultValue=""><option value="">Select synchronized office or unit…</option>{organizationUnits.map((organization) => <option key={organization.key} value={organization.key}>{organization.name} · {organization.level.toLowerCase()}</option>)}</select><small className="muted">A series-configured default owner takes precedence.</small></div><div className="field span-2"><SingleStaffPicker fieldName="recordSubjectUserId" label="Personnel-file subject, when applicable" hint="Required only when the selected series is Personnel." /></div><div className="field span-2"><label>Correction reason</label><textarea name="reason" required minLength={10} placeholder="State what was wrong, the approved correction and authority reference." /></div><button className="btn" type="submit">Apply audited re-filing</button></form></details> : null}
       {activeDelegation ? <p className="notice">Acting authority: you are handling this item for <strong>{activeDelegation.principal.name}</strong> through the <strong>{activeDelegation.officeLabel}</strong> desk until {activeDelegation.endsAt.toLocaleString("en-NG")}.{activeDelegation.canApprove ? " Formal approval authority is enabled." : " Formal approval authority is not delegated."}</p> : null}
       {record.status === CorrespondenceStatus.SUBMITTED ? (
         <section className="handler-strip">

@@ -3,16 +3,21 @@ import { canOriginate, canRegister } from "@/lib/permissions";
 import { requireUser } from "@/lib/session";
 import { UserRole } from "@/lib/generated/prisma/client";
 import { db } from "@/lib/db";
+import { activeOrganizationUnitOptions, activeRecordSeriesOptions, preferredOrganizationUnitKey } from "@/lib/records-catalogue";
 
 export default async function NewCorrespondencePage() {
   const user = await requireUser();
   if (!canOriginate(user.role)) return <div className="notice">You cannot raise correspondence.</div>;
   const isRegistrar = canRegister(user.role);
-  const categories = await db.workflowCategory.findMany({ where: { isActive: true }, select: { code: true, name: true, correspondenceType: true, routineSlaDays: true, urgentSlaDays: true, immediateSlaDays: true }, orderBy: { code: "asc" } });
+  const [categories, recordSeriesOptions, organizationUnits] = await Promise.all([
+    db.workflowCategory.findMany({ where: { isActive: true }, select: { code: true, name: true, correspondenceType: true, routineSlaDays: true, urgentSlaDays: true, immediateSlaDays: true }, orderBy: { code: "asc" } }),
+    activeRecordSeriesOptions(),
+    activeOrganizationUnitOptions(),
+  ]);
   return <>
     <span className="eyebrow">{isRegistrar ? "Secretariat intake or internal origination" : "Internal origination"}</span>
     <h1>Raise correspondence</h1>
     <p className="muted">Save unfinished work privately, then submit it through your synchronized formal reporting line when ready. If action-recipient search is empty, ask the Workspace administrator to verify your supervisor and Flow role, then synchronize the directory.</p>
-    <CorrespondenceComposer userName={user.name} defaultOrgUnitName={user.department ?? user.division ?? user.unit ?? user.office} isRegistrar={isRegistrar} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} categories={categories} />
+    <CorrespondenceComposer userName={user.name} defaultOwnerOrgUnitKey={preferredOrganizationUnitKey(user)} isRegistrar={isRegistrar} canReferToPeers={user.role === UserRole.DIRECTOR || user.role === UserRole.DIVISION_HEAD} categories={categories} recordSeriesOptions={recordSeriesOptions} organizationUnits={organizationUnits} />
   </>;
 }

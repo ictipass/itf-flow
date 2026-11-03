@@ -5,6 +5,7 @@ import { getApplicationConfiguration } from "@/lib/appearance";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function RecordsAdministrationPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const actor = await requireUser();
@@ -20,6 +21,7 @@ export default async function RecordsAdministrationPage({ searchParams }: { sear
   return <>
     <span className="eyebrow">Records governance</span><h1>Open and Secret Registry access</h1>
     <p className="muted">Appointments authorize retrieval through ITF Flow; they never expose direct Blob credentials. Open Registry can retrieve Public/Internal records. Secret Registry can retrieve all classifications, with audited MFA policy.</p>
+    <div className="actions"><Link className="btn secondary" href="/records/catalogue">Manage file plan, retention and legacy staff boxes</Link></div>
     {query.created || query.revoked || query.policy ? <p className="notice success">Records governance was updated and audited.</p> : null}
     {query.error ? <p className="notice error">The request was invalid, stale or unchanged. Review the current values and try again.</p> : null}
     <div className="grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))", marginTop: 18 }}>

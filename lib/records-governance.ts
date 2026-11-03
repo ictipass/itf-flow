@@ -1,6 +1,8 @@
 import { createHash } from "crypto";
 import { z } from "zod";
 import { CorrespondenceType, RecordCategory, RegistryScope, UltimateRecipientType, type Prisma, type User } from "@/lib/generated/prisma/client";
+import { db } from "@/lib/db";
+import { activeOrganizationUnitOptions } from "@/lib/records-catalogue";
 
 type FilingActor = Pick<User, "id" | "name" | "department" | "office" | "workspaceDepartmentId" | "staffNumber">;
 
@@ -19,6 +21,10 @@ export type FilingInput = {
   subjectUserId: string | null;
   ownerOrgUnitKey: string | null;
   ownerOrgUnitName: string | null;
+  recordSeriesId?: string | null;
+  recordSeriesVersion?: number | null;
+  retentionPolicyId?: string | null;
+  retentionPolicyVersion?: number | null;
 };
 
 export function parseFilingInput(formData: FormData, actor: FilingActor, strict = true): FilingInput | null {
@@ -46,6 +52,59 @@ export function parseFilingInput(formData: FormData, actor: FilingActor, strict 
   return { category, filePlanCode, retentionClass, subjectUserId, ownerOrgUnitKey, ownerOrgUnitName };
 }
 
+export async function resolveCatalogueFilingInput(formData: FormData, actor: FilingActor, strict = true): Promise<FilingInput | null> {
+  const recordSeriesId = bounded(formData.get("recordSeriesId"), 100);
+  if (!recordSeriesId) {
+    if (strict) throw new Error("Select an approved record series for the official file.");
+    return null;
+  }
+  const series = await db.recordSeries.findFirst({
+    where: { id: recordSeriesId, isActive: true, retentionPolicy: { isActive: true } },
+    include: { retentionPolicy: true },
+  });
+  if (!series) {
+    if (strict) throw new Error("The selected record series is unavailable or has been retired. Select an active series.");
+    return null;
+  }
+  const submittedCategory = bounded(formData.get("recordCategory"), 40);
+  if (submittedCategory && submittedCategory !== series.category) {
+    if (strict) throw new Error("The selected record series does not match the official filing category.");
+    return null;
+  }
+  const subjectUserId = series.category === RecordCategory.PERSONNEL
+    ? bounded(formData.get("recordSubjectUserId"), 100) || null
+    : null;
+  if (series.category === RecordCategory.PERSONNEL && !subjectUserId) {
+    if (strict) throw new Error("A personnel record must identify the staff member whose official file owns it.");
+    return null;
+  }
+
+  const requestedOwnerKey = bounded(formData.get("ownerOrgUnitKey"), 200);
+  const ownerOrgUnitKey = series.defaultOwnerOrgUnitKey || requestedOwnerKey || null;
+  const organizations = await activeOrganizationUnitOptions();
+  const selectedOrganization = ownerOrgUnitKey ? organizations.find((item) => item.key === ownerOrgUnitKey) : null;
+  const ownerOrgUnitName = series.defaultOwnerOrgUnitKey
+    ? series.defaultOwnerOrgUnitName
+    : selectedOrganization?.name ?? null;
+  if (!ownerOrgUnitKey || !ownerOrgUnitName) {
+    if (strict) throw new Error("Select the synchronized office or unit responsible for maintaining the official record.");
+    return null;
+  }
+
+  return {
+    category: series.category,
+    filePlanCode: series.code,
+    retentionClass: series.retentionPolicy.code,
+    subjectUserId,
+    ownerOrgUnitKey,
+    ownerOrgUnitName,
+    recordSeriesId: series.id,
+    recordSeriesVersion: series.version,
+    retentionPolicyId: series.retentionPolicy.id,
+    retentionPolicyVersion: series.retentionPolicy.version,
+  };
+}
+
 export async function resolveRecordFile(tx: Prisma.TransactionClient, input: FilingInput) {
   let subject: Pick<User, "id" | "name" | "staffNumber"> | null = null;
   if (input.subjectUserId) {
@@ -59,21 +118,30 @@ export async function resolveRecordFile(tx: Prisma.TransactionClient, input: Fil
       : input.category === RecordCategory.EXTERNAL_CASE
         ? input.ownerOrgUnitName ?? "external"
         : "itf";
-  const fileKey = `${input.category.toLowerCase()}:${keyPart(ownerIdentity)}:${keyPart(input.filePlanCode)}`;
+  const catalogueVersion = input.recordSeriesId && input.recordSeriesVersion
+    ? `:v${input.recordSeriesVersion}`
+    : "";
+  const fileKey = `${input.category.toLowerCase()}:${keyPart(ownerIdentity)}:${keyPart(input.filePlanCode)}${catalogueVersion}`;
   const label = input.category === RecordCategory.PERSONNEL
     ? `${subject!.name} personnel file · ${input.filePlanCode}`
     : `${input.ownerOrgUnitName ?? "ITF corporate"} · ${input.filePlanCode}`;
   return tx.recordFile.upsert({
     where: { fileKey },
-    create: { fileKey, category: input.category, label, filePlanCode: input.filePlanCode, retentionClass: input.retentionClass, subjectUserId: subject?.id, ownerOrgUnitKey: input.ownerOrgUnitKey, ownerOrgUnitName: input.ownerOrgUnitName },
-    update: { label, retentionClass: input.retentionClass, subjectUserId: subject?.id, ownerOrgUnitKey: input.ownerOrgUnitKey, ownerOrgUnitName: input.ownerOrgUnitName },
+    create: {
+      fileKey, category: input.category, label, filePlanCode: input.filePlanCode, retentionClass: input.retentionClass,
+      subjectUserId: subject?.id, ownerOrgUnitKey: input.ownerOrgUnitKey, ownerOrgUnitName: input.ownerOrgUnitName,
+      recordSeriesId: input.recordSeriesId, recordSeriesVersion: input.recordSeriesVersion,
+      retentionPolicyId: input.retentionPolicyId, retentionPolicyVersion: input.retentionPolicyVersion,
+    },
+    // Catalogue-backed file metadata is an immutable snapshot. A later series
+    // version receives a different file key instead of rewriting historic files.
+    update: {},
   });
 }
 
 export async function resolveUltimateRecipient(formData: FormData, type: CorrespondenceType, fallbackUserId?: string | null) {
   if (type === CorrespondenceType.INTERNAL_MEMO) {
     const id = bounded(formData.get("ultimateRecipientUserId"), 100) || fallbackUserId;
-    const { db } = await import("@/lib/db");
     const user = id ? await db.user.findFirst({ where: { id, isActive: true }, select: { id: true, name: true, workspaceDepartmentId: true, department: true, office: true } }) : null;
     if (!user) throw new Error("Select the active staff member who is the ultimate recipient of this correspondence.");
     return { ultimateRecipientType: UltimateRecipientType.STAFF, ultimateRecipientUserId: user.id, ultimateRecipientName: user.name, ultimateRecipientOrgUnitKey: user.workspaceDepartmentId ? `workspace:${user.workspaceDepartmentId}` : null, ultimateRecipientOrgUnitName: user.department ?? user.office };

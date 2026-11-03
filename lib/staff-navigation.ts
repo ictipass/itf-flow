@@ -18,6 +18,8 @@ export function getStaffNavigation(role: UserRole, unreadNotifications: number, 
     { href: "/drafts", label: "My drafts", shortLabel: "Drafts" },
     { href: "/correspondence", label: "All correspondence", shortLabel: "Registry" },
     hasRecordsAccess && { href: "/records", label: "Official records", shortLabel: "Records" },
+    ([UserRole.RECORDS_ADMIN, UserRole.SYSTEM_ADMIN] as UserRole[]).includes(role) &&
+      { href: "/records/catalogue", label: "Records catalogue", shortLabel: "File plan" },
     canDispatch(role) && { href: "/dispatch", label: "Dispatch registry", shortLabel: "Dispatch" },
     { href: "/correspondence/new", label: "Raise correspondence", shortLabel: "Create" },
     { href: "/broadcasts", label: "Announcements", shortLabel: "News" },

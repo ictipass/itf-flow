@@ -49,6 +49,22 @@ enum RegistryScope {
   SECRET
 }
 
+enum RetentionTrigger {
+  RESOLUTION
+  FILE_CLOSURE
+  EMPLOYMENT_END
+  CONTRACT_END
+  EVENT_DATE
+  PERMANENT
+}
+
+enum RetentionDisposition {
+  REVIEW
+  ARCHIVE
+  DESTROY
+  PERMANENT
+}
+
 enum Priority {
   ROUTINE
   URGENT
@@ -257,6 +273,7 @@ enum EventType {
   CLOSED
   COMMENTED
   MEMO_OUTPUT_GENERATED
+  REFILED
 }
 
 enum SignatureProfileStatus {
@@ -391,6 +408,10 @@ model User {
   originatedMemoOutputs            MemoOutput[]                    @relation("MemoOutputOriginator")
   ultimateRecipientCorrespondence  Correspondence[]                @relation("UltimateRecipient")
   subjectRecordFiles               RecordFile[]                    @relation("RecordFileSubject")
+  createdRetentionPolicies         RetentionPolicy[]               @relation("RetentionPolicyCreator")
+  createdRecordSeries              RecordSeries[]                  @relation("RecordSeriesCreator")
+  legacyPersonnelFiles             LegacyPersonnelFile[]           @relation("LegacyPersonnelSubject")
+  mappedLegacyPersonnelFiles       LegacyPersonnelFile[]           @relation("LegacyPersonnelMapper")
   registryAppointments             RegistryAppointment[]           @relation("RegistryAppointee")
   createdRegistryAppointments      RegistryAppointment[]           @relation("RegistryAppointmentCreator")
   revokedRegistryAppointments      RegistryAppointment[]           @relation("RegistryAppointmentRevoker")
@@ -995,23 +1016,111 @@ model Correspondence {
 }
 
 model RecordFile {
-  id               String           @id @default(cuid())
-  fileKey          String           @unique
-  category         RecordCategory
-  label            String
-  filePlanCode     String
-  subjectUserId    String?
-  ownerOrgUnitKey  String?
-  ownerOrgUnitName String?
-  retentionClass   String
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  subjectUser      User?            @relation("RecordFileSubject", fields: [subjectUserId], references: [id], onDelete: SetNull)
-  correspondence   Correspondence[]
+  id                     String           @id @default(cuid())
+  fileKey                String           @unique
+  category               RecordCategory
+  label                  String
+  filePlanCode           String
+  subjectUserId          String?
+  ownerOrgUnitKey        String?
+  ownerOrgUnitName       String?
+  retentionClass         String
+  recordSeriesId         String?
+  recordSeriesVersion    Int?
+  retentionPolicyId      String?
+  retentionPolicyVersion Int?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  subjectUser            User?            @relation("RecordFileSubject", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  recordSeries           RecordSeries?    @relation(fields: [recordSeriesId], references: [id], onDelete: SetNull)
+  retentionPolicy        RetentionPolicy? @relation(fields: [retentionPolicyId], references: [id], onDelete: SetNull)
+  correspondence         Correspondence[]
 
   @@index([category, filePlanCode])
   @@index([subjectUserId])
   @@index([ownerOrgUnitKey])
+  @@index([recordSeriesId])
+  @@index([retentionPolicyId])
+}
+
+model RetentionPolicy {
+  id                 String               @id @default(cuid())
+  code               String
+  name               String
+  description        String
+  trigger            RetentionTrigger
+  durationYears      Int?
+  disposition        RetentionDisposition
+  legalAuthority     String
+  version            Int                  @default(1)
+  isActive           Boolean              @default(true)
+  reason             String
+  createdById        String?
+  retiredAt          DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  createdBy          User?                @relation("RetentionPolicyCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  recordSeries       RecordSeries[]
+  recordFiles        RecordFile[]
+
+  @@unique([code, version])
+  @@index([isActive, name])
+}
+
+model RecordSeries {
+  id                      String          @id @default(cuid())
+  code                    String
+  title                   String
+  description             String
+  category                RecordCategory
+  retentionPolicyId       String
+  defaultOwnerOrgUnitKey  String?
+  defaultOwnerOrgUnitName String?
+  legacyUnit              String?
+  legacyBoxCategory       String?
+  version                 Int             @default(1)
+  isActive                Boolean         @default(true)
+  reason                  String
+  createdById             String?
+  retiredAt               DateTime?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  retentionPolicy         RetentionPolicy @relation(fields: [retentionPolicyId], references: [id], onDelete: Restrict)
+  createdBy               User?           @relation("RecordSeriesCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  recordFiles             RecordFile[]
+
+  @@unique([code, version])
+  @@index([category, isActive, title])
+  @@index([retentionPolicyId, isActive])
+}
+
+model LegacyPersonnelFile {
+  id                String   @id @default(cuid())
+  legacyKey         String   @unique
+  subjectUserId     String
+  legacyDocumentId  String?
+  legacyFolderId    String?
+  legacyUnit        String
+  boxCategory       String
+  boxNumber         String
+  fileVolume        String?
+  legacyRefId       String
+  legacyRefName     String?
+  fileOpenDate      DateTime?
+  fileCloseDate     DateTime?
+  storagePath       String?
+  sha256            String?
+  isActive          Boolean  @default(true)
+  reason            String
+  mappedById        String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  subjectUser       User     @relation("LegacyPersonnelSubject", fields: [subjectUserId], references: [id], onDelete: Restrict)
+  mappedBy          User?    @relation("LegacyPersonnelMapper", fields: [mappedById], references: [id], onDelete: SetNull)
+
+  @@index([subjectUserId, isActive])
+  @@index([legacyUnit, boxCategory, boxNumber])
+  @@index([legacyRefId])
 }
 
 model RegistryAppointment {

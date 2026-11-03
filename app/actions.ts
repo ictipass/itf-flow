@@ -49,7 +49,7 @@ import { activeDepartmentCorrespondenceProfile, activeDirectorSignature, regener
 import { itfLogoPng } from "@/lib/itf-branding";
 import { renderOutgoingLetter } from "@/lib/outgoing-letter-output";
 import { normalizeRichTextForStorage, richTextPlainText } from "@/lib/rich-text";
-import { parseFilingInput, resolveRecordFile, resolveUltimateRecipient } from "@/lib/records-governance";
+import { resolveCatalogueFilingInput, resolveRecordFile, resolveUltimateRecipient } from "@/lib/records-governance";
 import { resolveContinuityAssignments } from "@/lib/office-continuity";
 
 const correspondenceSchema = z.object({
@@ -309,7 +309,7 @@ async function performRegisterCorrespondence(formData: FormData) {
   const outgoingProfile = parsed.type === CorrespondenceType.OUTGOING_LETTER
     ? await activeDepartmentCorrespondenceProfile(user)
     : null;
-  const filingInput = parseFilingInput(formData, user);
+  const filingInput = await resolveCatalogueFilingInput(formData, user);
 
   if (parsed.type === CorrespondenceType.OUTGOING_LETTER && actionRecipients.some((recipient) => recipient.role === UserRole.DG)) {
     throw new Error("Outgoing departmental letters must end at the Director's desk, not the DG's desk.");
@@ -526,6 +526,12 @@ export async function registerCorrespondenceAction(
       "Enter a valid email address for the ultimate external recipient.",
       "Enter the external recipient's delivery address for the outgoing letter.",
       "Compose the outgoing letter before submitting it.",
+      "Select an approved record series for the official file.",
+      "The selected record series is unavailable or has been retired. Select an active series.",
+      "The selected record series does not match the official filing category.",
+      "A personnel record must identify the staff member whose official file owns it.",
+      "The selected personnel-file subject is not an active staff member.",
+      "Select the synchronized office or unit responsible for maintaining the official record.",
     ]);
     const expectedPrefix = [
       "The system administrator must configure the outgoing-letter profile for ",
@@ -545,7 +551,7 @@ async function persistDraft(formData: FormData) {
   const user = await requireUser();
   if (!canOriginate(user.role)) throw new Error("You cannot create correspondence drafts.");
   const parsed = draftData(formData);
-  const filingInput = parseFilingInput(formData, user, false);
+  const filingInput = await resolveCatalogueFilingInput(formData, user, false);
   const recordFile = filingInput ? await db.$transaction((tx) => resolveRecordFile(tx, filingInput)) : null;
   const hasUltimateRecipient = parsed.type === CorrespondenceType.INTERNAL_MEMO
     ? Boolean(String(formData.get("ultimateRecipientUserId") ?? ""))

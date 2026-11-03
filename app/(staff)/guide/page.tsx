@@ -3,6 +3,7 @@ const guides = [
     title: "All staff and originators",
     steps: [
       ["Raise, preview or save", "Create correspondence and format the memo body. Select the ultimate recipient separately from the next action desk, then use Preview memo PDF to inspect the ITF layout before submission or save a private draft."],
+      ["File from the approved catalogue", "Choose the official category, then a compatible record series. Flow derives its file-plan code and retention rule; confirm the synchronized owning office and select the staff subject for Personnel records."],
       ["Monitor", "Use My inbox for assigned work, Notifications for alerts, and the correspondence register to search matters you are permitted to see."],
       ["Annotate a document", "While you own the Action item, use pen/eraser, stroke undo/redo, custom draggable minute placement and typed text. Flow preserves the source and creates a signed PDF version."],
       ["Register your signature", "Open Signature profile and submit your own PNG signature. Your authenticated submission activates immediately and can appear on new ITF memo outputs."],
@@ -28,6 +29,7 @@ const guides = [
       ["Label and move", "Print the QR tracking label and record every physical-file reassignment with a reason."],
       ["Dispatch", "For approved outgoing correspondence, prepare a delivery record and update it through dispatch, delivery, or failure."],
       ["Retrieve official records", "Open Registry appointments retrieve Public/Internal files; Secret Registry appointments retrieve every classification under the active MFA policy. Export the S29 evidence ZIP when an auditor or archive needs the complete record."],
+      ["Maintain the catalogue", "Records Administrators create versioned retention policies and record series, map existing staff boxes or volumes without moving them, and correct wrong filing through a reasoned audited re-file."],
     ],
   },
   {
@@ -38,6 +40,7 @@ const guides = [
       ["Govern annotations", "Under Document Administration, require or relax annotation re-authentication separately for DG, Directors, and Division Heads. Every change needs an audit reason."],
       ["Govern signature profiles", "Use Signature governance to audit staff submissions and revoke a signature with a recorded reason when it must no longer be used."],
       ["Govern records access", "Use Records governance to appoint or revoke Open/Secret Registry staff and to enforce or relax Secret Registry MFA with a recorded reason."],
+      ["Govern records metadata", "Use Records catalogue to approve versioned file-plan and retention choices, synchronized owning offices and legacy personnel-box mappings. Retire and supersede entries instead of silently changing history."],
       ["Operate automation", "Monitor reminder policy and runs, process or retry email delivery, and investigate dead-letter items without changing correspondence history."],
       ["Respect separation", "Administration does not silently broaden document visibility; Secret classification remains restricted by role."],
     ],
@@ -45,7 +48,7 @@ const guides = [
 ];
 
 const endToEndSteps = [
-  ["Compose, preview, file and route", "The sender selects the stable ultimate recipient and logical official file, previews the draft ITF PDF, then selects the next action recipient, adds copies only for awareness, records a clear instruction, and submits."],
+  ["Compose, preview, file and route", "The sender selects the stable ultimate recipient, guided official category and approved record series. Flow derives retention and the owning-office control. The sender previews the draft ITF PDF, selects the next action recipient, adds copies only for awareness, records a clear instruction, and submits."],
   ["Secure the document", "With scanning enabled, an attachment is quarantined until validation and malware scanning mark it Available and Clean. Under the explicit temporary bypass, a signature-valid upload is immediately Available and Bypassed, with the exception retained in its audit history."],
   ["Receive and acknowledge", "Each action recipient sees the item in the personal inbox, or an acting appointee sees the substantive desk's item in the Acting office inbox. Acknowledgement establishes custody and is required before the document can be opened or treated. Copy recipients can follow it but do not own treatment."],
   ["Treat or decide", "The action owner performs the required work and records any requested review, concurrence, approval, recommendation, or clarification."],

@@ -6,6 +6,7 @@ import { DirectoryPerson, RecipientSelector } from "@/components/recipient-selec
 import { categoriesForDocumentType, routingPurposeHelp, type WorkflowCategoryOption } from "@/lib/correspondence-form";
 import { RichTextEditor } from "@/components/rich-text-editor";
 import { SingleStaffPicker } from "@/components/single-staff-picker";
+import { recordCategoryGuidance, retentionPolicySummary, type OrganizationUnitOption, type RecordSeriesOption } from "@/lib/records-catalogue-shared";
 
 type InitialDraft = {
   id: string;
@@ -29,25 +30,28 @@ type InitialDraft = {
   ultimateRecipientAddress?: string;
   recordCategory?: string;
   recordSubject?: DirectoryPerson | null;
-  filePlanCode?: string;
-  retentionClass?: string;
-  ownerOrgUnitName?: string;
+  recordSeriesId?: string;
+  ownerOrgUnitKey?: string;
 };
 
 export function CorrespondenceComposer({
   userName,
   isRegistrar,
   canReferToPeers,
-  defaultOrgUnitName,
+  defaultOwnerOrgUnitKey,
   initial,
   categories = [],
+  recordSeriesOptions = [],
+  organizationUnits = [],
 }: {
   userName: string;
   isRegistrar: boolean;
   canReferToPeers: boolean;
-  defaultOrgUnitName: string;
+  defaultOwnerOrgUnitKey: string;
   initial?: InitialDraft;
   categories?: WorkflowCategoryOption[];
+  recordSeriesOptions?: RecordSeriesOption[];
+  organizationUnits?: OrganizationUnitOption[];
 }) {
   const initialSubmitState: RegisterCorrespondenceState = { status: "idle", message: "", attempt: 0 };
   const [submitState, submitAction, submitting] = useActionState(registerCorrespondenceAction, initialSubmitState);
@@ -59,9 +63,13 @@ export function CorrespondenceComposer({
   const [categoryCode, setCategoryCode] = useState("");
   const [routingPurpose, setRoutingPurpose] = useState(initial?.workPurpose ?? "ACTION");
   const [recordCategory, setRecordCategory] = useState(initial?.recordCategory ?? "OFFICE");
+  const [recordSeriesId, setRecordSeriesId] = useState(initial?.recordSeriesId ?? "");
+  const [ownerOrgUnitKey, setOwnerOrgUnitKey] = useState(initial?.ownerOrgUnitKey ?? defaultOwnerOrgUnitKey);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const compatibleCategories = categoriesForDocumentType(categories, documentType);
+  const compatibleRecordSeries = recordSeriesOptions.filter((series) => series.category === recordCategory);
+  const selectedRecordSeries = recordSeriesOptions.find((series) => series.id === recordSeriesId) ?? null;
 
   function autosave() {
     if (!initial?.id || !dirty || !formRef.current || saving) return;
@@ -121,11 +129,11 @@ export function CorrespondenceComposer({
         <div className="field"><label>Recipient email *</label><input name="ultimateRecipientEmail" type="email" defaultValue={initial?.ultimateRecipientEmail} required placeholder="recipient@example.org" /><small className="muted">This governed external delivery address cannot be replaced at final dispatch.</small></div>
         <div className="field span-2"><label>Recipient postal / office address *</label><textarea name="ultimateRecipientAddress" defaultValue={initial?.ultimateRecipientAddress} required minLength={5} placeholder="Full address printed on the outgoing letter" /></div>
       </> : null}
-      <div className="field"><label>Official record category</label><select name="recordCategory" value={recordCategory} onChange={(event) => { setRecordCategory(event.target.value); setDirty(true); }}><option value="OFFICE">Office / departmental record</option><option value="PERSONNEL">Personnel record</option><option value="CORPORATE">Corporate record</option><option value="EXTERNAL_CASE">External case file</option></select></div>
-      <div className="field"><label>File-plan code *</label><input name="filePlanCode" defaultValue={initial?.filePlanCode ?? "GENERAL-CORRESPONDENCE"} required pattern="[A-Za-z0-9._/-]{3,80}" placeholder="e.g. HR/PERSONNEL/QUERY" /><small className="muted">Use an approved functional classification code, not a Blob folder name.</small></div>
-      <div className="field"><label>Retention class *</label><input name="retentionClass" defaultValue={initial?.retentionClass ?? "GENERAL-7Y"} required pattern="[A-Za-z0-9._/-]{3,80}" placeholder="e.g. PERSONNEL-EMPLOYMENT" /></div>
+      <div className="field span-2"><label>Official record category</label><select name="recordCategory" value={recordCategory} onChange={(event) => { setRecordCategory(event.target.value); setRecordSeriesId(""); setOwnerOrgUnitKey(defaultOwnerOrgUnitKey); setDirty(true); }}><option value="OFFICE">Office / departmental record</option><option value="PERSONNEL">Personnel record</option><option value="CORPORATE">Corporate record</option><option value="EXTERNAL_CASE">External case file</option></select><small className="muted">{recordCategoryGuidance[recordCategory]}</small></div>
+      <div className="field span-2"><label>Record series / file-plan classification *</label><select name="recordSeriesId" value={recordSeriesId} required onChange={(event) => { const id = event.target.value; const series = recordSeriesOptions.find((item) => item.id === id); setRecordSeriesId(id); setOwnerOrgUnitKey(series?.defaultOwnerOrgUnitKey ?? defaultOwnerOrgUnitKey); setDirty(true); }}><option value="">Select an approved record series…</option>{compatibleRecordSeries.map((series) => <option key={series.id} value={series.id}>{series.title} · {series.code}</option>)}</select><small className="muted">{selectedRecordSeries?.description ?? "Records Administration controls these choices. Select the series that best describes the official file."}</small>{!compatibleRecordSeries.length ? <small className="notice error">No active series is configured for this category. Ask Records Administration to configure one.</small> : null}</div>
+      {selectedRecordSeries ? <div className="field span-2"><div className="notice"><strong>Derived filing controls</strong><span className="registry-secondary">File-plan code: {selectedRecordSeries.code} · series version {selectedRecordSeries.version}</span><span className="registry-secondary">Retention: {retentionPolicySummary(selectedRecordSeries.retentionPolicy)}</span>{selectedRecordSeries.legacyUnit || selectedRecordSeries.legacyBoxCategory ? <span className="registry-secondary">Legacy crosswalk: {[selectedRecordSeries.legacyUnit, selectedRecordSeries.legacyBoxCategory].filter(Boolean).join(" / ")}</span> : null}</div></div> : null}
       {recordCategory === "PERSONNEL" ? <div className="field span-2"><SingleStaffPicker fieldName="recordSubjectUserId" label="Personnel-file subject" hint="The official personnel file belongs to this staff member. The creator and ultimate recipient may be different people." required initial={initial?.recordSubject} onSelectionChange={() => setDirty(true)} /></div> : null}
-      {recordCategory !== "PERSONNEL" ? <div className="field"><label>Owning office/unit *</label><input name="ownerOrgUnitName" defaultValue={initial?.ownerOrgUnitName ?? defaultOrgUnitName} required minLength={2} placeholder="Department, division, unit or corporate registry" /></div> : null}
+      <div className="field span-2"><label>Records-owning office/unit *</label>{selectedRecordSeries?.defaultOwnerOrgUnitKey ? <><input type="hidden" name="ownerOrgUnitKey" value={selectedRecordSeries.defaultOwnerOrgUnitKey} /><input value={selectedRecordSeries.defaultOwnerOrgUnitName ?? "Configured records owner"} readOnly /></> : <select name="ownerOrgUnitKey" value={ownerOrgUnitKey} required onChange={(event) => { setOwnerOrgUnitKey(event.target.value); setDirty(true); }}><option value="">Select synchronized office or unit…</option>{organizationUnits.map((organization) => <option key={organization.key} value={organization.key}>{organization.name} · {organization.level.toLowerCase()}</option>)}</select>}<small className="muted">The office accountable for maintaining the official file. It can differ from the sender, current handler and ultimate recipient.</small></div>
       <div className="field span-2"><label>Summary *</label><textarea name="summary" defaultValue={initial?.summary} placeholder="Summarize the request, decision required, and important context" required minLength={10} /></div>
       <div className="field span-2"><label>{documentType === "OUTGOING_LETTER" ? "Compose outgoing letter" : "Compose memo / transcribe letter"}</label><RichTextEditor initialHtml={initial?.body} onDirty={() => setDirty(true)} /></div>
       <div className="field span-2"><RecipientSelector
