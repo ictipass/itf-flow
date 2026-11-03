@@ -17,9 +17,9 @@ Open **Raise correspondence** and select **Internal memo**.
 | Priority | Routine, Urgent or Immediate. It influences the workflow deadline. |
 | Ultimate recipient | The staff member for whom the matter is finally intended. This remains stable while custody moves through intermediate desks. |
 | Official record category | Office, Personnel, Corporate or External Case. This identifies the logical official file, not who may read the Blob path. |
-| File-plan code | An approved functional records classification code. It must come from ITF's file plan. |
-| Retention class | The approved retention/disposal rule tied to the file-plan entry. It is not a user-created label. |
-| Owning office/unit | The organizational custodian of a non-personnel official file. For Personnel, select the staff member who owns the personnel file instead. |
+| Record series / file-plan code | Select the Records-approved practical subject. Flow derives its controlled code and displays a use-case description. |
+| Retention class | Read-only rule derived from the selected series, including trigger, duration and disposition. |
+| Owning office/unit | Workspace-backed organizational custodian responsible for the official file. A series may fix this owner; Personnel also requires the staff-file subject. |
 | Summary | Searchable explanation of the request, decision required and essential context. |
 | Compose memo | Rich-text memo body. Supported formatting is carried into the ITF PDF template. |
 | Action recipient | The next accountable desk, which must acknowledge and treat the item. For A → B → C → Z, A sends to B only. |
@@ -72,15 +72,16 @@ When corrected, the initiator creates a new numbered revision and resubmits. Ear
 
 For an internal memo, the ultimate recipient is correctly selected from the synchronized staff directory. For an incoming letter, the current free-text ultimate destination is only a transitional control. The production design should select an authoritative Workspace organizational unit by immutable ID, while retaining its display-name snapshot. External outgoing recipients remain free text because they are outside the Workspace directory.
 
-File-plan code, retention class and owning office must not remain arbitrary production inputs. ITF Records Management must approve a versioned file-plan/retention catalogue. The intended S29C records-governance slice will:
+S29C replaces originator free text with a versioned Records catalogue:
 
-1. let Records Administration maintain active file-plan entries and their descriptions;
-2. derive retention class from the selected entry instead of asking the originator to type it;
-3. select owning units from synchronized Workspace organization IDs;
-4. validate category/subject/owner compatibility server-side; and
-5. correct a wrong filing through a reasoned, audited re-file operation without rewriting historical events or moving access control into Blob folders.
+1. Records/System Administration maintains record series, descriptions and retention schedules at `/records/catalogue`;
+2. the originator selects a friendly series filtered by category;
+3. Flow derives the file-plan code and retention rule and snapshots their versions;
+4. owning units come from synchronized Workspace organization identifiers;
+5. Personnel requires the staff whose official file owns the matter and can show that staff member's mapped legacy boxes/volumes; and
+6. authorized Records/System Administration corrects a wrong filing through a reasoned `REFILED` event without rewriting history or moving objects.
 
-Until that catalogue is approved and implemented, originators must use approved values supplied by Records Management. A wrong value must be escalated to Records Administration; it must not be silently overwritten.
+The migration's general entries are transitional, not an approved ITF schedule. Records/Legal must approve or replace them before production. See [`slices/S29C-governed-records-catalogue-legacy-edms-crosswalk.md`](slices/S29C-governed-records-catalogue-legacy-edms-crosswalk.md).
 
 ## 6. Records and registry responsibilities
 

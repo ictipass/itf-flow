@@ -42,7 +42,8 @@ Do not begin production configuration until the following source information is 
 - [ ] Obtain each department's official display name, letterhead address and copy email mailbox.
 - [ ] Confirm that every substantive Director who will finalize outgoing letters will upload an active transparent PNG signature.
 - [ ] Obtain the approved Open Registry and Secret Registry appointments, expiry dates and authority references.
-- [ ] Approve the file plan, retention classes, archival ownership and disposal/hold policy. Until the governed S29C catalogue is delivered, originators still enter some filing metadata manually and Records must review it.
+- [ ] Approve the file plan, retention schedules, records-owning offices, archival ownership and disposal/hold policy. The delivered S29C catalogue must be populated and accepted by Records/Legal before general production.
+- [ ] Inventory existing staff personnel boxes/volumes in `edms-current`, including staff identifier, registry unit, box category/number, volume, legacy document/folder ID, object path and verified SHA-256 where available. Do not move legacy objects during mapping.
 - [ ] Approve workflow purposes, peer-referral rules, outgoing-approval rule and Routine/Urgent/Immediate SLA days.
 - [ ] Decide whether strong annotation authentication is mandatory for the DG, Directors and Division Heads.
 - [ ] Decide whether recent enterprise MFA is mandatory for Secret Registry access.
@@ -59,6 +60,17 @@ Repeat this register for every department.
 | Department | Director | First next-in-line | Second next-in-line | Department Secretary | Copy email | Letterhead address verified | Director signature active | Accepted |
 |---|---|---|---|---|---|---|---|---|
 |  |  |  |  |  |  | [ ] | [ ] | [ ] |
+
+### Records catalogue and legacy-box setup
+
+- [ ] Assign at least one trained `RECORDS_ADMIN`; retain `SYSTEM_ADMIN` only as a controlled fallback.
+- [ ] Open **Records catalogue** (`/records/catalogue`) and review the transitional entries created by migration `20261103120000_add_records_catalogue`.
+- [ ] Create each approved retention policy with trigger, duration, disposition and authority reference.
+- [ ] Create approved record series with plain-language use cases, category, retention policy and Workspace-backed default owning office.
+- [ ] Retire superseded entries and create a new version; never repurpose an existing code/version silently.
+- [ ] Register every reconciled personnel box/volume against the correct synchronized staff member.
+- [ ] Test a Director-to-staff personnel matter: the Director is creator, the affected staff member is file subject, and the evidence package lists the correct legacy boxes.
+- [ ] Test reasoned re-filing and confirm both the `REFILED` passage event and previous/new file IDs remain auditable.
 
 ## Phase 2 — Provision infrastructure and environment variables
 

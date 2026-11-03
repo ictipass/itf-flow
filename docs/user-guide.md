@@ -180,11 +180,12 @@ not require a physical tracking record. This panel does not assign the digital a
    three at once creates parallel responsibilities. A merely informed D belongs in Copy.
 6. Select Z separately as the **Ultimate recipient**. This endpoint remains stable while B and C temporarily own the
    action. Internal memo **TO** output uses the ultimate recipient rather than the first intermediate desk.
-7. Select the official record category, file-plan code and retention class. For Personnel, select the staff member
-   whose official file owns the record; for Office/Corporate/External Case, identify the owning organizational unit.
-   Creator, ultimate recipient and record subject may legitimately be different people.
-6. Enter a specific routing minute and attach permitted PDF, DOCX, XLSX, JPEG or PNG material if needed.
-7. Save as a private draft or raise and route. Retain the generated ITF Flow reference.
+7. Select the official record category and then a compatible Records-approved record series. Read its use-case text.
+   Flow derives the file-plan code, series version and retention policy; these are not free-text staff inputs.
+8. Confirm the Workspace-backed records-owning office. For Personnel, also select the staff member whose official
+   file owns the record. Creator, ultimate recipient and personnel-file subject may legitimately be different people.
+9. Enter a specific routing minute and attach permitted PDF, DOCX, XLSX, JPEG or PNG material if needed.
+10. Save as a private draft or raise and route. Retain the generated ITF Flow reference.
 8. Use **My inbox** to acknowledge assigned matters, then minute onward or resolve them.
 9. If correspondence is returned, create a corrected revision with a meaningful change note and resubmit.
 
@@ -280,6 +281,10 @@ enabled prematurely.
 13. Use **Records governance** to appoint Open or Secret Registry staff, set expiry/revoke appointments with reasons,
     and enable or relax Secret Registry MFA. Open Registry is limited to Public/Internal; Secret Registry can retrieve
     all classifications. Blob credentials are never given to registry staff.
+14. Use **Records catalogue** to maintain versioned retention policies and record series, assign synchronized owning
+    offices, map existing personnel boxes/volumes, and retire superseded entries. Do not edit legacy EDMS object keys.
+15. On an authorized correspondence detail page, use **Correct official filing** only with an approved reason. Flow
+    records the old/new official-file IDs and a `REFILED` movement event; it does not rewrite history.
 
 Expected control: operational administration does not grant blanket access to restricted business records;
 classification rules continue to apply to registry queries and exports.
@@ -325,7 +330,8 @@ priority, status, active owner, office, department and received-date filters.
 - The server reapplies visibility and Secret-classification rules during export; altering a URL cannot broaden access.
 - Appointed registry staff use **Official records** to search logical files by ultimate recipient, record subject,
   staff number or file-plan code. The correspondence page and registry provide a unified S29 ZIP containing documents,
-  movement, minutes, revisions, approvals, annotations, hashes and archival manifest evidence.
+  movement, minutes, revisions, approvals, annotations, hashes and archival manifest evidence. The manifest also records
+  the catalogue/retention versions, owning office and active legacy personnel-box locators.
 
 Search includes composed text and minutes. It can include released attachment extracted text, but a real OCR provider
 is not connected until S24B.

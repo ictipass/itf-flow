@@ -11,7 +11,7 @@ exist.
 | S24B | Real malware scanner and OCR; fail-closed document worker | EICAR/clean/timeout tests, OCR accuracy sample, alerting and approved data residency |
 | S28 production acceptance | Approved private object store, lifecycle/encryption/backup policy and Vercel Blob live test | Upload/quarantine/release/retrieve/restore evidence for every classification |
 | S29/S29A/S29B acceptance | Registry appointments, MFA decision and evidence-package archival trial | Records/Legal sign-off plus successful export, hash reconciliation and denied-access tests |
-| S29C | Governed organization destination, file-plan catalogue and audited re-filing | Records-approved catalogue and immutable Workspace organization identifiers replace originator free text |
+| S29C acceptance | Approve the delivered file-plan/retention catalogue and reconcile Workspace organizations plus legacy personnel boxes | Migration evidence, Records/Legal approval, representative box reconciliation and successful audited re-filing |
 | S27B/A01 | Authoritative Workspace reporting lines, Department Secretary and registry/desk assignments with revocation | Production identity, role-change, termination, central logout and resynchronization evidence |
 | S15/S16/S24 operations | Production schedules for mail, reminders and document workers | Monitored schedules, retry/dead-letter alerts and runbook ownership |
 | S33 | EDMS archival transfer, retention, legal hold, disposal and reconciliation | Versioned integration contract, idempotent transfer, retrieval drill and disposition approval |
