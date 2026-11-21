@@ -2,6 +2,7 @@ import { resolveWorkspaceLaunchReceiverConfiguration } from "@/lib/workspace-tok
 import { resolveWorkspaceNavigationUrls } from "@/lib/workspace-navigation-urls";
 import { malwareScannerMode } from "@/lib/document-security";
 import { assertDocumentConverterConfiguration } from "@/lib/document-conversion";
+import { assertDocumentScannerConfiguration, effectiveDocumentUploadMaximumBytes } from "@/lib/clamav-http";
 
 export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.env) {
   const issues: string[] = [];
@@ -22,8 +23,10 @@ export function productionConfigurationIssues(env: NodeJS.ProcessEnv = process.e
   else if (storageProvider === "VERCEL_BLOB" && !env.BLOB_READ_WRITE_TOKEN?.trim()) issues.push("BLOB_READ_WRITE_TOKEN is missing for private Vercel Blob storage");
   else if (storageProvider !== "VERCEL_BLOB") issues.push(`unsupported document storage provider: ${storageProvider}`);
   try {
-    if (malwareScannerMode(env) === "DISABLED") issues.push("malware scanning is explicitly bypassed by MALWARE_SCANNER=DISABLED");
-    else if (["DISABLED", "MOCK"].includes((env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED").trim().toUpperCase())) issues.push("a production malware scanner is not configured");
+    const scannerMode = malwareScannerMode(env);
+    effectiveDocumentUploadMaximumBytes(scannerMode === "ENABLED", env);
+    if (scannerMode === "DISABLED") issues.push("malware scanning is explicitly bypassed by MALWARE_SCANNER=DISABLED");
+    else assertDocumentScannerConfiguration({ ...env, NODE_ENV: "production" } as NodeJS.ProcessEnv);
   } catch (error) {
     issues.push(error instanceof Error ? error.message : "malware-scanner mode is invalid");
   }

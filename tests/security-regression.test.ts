@@ -23,15 +23,19 @@ test("production configuration detects unsafe document adapters", () => {
   const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_ISSUER: "https://workspace.example.test", WORKSPACE_LAUNCH_AUDIENCE: "itf-flow", WORKSPACE_LAUNCH_JWKS_URL: "https://workspace.example.test/api/integrations/workspace/v2/jwks", WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, WORKSPACE_APP_NAVIGATION_SECRET: secret, NEXT_PUBLIC_WORKSPACE_URL: "https://workspace.example.test", NEXT_PUBLIC_WORKSPACE_LOGOUT_URL: "https://workspace.example.test/dashboard/apps", APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "LOCAL", DOCUMENT_SCANNER_PROVIDER: "MOCK", DOCUMENT_OCR_PROVIDER: "DISABLED" } as unknown as NodeJS.ProcessEnv;
   const issues = productionConfigurationIssues(env);
   assert.equal(issues.length, 4);
-  assert.ok(issues.some((issue) => issue.includes("malware")));
+  assert.ok(issues.some((issue) => issue.toLowerCase().includes("scanner")));
   assert.ok(issues.some((issue) => issue.includes("Office-to-PDF")));
 });
 
-test("production configuration requires the Vercel Blob read-write token", () => {
+test("production configuration requires Vercel Blob and ClamAV HTTP secrets", () => {
   const secret = "x".repeat(40);
   const env = { SESSION_SECRET: secret, WORKSPACE_LAUNCH_ISSUER: "https://workspace.example.test", WORKSPACE_LAUNCH_AUDIENCE: "itf-flow", WORKSPACE_LAUNCH_JWKS_URL: "https://workspace.example.test/api/integrations/workspace/v2/jwks", WORKSPACE_DIRECTORY_SYNC_SECRET: secret, WORKSPACE_INTEROP_SECRET: secret, WORKSPACE_APP_NAVIGATION_SECRET: secret, NEXT_PUBLIC_WORKSPACE_URL: "https://workspace.example.test", NEXT_PUBLIC_WORKSPACE_LOGOUT_URL: "https://workspace.example.test/dashboard/apps", APPROVAL_SIGNING_SECRET: secret, EMAIL_WORKER_SECRET: secret, WORKFLOW_WORKER_SECRET: secret, DOCUMENT_WORKER_SECRET: secret, DOCUMENT_STORAGE_PROVIDER: "VERCEL_BLOB", DOCUMENT_SCANNER_PROVIDER: "CLAMAV", DOCUMENT_OCR_PROVIDER: "MANAGED", DOCUMENT_CONVERTER_PROVIDER: "GOTENBERG", GOTENBERG_URL: "https://documents.example.test" } as unknown as NodeJS.ProcessEnv;
   assert.ok(productionConfigurationIssues(env).some((issue) => issue.includes("BLOB_READ_WRITE_TOKEN")));
   env.BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_test";
+  assert.ok(productionConfigurationIssues(env).some((issue) => issue.includes("CLAMAV_HTTP_URL")));
+  env.CLAMAV_HTTP_URL = "https://scan.example.test/api/v1/scan";
+  env.CLAMAV_HTTP_TOKEN = "scanner-test-token";
+  env.CLAMAV_HTTP_TIMEOUT_MS = "30000";
   assert.equal(productionConfigurationIssues(env).length, 0);
 });
 

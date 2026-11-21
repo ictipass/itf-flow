@@ -10,6 +10,7 @@ import { resolveWorkspaceNavigationUrls } from "../lib/workspace-navigation-urls
 import { stagingAcceptanceConfigurationIssues } from "../lib/workspace-staging-acceptance";
 import { malwareScannerMode } from "../lib/document-security";
 import { assertDocumentConverterConfiguration, documentConverterProvider } from "../lib/document-conversion";
+import { assertDocumentScannerConfiguration, effectiveDocumentUploadMaximumBytes } from "../lib/clamav-http";
 
 const required = [
   "DATABASE_URL",
@@ -41,11 +42,12 @@ async function main() {
   if ((process.env.WORKFLOW_WORKER_SECRET?.length ?? 0) < 32) warnings.push("WORKFLOW_WORKER_SECRET is missing or shorter than 32 characters; scheduled reminder processing will reject all requests.");
   if ((process.env.DOCUMENT_WORKER_SECRET?.length ?? 0) < 32) warnings.push("DOCUMENT_WORKER_SECRET is missing or shorter than 32 characters; quarantined documents cannot be processed.");
   try {
-    if (malwareScannerMode() === "DISABLED") {
+    const scannerMode = malwareScannerMode();
+    effectiveDocumentUploadMaximumBytes(scannerMode === "ENABLED");
+    if (scannerMode === "DISABLED") {
       warnings.push("MALWARE_SCANNER=DISABLED explicitly bypasses malware scanning; uploads are released as Available and Bypassed.");
     } else {
-      if ((process.env.DOCUMENT_SCANNER_PROVIDER ?? "DISABLED").trim().toUpperCase() === "DISABLED") warnings.push("Malware scanning is enabled but no document scanner provider is configured; uploads will remain quarantined.");
-      if (process.env.NODE_ENV === "production" && process.env.DOCUMENT_SCANNER_PROVIDER?.trim().toUpperCase() === "MOCK") errors.push("The mock document scanner is forbidden in production.");
+      assertDocumentScannerConfiguration(process.env);
     }
   } catch (error) {
     errors.push(error instanceof Error ? error.message : "MALWARE_SCANNER is invalid.");

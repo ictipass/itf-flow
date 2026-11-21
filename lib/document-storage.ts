@@ -5,6 +5,7 @@ import path from "path";
 import { initialDocumentSecurityState, malwareScannerMode } from "@/lib/document-security";
 import { detectDocumentMime } from "@/lib/document-validation";
 import { recordStorageSegment } from "@/lib/records-governance";
+import { effectiveDocumentUploadMaximumBytes } from "@/lib/clamav-http";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -138,11 +139,11 @@ export function documentProvider(name = process.env.DOCUMENT_STORAGE_PROVIDER ??
 }
 
 export async function storeDocument(input: DocumentInput): Promise<StoredDocument> {
-  const maximumBytes = Number(process.env.DOCUMENT_MAX_SIZE_MB ?? "50") * 1024 * 1024;
+  const scannerMode = malwareScannerMode();
+  const maximumBytes = effectiveDocumentUploadMaximumBytes(scannerMode === "ENABLED");
   if (!allowedMimeTypes.has(input.mimeType) || !input.bytes.length || input.bytes.length > maximumBytes) {
     throw new Error("Document type is not permitted or the document exceeds the configured size limit.");
   }
-  const scannerMode = malwareScannerMode();
   const detectedMimeType = scannerMode === "DISABLED" ? detectDocumentMime(input.bytes) : null;
   if (scannerMode === "DISABLED" && detectedMimeType !== input.mimeType) {
     throw new Error("Declared document type does not match the file signature.");
