@@ -4,7 +4,7 @@ This file is the durable starting prompt for a coding assistant on a new machine
 
 ## First instruction to the new assistant
 
-> Open `docs/coding-assistant-handoff.md`, follow every step under **Repository verification**, then read the files under **Required reading**. Do not implement S24B without the approved EDMS, malware-scanner and OCR contracts. Before making changes, report the checked-out commit, working-tree state, validation result and the production gates that remain open.
+> Open `docs/coding-assistant-handoff.md`, follow every step under **Repository verification**, then read the files under **Required reading**. The ClamAV HTTP portion of S24B follows approved contract v1.0; do not invent EDMS or OCR integrations without their approved contracts. Before making changes, report the checked-out commit, working-tree state, validation result and the production gates that remain open.
 
 ## Repository verification
 
@@ -39,7 +39,7 @@ Use Node.js 22 LTS on the replacement machine. The previous Windows host used No
 ## Current state and boundaries
 
 - S01–S26 are implemented; S27 is the current Priority-1 delivery and S24B remains externally blocked.
-- S24B is blocked on real EDMS, malware-scanner and OCR contracts/test services.
+- S24B ClamAV HTTP support is implemented locally and awaits live gateway acceptance. EDMS and OCR remain blocked on their contracts/test services.
 - S26 provides assurance tooling, not fabricated evidence. Production is a no-go until every required assurance check is PASSED and current.
 - Local disk, disabled/mock scanning, demo accounts and `Demo123!` are not production facilities.
 - Production staff are created and governed in ITF Workspace, synchronized to Flow without a local password, and enter through Workspace with MFA evidence.

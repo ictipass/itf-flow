@@ -370,8 +370,8 @@ is not connected until S24B.
 
 - Workspace v2 sessions consume enterprise MFA evidence and can be centrally revoked. Local/demo authentication is
   not a production fallback; production IdP registration, key management and central logout delivery must be operated.
-- Attachments can use private Vercel Blob storage while retaining quarantine, hash/magic-byte validation and
-  clean-only release. A real malware-scanner adapter, OCR and permanent EDMS integration remain production requirements.
+- Attachments can use private Vercel Blob storage with quarantine, hash/magic-byte validation and authenticated
+  ClamAV HTTP clean-only release. Live gateway acceptance, OCR and permanent EDMS integration remain production requirements.
 - Search is database-backed multi-field text search, not OCR or a dedicated enterprise search engine.
 - Digital-signature assertions, acting appointments, need-to-know groups and the external stakeholder portal are
   implemented; PKI/legal-signature policy, legal hold and governed retention/disposal remain external policy/integration work.

@@ -25,9 +25,21 @@ Production ingestion and downloads require a scanning pipeline:
 Receive → quarantine → validate magic bytes → malware scan → release or reject
 ```
 
-The protected document worker now performs hash and magic-byte checks and calls a scanner interface. A development
-mock is available only when explicitly enabled outside production. ClamAV or a managed scanner must implement the
-production stage; when none is configured, processing fails closed and downloads remain blocked.
+The protected document worker performs hash and magic-byte checks and calls the centralized ITF ClamAV FastAPI
+gateway through authenticated server-side HTTPS multipart requests. It validates the contract-v1 response before
+releasing a document. HTTP 429/503/504, timeouts and network interruptions remain quarantined and receive bounded
+retries; authentication, oversized and malformed-response failures stop for administrator review. Confirmed infected
+files are rejected and never retried automatically.
+
+Production configuration uses `DOCUMENT_SCANNER_PROVIDER=CLAMAV_HTTP`, `CLAMAV_HTTP_URL`,
+`CLAMAV_HTTP_TOKEN` and `CLAMAV_HTTP_TIMEOUT_MS`. `CLAMAV` remains a compatibility alias. The 20 MiB gateway limit
+is enforced when scanning is enabled even if `DOCUMENT_MAX_SIZE_MB` is higher. A local mock is available only outside
+production.
+
+The product-owner-approved administrative exception remains `MALWARE_SCANNER=DISABLED`. Under that explicit
+deployment setting, signature-valid uploads are accepted as `Available · Bypassed`; they are never represented as
+`Clean`. Re-enable scanning by restoring `MALWARE_SCANNER=ENABLED`, verifying all ClamAV variables and redeploying.
+Existing Bypassed files are not retroactively relabelled as Clean.
 
 ## Electronic document management server
 

@@ -102,13 +102,15 @@ Start with [`.env.example`](../.env.example). Store real values only in the appr
 - [ ] Set `DOCUMENT_STORAGE_PROVIDER=VERCEL_BLOB` for the currently supported managed provider and connect a private Blob store so `BLOB_READ_WRITE_TOKEN` is supplied.
 - [ ] Set `DOCUMENT_MAX_SIZE_MB` and `EVIDENCE_PACKAGE_MAX_MB` to approved limits.
 - [ ] Choose the malware posture:
-  - [ ] Production target: `MALWARE_SCANNER=ENABLED` with an approved production scanner adapter.
+  - [ ] Production target: `MALWARE_SCANNER=ENABLED` and `DOCUMENT_SCANNER_PROVIDER=CLAMAV_HTTP`.
   - [ ] Temporary exception only: `MALWARE_SCANNER=DISABLED`, which releases signature-valid uploads as **Available · Bypassed** and records that they were not scanned.
-- [ ] Set `DOCUMENT_SCANNER_PROVIDER`, `DOCUMENT_OCR_PROVIDER` and their external-service configuration when the S24B contracts/adapters are available.
+- [ ] For enabled scanning, set server-only `CLAMAV_HTTP_URL`, `CLAMAV_HTTP_TOKEN` and `CLAMAV_HTTP_TIMEOUT_MS`; never place the token in browser configuration, source control, logs or support tickets.
+- [ ] Confirm the effective enabled-mode upload limit is no more than the gateway contract limit of 20 MiB even if `DOCUMENT_MAX_SIZE_MB` is higher.
+- [ ] Set `DOCUMENT_OCR_PROVIDER` and its external-service configuration only when the separate OCR contract/adapter is available.
 - [ ] If governed Office-to-PDF conversion is required, set `DOCUMENT_CONVERTER_PROVIDER=GOTENBERG`, `GOTENBERG_URL` and `DOCUMENT_CONVERTER_TIMEOUT_MS`; otherwise DOCX/XLSX remain separate source files.
 - [ ] Generate `DOCUMENT_WORKER_SECRET` and set `DOCUMENT_WORKER_BATCH_SIZE`.
 
-Current production boundary: the repository supports private Vercel Blob, but the production malware-scanner and OCR adapters still require S24B. `DOCUMENT_SCANNER_PROVIDER=MOCK` is development-only. Enabling malware scanning without a working scanner intentionally leaves uploads quarantined.
+Current production boundary: the repository supports private Vercel Blob and the ClamAV HTTP contract-v1 adapter. Live gateway/EICAR/timeout acceptance and the production OCR adapter remain required. `DOCUMENT_SCANNER_PROVIDER=MOCK` is development-only. Enabled scanning without valid gateway configuration intentionally leaves uploads unavailable.
 
 ### Mail and automation
 

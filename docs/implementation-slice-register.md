@@ -50,6 +50,7 @@ authoritative [`system-administrator-onboarding-checklist.md`](system-administra
 | S23D | Safe Workspace handoff failure diagnostics | Implemented; staging launch recovery accepted | `9577561`; matching Workspace `c992230`; synchronization restored launch, confirmed 2026-09-17. Independent diagnostic failure-path acceptance remains; 33 security tests and full verification passed; no verification bypass. See [`slices/S23D-workspace-launch-diagnostics.md`](slices/S23D-workspace-launch-diagnostics.md) |
 | S23E | Controlled staging lifecycle acceptance profile | Implemented; staging acceptance pending | Flow `c4cef48`, Workspace `b3a9ab5`; 36 Flow regressions/full verification passed; Workspace W42; one pinned ordinary identity, staging-only expiring flags, authenticated pre-side-effect 503 and read-only bounded observations. No migration/new secret; live A01-06/A01-07 pending. See [slice](slices/S23E-controlled-staging-acceptance.md) |
 | S24A | Secure provider-neutral quarantine, validation and document-processing foundation | Implemented | `0481866`; see [`slices/S24A-secure-document-foundation.md`](slices/S24A-secure-document-foundation.md) |
+| S24B-ClamAV | Authenticated centralized ClamAV HTTP scanning | Implemented locally; live gateway acceptance pending | `e9a7ad1`; contract-v1 multipart client, conditional secret validation, strict verdict schema, 20 MiB enforcement, bounded transient retries, non-retryable permanent failures, audit metadata and explicit `BYPASSED` administrator override. All 91 assurance tests and the 63-route production build passed. See [`slices/S24B-clamav-http-malware-scanning.md`](slices/S24B-clamav-http-malware-scanning.md) |
 | S25 | Configurable workflow templates, category SLAs and safe simulation | Implemented | `a627a92`; see [`slices/S25-workflow-templates-slas-simulation.md`](slices/S25-workflow-templates-slas-simulation.md) |
 | S26 | Assurance controls, observability, test/recovery tooling and controlled-pilot gate | Implemented | `41f274f`; see [`slices/S26-production-assurance-pilot.md`](slices/S26-production-assurance-pilot.md) |
 | S27 | Recipient Department Secretary routing and controlled classification escalation | Implemented | `696eb0d`; migration applied; 40 assurance tests and full verification passed; see [`slices/S27-department-secretariat-routing.md`](slices/S27-department-secretariat-routing.md) |
@@ -106,15 +107,15 @@ environment-specific Workspace login; production local staff login remains disab
 are implemented. The private Vercel Blob increment of S28 is implemented locally and awaits live deployment
 acceptance. S30 and S31A-S31A2 now supply governed reusable visual signatures, memo lifecycle output, controlled
 PDF-first annotation and direct stylus markup. The next business slices are Department Secretariat desk/context
-switching, submission idempotency/managed malware-scanner hardening, the broader auditor evidence pack, and the
-installable PWA baseline. Real EDMS integration remains S24B
-and must not be simulated without its approved contract and test service.
+switching, submission idempotency, the broader auditor evidence pack, and the installable PWA baseline. The ClamAV
+HTTP portion of S24B is implemented locally; live gateway acceptance remains. Real EDMS and OCR integration must not
+be simulated without their approved contracts and test services.
 
 **Immediate integration action — A01-02 role-change/mismatch acceptance:** use a dedicated staging identity and
 explicitly approved old/new Flow roles to prove an old session ends, a mismatched launch fails closed and only the
 reconciled approved role can launch. Do not alter the only recoverable Workspace administrator.
 
-**S24B - Real EDMS, malware-scanner and OCR adapters** is pending the external technical contract and test services.
+**S24B - ClamAV HTTP scanning** is implemented locally from contract v1.0; live gateway acceptance is pending. EDMS and OCR adapters still await their contracts/test services.
 **S26 - Assurance, observability, load/security tests, backup recovery and pilot rollout** is implemented. External execution evidence and production sign-off remain pending.
 
 ## Subsequent slices
@@ -131,7 +132,7 @@ reconciled approved role can launch. Do not alter the only recoverable Workspace
 | S22 | Authenticated external stakeholder portal | Requires identity, anti-abuse and privacy design |
 | S23 | Enterprise Workspace identity, MFA, central logout and interoperability contracts | Cross-application platform slice |
 | S24A | Secure provider-neutral document-processing foundation | Local foundation; production activation remains blocked |
-| S24B | Real EDMS, malware scanning, quarantine and OCR adapters | Requires external contracts and test services |
+| S24B | Centralized ClamAV HTTP scanning plus future EDMS/OCR adapters | ClamAV implemented locally; gateway acceptance pending. EDMS/OCR still require contracts and test services |
 | S25 | Configurable workflow templates, SLAs and simulation | Requires stable business-rule ownership |
 | S26 | Assurance, observability, load/security tests, backup recovery and pilot rollout | Final production gate |
 | S27 | Recipient Department Secretary routing and controlled classification escalation | Priority 1; locally administered until authoritative Workspace/HR sync |

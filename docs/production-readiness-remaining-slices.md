@@ -8,7 +8,7 @@ exist.
 
 | Slice | Remaining outcome | Exit evidence |
 |---|---|---|
-| S24B | Real malware scanner and OCR; fail-closed document worker | EICAR/clean/timeout tests, OCR accuracy sample, alerting and approved data residency |
+| S24B acceptance/OCR | Accept the delivered ClamAV HTTP adapter against the live gateway and implement the separately approved OCR provider | Live clean/EICAR/auth/timeout/unavailable tests, gateway monitoring/data-residency sign-off, then OCR accuracy evidence |
 | S28 production acceptance | Approved private object store, lifecycle/encryption/backup policy and Vercel Blob live test | Upload/quarantine/release/retrieve/restore evidence for every classification |
 | S29/S29A/S29B acceptance | Registry appointments, MFA decision and evidence-package archival trial | Records/Legal sign-off plus successful export, hash reconciliation and denied-access tests |
 | S29C acceptance | Approve the delivered file-plan/retention catalogue and reconcile Workspace organizations plus legacy personnel boxes | Migration evidence, Records/Legal approval, representative box reconciliation and successful audited re-filing |
